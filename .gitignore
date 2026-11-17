@@ -1,0 +1,26 @@
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Build Artifacts & Binaries
+tools/*.exe
+build/
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Logs & Temp
+logs/*.log
+*.log
+tmp/
+temp/
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
