@@ -103,33 +103,51 @@ if ($violations.Count -gt 0) {
     Fail-Verify ("Phat hien vi pham quy tac an toan Roblox:`n  - " + ($violations -join "`n  - "))
 }
 
+function Invoke-NativeTool {
+    param(
+        [string]$ExePath,
+        [string[]]$Arguments
+    )
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & $ExePath @Arguments 2>&1
+        return @{
+            ExitCode = $LASTEXITCODE
+            Output = ($output | Out-String)
+        }
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+}
+
 # 3. Sinh Rojo Sourcemap
 Write-Step "[3/6] Sinh Rojo sourcemap (build\sourcemap.json)..."
-$smOut = & $rojoExe sourcemap "default.project.json" -o "build\sourcemap.json" 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $smOut | Out-File -FilePath $logFile -Append -Encoding utf8
-    Fail-Verify "Rojo sourcemap that bai: $smOut"
+$smRes = Invoke-NativeTool -ExePath $rojoExe -Arguments @("sourcemap", "default.project.json", "-o", "build\sourcemap.json")
+if ($smRes.ExitCode -ne 0) {
+    $smRes.Output | Out-File -FilePath $logFile -Append -Encoding utf8
+    Fail-Verify "Rojo sourcemap that bai: $($smRes.Output)"
 }
 
 if ($luauFiles.Count -gt 0) {
     # 4. Luau-LSP Analyze voi tu dien API chinh chu cua Roblox
     Write-Step "[4/6] Chay luau-lsp analyze (kiem tra kieu & API Roblox chinh chu)..."
-    $lspOut = & $luauLspExe analyze "--definitions=$globalTypes" "--sourcemap=build\sourcemap.json" "src" 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        $lspOut | Out-File -FilePath $logFile -Append -Encoding utf8
-        Write-Host ($lspOut | Out-String) -ForegroundColor Red
+    $lspRes = Invoke-NativeTool -ExePath $luauLspExe -Arguments @("analyze", "--definitions=$globalTypes", "--sourcemap=build\sourcemap.json", "src")
+    if ($lspRes.ExitCode -ne 0) {
+        $lspRes.Output | Out-File -FilePath $logFile -Append -Encoding utf8
+        Write-Host $lspRes.Output -ForegroundColor Red
         Fail-Verify "luau-lsp phat hien loi code/API Roblox!"
     }
 
     # 5. Selene Linter
     Write-Step "[5/6] Chay selene linter (kiem tra bien thua / bien chua khai bao)..."
     if (-not (Test-Path (Join-Path $projectRoot "roblox.yml"))) {
-        & $seleneExe generate-roblox-std | Out-Null
+        $null = Invoke-NativeTool -ExePath $seleneExe -Arguments @("generate-roblox-std")
     }
-    $selOut = & $seleneExe "src" 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        $selOut | Out-File -FilePath $logFile -Append -Encoding utf8
-        Write-Host ($selOut | Out-String) -ForegroundColor Red
+    $selRes = Invoke-NativeTool -ExePath $seleneExe -Arguments @("src")
+    if ($selRes.ExitCode -ne 0) {
+        $selRes.Output | Out-File -FilePath $logFile -Append -Encoding utf8
+        Write-Host $selRes.Output -ForegroundColor Red
         Fail-Verify "selene phat hien loi linter trong src/!"
     }
 } else {
@@ -139,10 +157,10 @@ if ($luauFiles.Count -gt 0) {
 
 # 6. Rojo Build .rbxlx
 Write-Step "[6/6] Dong goi file Roblox Studio (build\mighty-angler-dev.rbxlx)..."
-$buildOut = & $rojoExe build "default.project.json" -o "build\mighty-angler-dev.rbxlx" 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $buildOut | Out-File -FilePath $logFile -Append -Encoding utf8
-    Fail-Verify "Rojo build that bai: $buildOut"
+$buildRes = Invoke-NativeTool -ExePath $rojoExe -Arguments @("build", "default.project.json", "-o", "build\mighty-angler-dev.rbxlx")
+if ($buildRes.ExitCode -ne 0) {
+    $buildRes.Output | Out-File -FilePath $logFile -Append -Encoding utf8
+    Fail-Verify "Rojo build that bai: $($buildRes.Output)"
 }
 
 Write-Step "[PASS] Hoan tat 6/6 chot chan kiem dinh! File build\mighty-angler-dev.rbxlx san sang."

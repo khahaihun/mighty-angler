@@ -1,7 +1,7 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 01:20 bởi Antigravity
-- **Trạng thái hiện tại:** Đã hoàn tất **100% Giai đoạn 0 (Chốt `PLAN.md` + Trang bị toàn bộ hệ thống công cụ kiểm định 6 chốt chặn)** *(Sẵn sàng chạy Chặng 1 ngay khi người dùng ra lệnh)*.
+- **Cập nhật lần cuối:** 2026-11-18 01:34 bởi Antigravity
+- **Trạng thái hiện tại:** Đang thi công tự động xuyên đêm — Đã xong **M1.1**, đang chuyển sang **M1.2 (Cảnh quan Low-Poly Đảo 1 & Ánh sáng)**.
 
 ---
 
@@ -13,9 +13,10 @@
   - Tạo cấu hình `.luaurc`, `selene.toml` (`std = "roblox"`).
   - Xây dựng và chạy thử xanh 6/6 bước với `tools/verify_project.ps1` (quét `≤ 350 dòng/file`, chặn class/material cấm của Roblox, sinh sourcemap, chạy `luau-lsp analyze`, chạy `selene`, xuất `build/mighty-angler-dev.rbxlx`).
   - Nâng cấp `run.bat`, `AGENTS.md`, `HUONG_DAN.md` và bổ sung quy chuẩn Design System + `DevTestPanel` (`[DEV]` chỉ hiện trong Studio) + `StudioErrorReporter` vào Chặng 1 của `PLAN.md`.
+- [x] **M1.1** — Hoàn thiện `Types.luau`, `Net.luau`, `Util.luau`, `AssetRegistry.luau`, `GameConfig.luau`, `RodsConfig.luau`, `Islands/Island1_SunnyShores.luau` & `Islands/init.luau` (PASS 6/6).
 
 ## Đang làm dở [~]
-- *(Không có — toàn bộ kế hoạch & công cụ nền tảng đã sẵn sàng 100%).*
+- [~] **M1.2** — Dựng Cảnh quan Low-Poly Đảo 1 & Ánh sáng (`PartFactory`, `WorldBuilder`, `PropsBuilder`, `IslandScenery1_2`).
 
 ## Bước tiếp theo [ ]
 - [ ] Chạy tự động trọn gói **Chặng 1 (M1.1 → M1.6)** trong `PLAN.md` ngay khi người dùng phát lệnh bắt đầu (bao gồm Đảo 1 Low-Poly, Câu cá, Gym, Auto-Train/Auto-Fish, UI Tiếng Anh, bảng `[DEV]` Studio, `StudioErrorReporter` và DataStore).

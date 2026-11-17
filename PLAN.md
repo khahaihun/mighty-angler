@@ -196,7 +196,7 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 > **Mục tiêu:** Chạy tự động một mạch từ khung dự án đến khi chơi trọn vẹn, mượt mà và đẹp mắt ngay tại **Đảo 1 (Sunny Shores)**.
 > **Nghiệm thu Studio Lần 1 (~5 phút):** Mở `run.bat` → đi dạo Đảo 1 ngắm cảnh Low-Poly, quăng cần câu cá thường (tự lên) & cá Hiếm/Boss (Minigame), ra máy Gym bấm chuột & bật thử `Auto-Train` / `Auto-Fish`, bán cá mua Cần mới, thoát ra vào lại giữ nguyên dữ liệu.
 
-- [ ] **M1.1 — Bộ kiểm tra tự động & Nền tảng Shared (`Net`, `Types`, `Util`, `AssetRegistry`, Config cơ bản):**
+- [x] **M1.1 — Bộ kiểm tra tự động & Nền tảng Shared (`Net`, `Types`, `Util`, `AssetRegistry`, Config cơ bản):**
   - Tạo `tools/verify_project.ps1`, `Net.luau`, `Types.luau`, `Util.luau`, `AssetRegistry.luau`, `GameConfig.luau`, `RodsConfig.luau` và `Island1_SunnyShores.luau`.
 - [ ] **M1.2 — Dựng Cảnh quan Low-Poly Đảo 1 & Ánh sáng (`PartFactory`, `WorldBuilder`, `PropsBuilder`, `IslandScenery1_2`):**
   - Dựng Đảo 1 *Sunny Shores* có bãi cát, biển trong xanh, cầu gỗ câu cá, 3 máy tập Gym chi tiết, quầy bán cá, cổng khóa Đảo 2, hàng dừa cong và bộ `Lighting` tươi sáng; đảm bảo `SpawnLocation` vững chắc 100%.
