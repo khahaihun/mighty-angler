@@ -6,7 +6,17 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 
 local WorldBuilder = require(script.World.WorldBuilder)
+local DataService = require(script.Services.DataService)
+local PerkService = require(script.Services.PerkService)
+local CurrencyService = require(script.Services.CurrencyService)
+local ShopAndItemsService = require(script.Services.ShopAndItemsService)
 
 -- 1. Khoi tao mang RemoteEvent va dung canh quan the gioi
 Net.InitServer()
 WorldBuilder.BuildAll()
+
+-- 2. Khoi tao cac Service nen tang
+DataService.Init()
+PerkService.Init()
+CurrencyService.Init()
+ShopAndItemsService.Init()

@@ -200,7 +200,7 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
   - Tạo `tools/verify_project.ps1`, `Net.luau`, `Types.luau`, `Util.luau`, `AssetRegistry.luau`, `GameConfig.luau`, `RodsConfig.luau` và `Island1_SunnyShores.luau`.
 - [x] **M1.2 — Dựng Cảnh quan Low-Poly Đảo 1 & Ánh sáng (`PartFactory`, `WorldBuilder`, `PropsBuilder`, `IslandScenery1_2`):**
   - Dựng Đảo 1 *Sunny Shores* có bãi cát, biển trong xanh, cầu gỗ câu cá, 3 máy tập Gym chi tiết, quầy bán cá, cổng khóa Đảo 2, hàng dừa cong và bộ `Lighting` tươi sáng; đảm bảo `SpawnLocation` vững chắc 100%.
-- [ ] **M1.3 — Dữ liệu Người chơi, Tiền tệ, Quyền lợi Auto & Khung `BuffAggregator`:**
+- [x] **M1.3 — Dữ liệu Người chơi, Tiền tệ, Quyền lợi Auto & Khung `BuffAggregator`:**
   - Hoàn thiện `DataService` (lưu/tải an toàn + làm việc trơn tru cả khi Studio chưa bật API Services bằng chế độ fallback thông báo rõ), `CurrencyService`, `PerkService` (tách rõ `Auto-Train = Join Group` và `Auto-Fish = Gamepass` + công tắc test Studio) và `BuffAggregator`.
 - [ ] **M1.4 — Hệ thống Câu cá Server + Visual Cần/Phao/Cá + Animation + Minigame:**
   - Cần câu gắn trên tay nhân vật, Animation vung cần & giật cá, dây câu + phao nhấp nhô; cá thường tự giật lên nảy mô hình cá 3D + chữ `+Gold`, cá Rare/Boss bật thanh `MinigameBar` (có hưởng lợi thế từ Strength); tích hợp nút `Auto-Fish`.
