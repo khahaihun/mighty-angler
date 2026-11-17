@@ -27,7 +27,7 @@ local function checkIsInGroup(player: Player): boolean
 		return cached
 	end
 	local ok, inGroup = pcall(function()
-		return player:IsInGroup(GameConfig.ROBLOX_GROUP_ID)
+		return player:IsInGroupAsync(GameConfig.ROBLOX_GROUP_ID)
 	end)
 	local res = ok and inGroup == true
 	groupMemberCache[player] = res

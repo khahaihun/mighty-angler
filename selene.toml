@@ -4,3 +4,5 @@ std = "roblox"
 mixed_table = "allow"
 multiple_statements = "allow"
 parenthese_conditions = "allow"
+roblox_manual_fromscale_or_fromoffset = "allow"
+

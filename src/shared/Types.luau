@@ -1,8 +1,8 @@
 --!strict
 -- Types.luau: Dinh nghia kieu du lieu dung chung toan du an Mighty Angler v2
 
-export type Rarity = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Boss"
-export type MutationName = "None" | "Shiny" | "Golden" | "Cosmic"
+export type Rarity = string
+export type MutationName = string
 
 export type FishDef = {
 	id: string,
@@ -100,7 +100,7 @@ export type GymGearDef = {
 	description: string,
 }
 
-export type PotionKind = "Luck" | "Strength" | "Sell" | "Mutation" | "Speed"
+export type PotionKind = string
 
 export type PotionDef = {
 	id: string,
@@ -113,7 +113,7 @@ export type PotionDef = {
 	description: string,
 }
 
-export type PetArchetype = "Crab" | "Fish" | "Bird" | "Spirit" | "Dragon" | "Star"
+export type PetArchetype = string
 
 export type PetDef = {
 	id: string,

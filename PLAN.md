@@ -202,11 +202,11 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
   - Dựng Đảo 1 *Sunny Shores* có bãi cát, biển trong xanh, cầu gỗ câu cá, 3 máy tập Gym chi tiết, quầy bán cá, cổng khóa Đảo 2, hàng dừa cong và bộ `Lighting` tươi sáng; đảm bảo `SpawnLocation` vững chắc 100%.
 - [x] **M1.3 — Dữ liệu Người chơi, Tiền tệ, Quyền lợi Auto & Khung `BuffAggregator`:**
   - Hoàn thiện `DataService` (lưu/tải an toàn + làm việc trơn tru cả khi Studio chưa bật API Services bằng chế độ fallback thông báo rõ), `CurrencyService`, `PerkService` (tách rõ `Auto-Train = Join Group` và `Auto-Fish = Gamepass` + công tắc test Studio) và `BuffAggregator`.
-- [ ] **M1.4 — Hệ thống Câu cá Server + Visual Cần/Phao/Cá + Animation + Minigame:**
+- [x] **M1.4 — Hệ thống Câu cá Server + Visual Cần/Phao/Cá + Animation + Minigame:**
   - Cần câu gắn trên tay nhân vật, Animation vung cần & giật cá, dây câu + phao nhấp nhô; cá thường tự giật lên nảy mô hình cá 3D + chữ `+Gold`, cá Rare/Boss bật thanh `MinigameBar` (có hưởng lợi thế từ Strength); tích hợp nút `Auto-Fish`.
-- [ ] **M1.5 — Hệ thống Tập Gym Click chuột + Auto-Train + Animation Tập luyện:**
+- [x] **M1.5 — Hệ thống Tập Gym Click chuột + Auto-Train + Animation Tập luyện:**
   - Bước vào 3 máy Gym bấm chuột diễn Animation nâng tạ / chạy bộ / đẩy ngực thật + tia sáng + số bay `+Strength`; bật nút `Auto-Train` tự tập mượt mà theo chuẩn kiểm tra của Server.
-- [ ] **M1.6 — Giao diện Tiếng Anh Đảo 1 (`Theme`, `HudPanel`, `BagPanel`, `ShopPanel`, `DevTestPanel`, `StudioErrorReporter`):**
+- [x] **M1.6 — Giao diện Tiếng Anh Đảo 1 (`Theme`, `HudPanel`, `BagPanel`, `ShopPanel`, `DevTestPanel`, `StudioErrorReporter`):**
   - Thiết kế UI chuẩn Simulator hiện đại (nút nhún lò xo, viền `UIStroke`, chữ rõ trên PC & Mobile); tương tác quầy Sell All, mua & trang bị 6 Cần câu, gắn sẵn bảng nút **`[DEV]` chỉ hiện trong Studio** (`+Gold`, `+Strength`, `Force Boss`, `Reset Save`) + hộp đen báo lỗi trực quan `StudioErrorReporter`, đóng gói `build/mighty-angler-dev.rbxlx` sẵn sàng cho **Lần Check Studio 1**.
 
 ---
