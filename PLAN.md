@@ -215,7 +215,7 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 > **Mục tiêu:** Hoàn thiện trọn bộ **Đảo 2 → Đảo 5**, đưa vào Mồi câu, Đồ tập Gym, Thuốc Potions và hệ thống Trứng Pet bay theo sau lưng.
 > **Nghiệm thu Studio Lần 2 (~5–7 phút):** Mua cổng mở khóa xuyên suốt 5 đảo, ấp trứng đeo 2 Pet bay lượn, mua mồi & đồ tập gym, uống thuốc buff và cảm nhận nhịp tăng tiến tiền/sức mạnh.
 
-- [ ] **M2.1 — Cấu hình & Cảnh quan Low-Poly cho Đảo 2, 3, 4, 5 + Cổng *Coming Soon*:**
+- [x] **M2.1 — Cấu hình & Cảnh quan Low-Poly cho Đảo 2, 3, 4, 5 + Cổng *Coming Soon*:**
   - Tạo config cá/boss/giá tiền cho `Island2`..`Island5` và dựng cảnh quan riêng biệt (San hô phát sáng, Đầm lầy nấm tím, Núi lửa dung nham, Thiên hà tinh thể + cổng hẹn bản Update kế tiếp); hoàn thiện `IslandService` mở khóa & dịch chuyển.
 - [ ] **M2.2 — Mồi câu (Bait), Đồ tập Gym (Gear) & Lọ thuốc (Potions):**
   - Hoàn thiện `BaitConfig`, `GymGearConfig`, `PotionsConfig`, `ShopAndItemsService`; nối toàn bộ hệ số vào `BuffAggregator`; mở rộng đủ 3 tab cho `ShopPanel` và `BagPanel`, hiển thị icon thuốc/mồi đang kích hoạt trên HUD.

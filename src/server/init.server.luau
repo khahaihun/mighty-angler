@@ -12,6 +12,7 @@ local CurrencyService = require(script.Services.CurrencyService)
 local ShopAndItemsService = require(script.Services.ShopAndItemsService)
 local FishingService = require(script.Services.FishingService)
 local GymService = require(script.Services.GymService)
+local IslandService = require(script.Services.IslandService)
 local DevTestService = require(script.Services.DevTestService)
 
 -- 1. Khoi tao mang RemoteEvent va dung canh quan the gioi
@@ -25,4 +26,5 @@ CurrencyService.Init()
 ShopAndItemsService.Init()
 FishingService.Init()
 GymService.Init()
+IslandService.Init()
 DevTestService.Init()
