@@ -46,6 +46,8 @@ function DevTestService.Init()
 			CurrencyService.AddStrength(player, 5000000, false, true)
 		elseif rawAction == "AddGems500" then
 			CurrencyService.AddGems(player, 500, true)
+			ShopAndItemsService.GrantPotion(player, "lucky_elixir_s", 1, false)
+			ShopAndItemsService.GrantPotion(player, "titan_brew_s", 1, false)
 		elseif rawAction == "ForceRare" then
 			FishingService.SetForcedRarityForDev(player, "Rare")
 			Net.FireClient(player, Net.ServerToClient.Toast, {

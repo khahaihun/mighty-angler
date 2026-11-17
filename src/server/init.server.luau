@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
+local PotionsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PotionsConfig"))
 
 local WorldBuilder = require(script.World.WorldBuilder)
 local DataService = require(script.Services.DataService)
@@ -28,3 +29,16 @@ FishingService.Init()
 GymService.Init()
 IslandService.Init()
 DevTestService.Init()
+
+-- 3. Noi hook tieu hao Bait & roi thuoc Potion khi cau dinh Rare / Boss
+FishingService.SetConsumeBaitHook(ShopAndItemsService.ConsumeActiveBaitOnCatch)
+FishingService.OnFishCaught(function(player: Player, fishDef, _mutation)
+	if fishDef.rarity == "Boss" and math.random() <= 0.35 then
+		local pool = if fishDef.islandId >= 4 then PotionsConfig.LargeIds else PotionsConfig.SmallIds
+		local pick = pool[math.random(1, #pool)]
+		ShopAndItemsService.GrantPotion(player, pick, 1, true)
+	elseif (fishDef.rarity == "Rare" or fishDef.rarity == "Epic" or fishDef.rarity == "Legendary") and math.random() <= 0.08 then
+		local pick = PotionsConfig.SmallIds[math.random(1, #PotionsConfig.SmallIds)]
+		ShopAndItemsService.GrantPotion(player, pick, 1, true)
+	end
+end)

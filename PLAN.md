@@ -217,7 +217,7 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 
 - [x] **M2.1 — Cấu hình & Cảnh quan Low-Poly cho Đảo 2, 3, 4, 5 + Cổng *Coming Soon*:**
   - Tạo config cá/boss/giá tiền cho `Island2`..`Island5` và dựng cảnh quan riêng biệt (San hô phát sáng, Đầm lầy nấm tím, Núi lửa dung nham, Thiên hà tinh thể + cổng hẹn bản Update kế tiếp); hoàn thiện `IslandService` mở khóa & dịch chuyển.
-- [ ] **M2.2 — Mồi câu (Bait), Đồ tập Gym (Gear) & Lọ thuốc (Potions):**
+- [x] **M2.2 — Mồi câu (Bait), Đồ tập Gym (Gear) & Lọ thuốc (Potions):**
   - Hoàn thiện `BaitConfig`, `GymGearConfig`, `PotionsConfig`, `ShopAndItemsService`; nối toàn bộ hệ số vào `BuffAggregator`; mở rộng đủ 3 tab cho `ShopPanel` và `BagPanel`, hiển thị icon thuốc/mồi đang kích hoạt trên HUD.
 - [ ] **M2.3 — Hệ thống 10 Trứng Pet (Gold & Gems) & Mô hình Pet bay theo sau lưng:**
   - Hoàn thiện `PetsConfig` (2 trứng × 5 đảo), `PetsService`, mô hình 3D Low-Poly cho các dòng Pet (bay/nhảy mượt mà 2 bên vai nhân vật), cùng giao diện `PetsPanel` và trụ ấp trứng trực quan tại mỗi đảo.

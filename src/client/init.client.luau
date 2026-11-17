@@ -9,6 +9,8 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local BaitConfig = require(Shared:WaitForChild("Config"):WaitForChild("BaitConfig"))
+local PotionsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PotionsConfig"))
 
 local FishingController = require(script.Controllers.FishingController)
 local GymController = require(script.Controllers.GymController)
@@ -100,6 +102,43 @@ local function toggleExclusivePanel(key: string)
 			progressModRef.Render()
 		end
 	end
+end
+
+local activeEventTextCache = ""
+local activeBuffTextCache = ""
+
+local function refreshTopBuffLine()
+	if activeEventTextCache ~= "" and activeBuffTextCache ~= "" then
+		HudPanel.UpdateEventBanner(activeEventTextCache .. "  •  " .. activeBuffTextCache)
+	elseif activeEventTextCache ~= "" then
+		HudPanel.UpdateEventBanner(activeEventTextCache)
+	else
+		HudPanel.UpdateEventBanner(activeBuffTextCache)
+	end
+end
+
+local function computeActiveItemBuffSummary(activePotions: any, activeBait: any, baitMap: any, serverNow: number?): string
+	local parts: { string } = {}
+	if type(activeBait) == "string" and activeBait ~= "" then
+		local bDef = BaitConfig.ById[activeBait]
+		local cnt = if type(baitMap) == "table" then (tonumber(baitMap[activeBait]) or 0) else 0
+		if bDef and cnt > 0 then
+			table.insert(parts, string.format("🪱 %s (%d)", bDef.name, cnt))
+		end
+	end
+	local now = serverNow or os.time()
+	if type(activePotions) == "table" then
+		for _, st in pairs(activePotions) do
+			if type(st) == "table" and (tonumber(st.expiresAt) or 0) > now then
+				local pDef = PotionsConfig.ById[tostring(st.potionId or "")]
+				if pDef then
+					local rem = math.max(0, (tonumber(st.expiresAt) or 0) - now)
+					table.insert(parts, string.format("🧪 %s (%s)", pDef.name, Util.FormatDuration(rem)))
+				end
+			end
+		end
+	end
+	return table.concat(parts, " | ")
 end
 
 -- State cache tren Client
@@ -201,6 +240,8 @@ local function applyFullSnapshot(snap: any)
 	BagPanel.UpdateFishBag(bagList)
 	BagPanel.UpdateItems(p.potions or {}, p.bait or {}, p.activeBait)
 	ShopPanel.SyncState(goldCache, strengthCache, rodIdCache, ownedRodsCache, gearLvCache)
+	activeBuffTextCache = computeActiveItemBuffSummary(p.activePotions, p.activeBait, p.bait, tonumber(snap.serverNow))
+	refreshTopBuffLine()
 
 	if petsModRef then
 		petsModRef.SyncFromProfile(p)
@@ -243,6 +284,8 @@ Net.OnClientEvent(Net.ServerToClient.InventoryUpdated, function(payload: any)
 	HudPanel.UpdateRodAndIsland(rodIdCache, islandCache)
 	BagPanel.UpdateItems(payload.potions or {}, payload.bait or {}, payload.activeBait)
 	ShopPanel.SyncState(goldCache, strengthCache, rodIdCache, ownedRodsCache, gearLvCache)
+	activeBuffTextCache = computeActiveItemBuffSummary(payload.activePotions, payload.activeBait, payload.bait, tonumber(payload.serverNow))
+	refreshTopBuffLine()
 end)
 
 Net.OnClientEvent(Net.ServerToClient.PerksUpdated, function(payload: any)
@@ -270,7 +313,8 @@ end)
 
 Net.OnClientEvent(Net.ServerToClient.ServerEventChanged, function(payload: any)
 	if type(payload) == "table" then
-		HudPanel.UpdateEventBanner(tostring(payload.bannerText or ""))
+		activeEventTextCache = tostring(payload.bannerText or "")
+		refreshTopBuffLine()
 	end
 end)
 

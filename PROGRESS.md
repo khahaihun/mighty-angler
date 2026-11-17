@@ -1,7 +1,7 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 02:07 bởi Antigravity
-- **Trạng thái hiện tại:** Đang thi công tự động xuyên đêm — Đã xong **Chặng 1 + M2.1 (Đủ 5 Đảo)**, đang chuyển sang **M2.2 (Mồi câu Bait, Đồ tập Gym Gear & Lọ thuốc Potions)**.
+- **Cập nhật lần cuối:** 2026-11-18 02:12 bởi Antigravity
+- **Trạng thái hiện tại:** Đang thi công tự động xuyên đêm — Đã xong **Chặng 1 + M2.1 – M2.2**, đang chuyển sang **M2.3 (Hệ thống 10 Trứng Pet Gold/Gems & Pet bay theo sau lưng)** và **M2.4 (Cân bằng Kinh tế 5 Đảo)**.
 
 ---
 
@@ -16,9 +16,10 @@
 - [x] **M1.5** — Hoàn thiện `GymService.luau` & `GymController.luau` (Click chuột tập tạ + Auto-Train Group Perk + Animation + tia sáng — PASS 6/6).
 - [x] **M1.6** — Hoàn thiện `Theme.luau`, `WindowFrame.luau`, `HudPanel.luau`, `BagPanel.luau`, `ShopPanel.luau`, `DevTestPanel.luau`, `DevTestService.luau`, `StudioErrorReporter.luau`, `SoundConfig.luau`, `SoundAndFxController.luau`, `PromptController.luau`, `init.client.luau` (PASS 6/6).
 - [x] **M2.1** — Hoàn thiện `Island2_CoralDepths` → `Island5_CelestialDeep`, `IslandScenery3_5.luau`, cổng *Coming Soon* tại Đảo 5 và `IslandService.luau` mở khóa/dịch chuyển liên đảo (PASS 6/6).
+- [x] **M2.2** — Hoàn thiện `BaitConfig.luau`, `GymGearConfig.luau`, `PotionsConfig.luau`, `PotionAndBaitHelper.luau`, nâng cấp `ShopAndItemsService.luau` + hiển thị active buffs trên HUD (PASS 6/6).
 
 ## Đang làm dở [~]
-- [~] **M2.2** — Mồi câu (`BaitConfig`), Đồ tập Gym (`GymGearConfig`) & Lọ thuốc (`PotionsConfig`) nối vào `ShopAndItemsService` & `BuffAggregator`.
+- [~] **M2.3 & M2.4** — Hệ thống 10 Trứng Pet (Gold & Gems) + `PetsService.luau` + `PetsPanel.luau` + Kiểm toán cân bằng kinh tế 5 Đảo.
 
 ## Bước tiếp theo [ ]
 - [ ] Chạy tự động trọn gói **Chặng 1 (M1.1 → M1.6)** trong `PLAN.md` ngay khi người dùng phát lệnh bắt đầu (bao gồm Đảo 1 Low-Poly, Câu cá, Gym, Auto-Train/Auto-Fish, UI Tiếng Anh, bảng `[DEV]` Studio, `StudioErrorReporter` và DataStore).
