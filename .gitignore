@@ -7,6 +7,8 @@
 
 # Build Artifacts & Binaries
 tools/*.exe
+tools/globalTypes.d.luau
+roblox.yml
 build/
 *.rbxl
 *.rbxlx

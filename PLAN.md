@@ -96,8 +96,12 @@ D:\Projects\mighty-angler\
 ├── default.project.json         ← Cấu hình ánh xạ Rojo
 ├── run.bat                      ← Chạy 1-click build .rbxlx + bật rojo serve
 ├── tools/
-│   ├── rojo.exe                 ← Rojo 7.7.1
-│   └── verify_project.ps1       ← Script tự động quét dòng code, API Roblox & Rojo build
+│   ├── rojo.exe                 ← Rojo 7.7.1 (đóng gói & đồng bộ Studio)
+│   ├── luau-lsp.exe             ← Trình phân tích kiểu & kiểm tra API Roblox chính chủ
+│   ├── globalTypes.d.luau       ← Từ điển định nghĩa API chuẩn của Roblox Engine
+│   ├── selene.exe               ← Linter bắt biến thừa / biến chưa khai báo
+│   ├── install_tools.ps1        ← Script tự tải/khôi phục bộ công cụ khi sang máy mới
+│   └── verify_project.ps1       ← Trạm gác tự động 6 chốt chặn (dòng code, API, LSP, Selene, Build)
 └── src/
     ├── shared/
     │   ├── Net.luau             ← Manifest duy nhất cho toàn bộ RemoteEvent
@@ -144,7 +148,8 @@ D:\Projects\mighty-angler\
     │       ├── ShopAndItemsService.luau ← Mua Cần, Mồi, Đồ Gym, dùng Thuốc Potions
     │       ├── PetsService.luau         ← Mở trứng, trang bị 2–4 Pet, cập nhật vị trí Pet
     │       ├── ProgressionService.luau  ← Rebirth, Index sưu tập, Achievements, Daily Rewards
-    │       └── LiveOpsService.luau      ← Server Event 30 phút & Bảng xếp hạng Leaderboard
+    │       ├── LiveOpsService.luau      ← Server Event 30 phút & Bảng xếp hạng Leaderboard
+    │       └── DevTestService.luau      ← Lệnh test nhanh (+Gold/Str, ép Boss, Reset) KHÓA CỨNG chỉ chạy ở Studio
     └── client/
         ├── init.client.luau
         ├── Controllers/
@@ -152,9 +157,10 @@ D:\Projects\mighty-angler\
         │   ├── FishingController.luau   ← Điều khiển câu cá, hiệu ứng phao, nút Auto-Fish
         │   ├── GymController.luau       ← Xử lý bấm chuột tập Gym, hiệu ứng mồ hôi/số bay, Auto-Train
         │   ├── SoundAndFxController.luau← Âm thanh, chữ nổi +Gold/+Strength, rung nhẹ camera
-        │   └── PromptController.luau    ← Tương tác gần quầy Sell, cổng Đảo, trụ Trứng, máy Gym
+        │   ├── PromptController.luau    ← Tương tác gần quầy Sell, cổng Đảo, trụ Trứng, máy Gym
+        │   └── StudioErrorReporter.luau ← Tự hiện băng báo lỗi góc màn hình trong Studio (khỏi mò Output)
         └── UI/
-            ├── Theme.luau               ← Bảng màu tươi sáng, font chữ, bo góc chuẩn Simulator
+            ├── Theme.luau               ← Design System: viền UIStroke tươi sáng, bo góc, nút nhún lò xo, 6 màu độ hiếm
             ├── Components/              ← Nút bấm có hiệu ứng nhún, cửa sổ khung, thẻ vật phẩm, Toast
             └── Panels/                  ← Tách riêng từng màn hình (< 300 dòng/file)
                 ├── HudPanel.luau        ← Tiền tệ, thanh Strength, nút Auto-Train / Auto-Fish, nút Menu
@@ -162,16 +168,23 @@ D:\Projects\mighty-angler\
                 ├── BagPanel.luau        ← Túi Cá / Thuốc / Mồi + nút Sell All
                 ├── ShopPanel.luau       ← Cửa hàng Cần câu / Mồi / Đồ tập Gym / Gamepasses
                 ├── PetsPanel.luau       ← Kho Pet & Ấp trứng
-                └── ProgressPanel.luau   ← Rebirth, Sổ Index, Thành tựu & Quà ngày
+                ├── ProgressPanel.luau   ← Rebirth, Sổ Index, Thành tựu & Quà ngày
+                └── DevTestPanel.luau    ← Bảng nút [DEV] 1 chạm trong Studio (+Gold/Str, Force Boss, Event, Reset)
 ```
 
-### 3.2. Năm Chốt Chặn An Toàn Kỹ Thuật (Bắt buộc chạy tự động sau mỗi Task)
-Để chủ dự án yên tâm cho AI chạy tự động hết cả chặng mà mở Studio lên không bao giờ gặp lỗi rơi vực như bản v1, script `tools/verify_project.ps1` sẽ tự động kiểm tra:
-1. **Rojo Build Pass:** `tools\rojo.exe build default.project.json -o build\mighty-angler-dev.rbxlx` trả về mã `0`.
-2. **Kiểm tra kích thước file:** Báo lỗi ngay nếu bất kỳ file `.luau` nào vượt quá **350 dòng**.
-3. **Chặn Class Roblox ảo:** Cấm tuyệt đối `Instance.new("Ball")` hoặc class không tồn tại (bắt buộc tạo qua `PartFactory.luau`).
-4. **Chặn Vật liệu Terrain trên BasePart:** Cấm gán 13 vật liệu chỉ dành cho Terrain (`Water`, `Basalt`, `Snow`, `Glacier`, `Ground`, `LeafyGrass`, `Rock`, `Sandstone`, `CrackedLava`, `Mud`, `Salt`, `Limestone`, `Pavement`) lên `Part`.
-5. **Kiểm tra cú pháp nguy hiểm:** Đảm bảo mọi lời gọi `CFrame.Angles(rx, ry, rz)` đủ 3 tham số và mọi `ModuleScript` đều có `return` hợp lệ ở cuối file.
+### 3.2. Sáu Chốt Chặn An Toàn Kỹ Thuật (Bắt buộc chạy tự động sau mỗi Task)
+Để chủ dự án yên tâm cho AI chạy tự động hết cả chặng mà mở Studio lên không gặp lỗi sập ngầm như bản v1, script `tools/verify_project.ps1` sẽ tự động kiểm tra đủ **6 bước**:
+1. **Kiểm tra kích thước file:** Báo lỗi ngay nếu bất kỳ file `.luau` nào vượt quá **350 dòng**.
+2. **Quét chặn API nguy hiểm:** Cấm `Instance.new("Ball"|"Cylinder"|"Block"|"Wedge")`, cấm gán 13 vật liệu Terrain lên `BasePart`, kiểm tra `CFrame.Angles(rx, ry, rz)` đủ 3 tham số, cấm viết comment giữ chỗ cắt xén code, và bắt buộc mọi `ModuleScript` có `return` ở cuối file.
+3. **Rojo Sourcemap:** Ánh xạ cây dự án ra `build/sourcemap.json` chuẩn xác.
+4. **`luau-lsp analyze` + `globalTypes.d.luau`:** Đối chiếu toàn bộ mã nguồn với từ điển API chính chủ của Roblox Engine (bắt sai tên thuộc tính, sai kiểu tham số, gọi nhầm `require`).
+5. **`selene` Linter (`std = "roblox"`):** Bắt sạch biến chưa khai báo, biến gán nhầm và lỗi cú pháp Luau.
+6. **Rojo Build Pass:** Xuất thành công `build/mighty-angler-dev.rbxlx` với mã thoát `0`.
+
+### 3.3. Quy chuẩn Giao diện & Công cụ Test nhanh cho Chủ dự án
+- **Visual Vibe (Design System chốt từ đầu):** Phong cách Roblox Simulator ăn khách (kiểu *Pet Simulator 99 / Arm Wrestle Simulator*) — khung tương phản cao, viền `UIStroke` dày sắc nét, bo góc tròn mềm, nút bấm có hiệu ứng phóng nhẹ khi rê chuột & nảy lò xo khi bấm, chữ có viền dễ đọc trên cả điện thoại. Bảng màu 6 bậc độ hiếm đồng nhất toàn game: *Common (Xám) → Uncommon (Xanh lá) → Rare (Xanh dương) → Epic (Tím) → Legendary (Vàng kim) → Boss/Cosmic (Đỏ rực / Cầu vồng)*.
+- **Bảng nút `[DEV]` chỉ hiện trong Roblox Studio:** Giúp chủ dự án kiểm tra trọn vẹn 1 chặng chỉ trong 3–5 phút bằng các nút bấm 1 chạm (`+Gold`, `+Strength`, `+Gems`, `Force Boss Next Cast`, `Trigger Event`, `Reset Data`) mà không cần ngồi cày chay hàng giờ hay gõ lệnh Command Bar. Khi Publish lên Roblox, bảng này và remote tương ứng tự động khóa 100% đối với người chơi thường.
+- **Băng báo lỗi trực quan `StudioErrorReporter`:** Trong Studio, nếu có bất kỳ lỗi đỏ nào phát sinh, game tự hiện thông báo nhỏ trên góc màn hình để chủ dự án chụp ảnh gửi AI xử lý trong vài giây.
 
 ---
 
@@ -193,8 +206,8 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
   - Cần câu gắn trên tay nhân vật, Animation vung cần & giật cá, dây câu + phao nhấp nhô; cá thường tự giật lên nảy mô hình cá 3D + chữ `+Gold`, cá Rare/Boss bật thanh `MinigameBar` (có hưởng lợi thế từ Strength); tích hợp nút `Auto-Fish`.
 - [ ] **M1.5 — Hệ thống Tập Gym Click chuột + Auto-Train + Animation Tập luyện:**
   - Bước vào 3 máy Gym bấm chuột diễn Animation nâng tạ / chạy bộ / đẩy ngực thật + tia sáng + số bay `+Strength`; bật nút `Auto-Train` tự tập mượt mà theo chuẩn kiểm tra của Server.
-- [ ] **M1.6 — Giao diện Tiếng Anh Đảo 1 (`Theme`, `HudPanel`, `BagPanel` cá, `ShopPanel` cần câu, `PromptController`):**
-  - Thiết kế UI hiện đại, bo góc, chữ rõ ràng trên cả PC & Mobile; tương tác quầy Sell All, mua & trang bị 6 Cần câu, đóng gói `build/mighty-angler-dev.rbxlx` sẵn sàng cho **Lần Check Studio 1**.
+- [ ] **M1.6 — Giao diện Tiếng Anh Đảo 1 (`Theme`, `HudPanel`, `BagPanel`, `ShopPanel`, `DevTestPanel`, `StudioErrorReporter`):**
+  - Thiết kế UI chuẩn Simulator hiện đại (nút nhún lò xo, viền `UIStroke`, chữ rõ trên PC & Mobile); tương tác quầy Sell All, mua & trang bị 6 Cần câu, gắn sẵn bảng nút **`[DEV]` chỉ hiện trong Studio** (`+Gold`, `+Strength`, `Force Boss`, `Reset Save`) + hộp đen báo lỗi trực quan `StudioErrorReporter`, đóng gói `build/mighty-angler-dev.rbxlx` sẵn sàng cho **Lần Check Studio 1**.
 
 ---
 

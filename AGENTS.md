@@ -16,14 +16,14 @@ Hướng dẫn chuẩn cho **Antigravity** và **OpenAI Codex** khi cùng làm v
 - `docs/PLANNING_BRIEF.md` — Tài liệu tóm tắt bài học từ bản v1 cũ.
 - `PROGRESS.md` — Sổ bàn giao tiến độ dùng chung giữa Antigravity ↔ Codex.
 - `default.project.json` — Cấu hình ánh xạ Rojo (`src/shared` → `ReplicatedStorage/Shared`, `src/server` → `ServerScriptService/Server`, `src/client` → `StarterPlayerScripts/Client`).
-- `tools/rojo.exe` — Công cụ build/sync Rojo cục bộ (7.7.1).
+- `tools/` — Bộ công cụ kiểm định cục bộ gồm `rojo.exe` (7.7.1), `luau-lsp.exe` (1.70.1 + `globalTypes.d.luau`), `selene.exe` (0.32.0), `install_tools.ps1` và `verify_project.ps1`.
 - `build/mighty-angler-dev.rbxlx` — File place đóng gói sẵn để mở test trên Roblox Studio.
-- `run.bat` — Chạy 1-click trên Windows (build `.rbxlx` + bật `rojo serve`).
-- `logs/app.log` — Nhật ký lỗi khi build/sync.
+- `run.bat` — Chạy 1-click trên Windows (chạy 6 bước kiểm tra + build `.rbxlx` + bật `rojo serve`).
+- `logs/app.log` — Nhật ký kiểm tra & lỗi khi build/sync.
 
-### Lệnh verify bắt buộc (exit code `0` = đạt)
+### Lệnh verify bắt buộc sau MỖI task (exit code `0` = đạt đủ 6 chốt chặn)
 ```powershell
-tools\rojo.exe build default.project.json -o build\mighty-angler-dev.rbxlx
+powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 ```
 
 ---
