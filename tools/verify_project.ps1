@@ -82,10 +82,28 @@ foreach ($file in $luauFiles) {
         if (($codePart -match $terrainMatRegex) -and ($codePart -notmatch "Terrain")) {
             $violations += "${rel}:$($i+1) Gan vat lieu chi danh cho Terrain ('Enum.Material.$($Matches[1])') len BasePart se gay crash Studio!"
         }
-        if ($codePart -match 'CFrame\.Angles\(([^)]*)\)') {
-            $argsText = $Matches[1].Trim()
-            if (($argsText -ne "") -and ($argsText -notmatch "unpack") -and (($argsText -split ",").Count -lt 3)) {
-                $violations += "${rel}:$($i+1) CFrame.Angles(...) truyen thieu tham so (bat buoc du 3 goc rx, ry, rz)!"
+        $anglesIdx = $codePart.IndexOf("CFrame.Angles(")
+        if ($anglesIdx -ge 0) {
+            $startArgs = $anglesIdx + "CFrame.Angles(".Length
+            $depth = 1
+            $topCommas = 0
+            $endArgs = -1
+            for ($chIdx = $startArgs; $chIdx -lt $codePart.Length; $chIdx++) {
+                $ch = $codePart[$chIdx]
+                if ($ch -eq '(') { $depth++ }
+                elseif ($ch -eq ')') {
+                    $depth--
+                    if ($depth -eq 0) { $endArgs = $chIdx; break }
+                }
+                elseif ($ch -eq ',' -and $depth -eq 1) {
+                    $topCommas++
+                }
+            }
+            if ($endArgs -gt $startArgs) {
+                $innerArgs = $codePart.Substring($startArgs, $endArgs - $startArgs).Trim()
+                if (($innerArgs -ne "") -and ($innerArgs -notmatch "unpack") -and ($topCommas -lt 2)) {
+                    $violations += "${rel}:$($i+1) CFrame.Angles(...) truyen thieu tham so (bat buoc du 3 goc rx, ry, rz)!"
+                }
             }
         }
     }
