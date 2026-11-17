@@ -5,14 +5,15 @@ Hướng dẫn chuẩn cho **Antigravity** và **OpenAI Codex** khi cùng làm v
 ---
 
 ## 1. Tổng quan dự án
-- **Tên dự án:** Mighty Angler (v2 Rebuild)
-- **Thể loại:** Game Roblox Simulator (**Luau + Rojo**) làm lại từ đầu theo hướng **Vertical Slice (làm cuốn chiếu từng phần chơi thật)**, kiểm thử trực tiếp trên Roblox Studio từng chặng nhỏ.
-- **Trạng thái nguồn code:** Giai đoạn 0 (Chuẩn bị lập `PLAN.md` — CHƯA viết code gameplay cho đến khi người dùng chốt Plan).
+- **Tên dự án:** Mighty Angler (v2 Rebuild — Bản Launch 5 Đảo, mở rộng dần qua Update)
+- **Thể loại:** Game Roblox Simulator (**Luau + Rojo**), giao diện Tiếng Anh chuẩn quốc tế, đồ họa Low-Poly code + hỗ trợ `Assets Override` từ Toolbox.
+- **Chiến lược triển khai:** Chạy tự động trọn gói theo **3 Chặng lớn** ghi trong `PLAN.md` (xong trọn 1 chặng mới dừng để người dùng mở Roblox Studio kiểm tra 1 lượt).
 
 ---
 
 ## 2. Cấu trúc thư mục & Lệnh kiểm tra
-- `docs/PLANNING_BRIEF.md` — Tóm tắt phần tinh hoa & bài học từ bản v1 để bàn lập `PLAN.md` mới.
+- `PLAN.md` — **Nguồn sự thật duy nhất** về thiết kế gameplay, thông số 5 đảo, kiến trúc file và lộ trình 3 Chặng.
+- `docs/PLANNING_BRIEF.md` — Tài liệu tóm tắt bài học từ bản v1 cũ.
 - `PROGRESS.md` — Sổ bàn giao tiến độ dùng chung giữa Antigravity ↔ Codex.
 - `default.project.json` — Cấu hình ánh xạ Rojo (`src/shared` → `ReplicatedStorage/Shared`, `src/server` → `ServerScriptService/Server`, `src/client` → `StarterPlayerScripts/Client`).
 - `tools/rojo.exe` — Công cụ build/sync Rojo cục bộ (7.7.1).
