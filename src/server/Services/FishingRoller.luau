@@ -32,6 +32,19 @@ function FishingRoller.FindWaterCastPoint(player: Player, islandId: number): Vec
 
 	local clampedX = math.clamp(forwardTarget.X, wCenter.X - half.X + 4, wCenter.X + half.X - 4)
 	local clampedZ = math.clamp(forwardTarget.Z, wCenter.Z - half.Z + 4, wCenter.Z + half.Z - 4)
+
+	-- Dam bao phao cau luon roi ra mat nuoc thoang ngoai ria cau go (khong bi khuat gam cau)
+	local relX = clampedX - wCenter.X
+	local dockEndZ = wCenter.Z + 10 -- Tuong ung Z ~ 124 so voi tam dao
+	if math.abs(relX) < 15.5 and clampedZ < dockEndZ then
+		if pPos.Z > (wCenter.Z - 18) then
+			clampedZ = dockEndZ + 4
+		else
+			local side = if relX >= 0 then 1 else -1
+			clampedX = wCenter.X + side * 16.5
+		end
+	end
+
 	local nearestWater = Vector3.new(clampedX, wCenter.Y + half.Y, clampedZ)
 
 	local horizDist = Vector3.new(pPos.X - nearestWater.X, 0, pPos.Z - nearestWater.Z).Magnitude

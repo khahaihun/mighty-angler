@@ -1,6 +1,7 @@
 --!strict
 -- Net.luau: Manifest duy nhat quan ly toan bo RemoteEvent giua Client va Server
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -118,8 +119,29 @@ function Net.FireAllClients(remoteName: string, ...: any)
 	Net.GetEvent(remoteName):FireAllClients(...)
 end
 
+local rateBuckets: { [Player]: { windowStart: number, count: number } } = {}
+local MAX_REMOTE_CALLS_PER_SEC = 32
+
+if RunService:IsServer() then
+	Players.PlayerRemoving:Connect(function(player: Player)
+		rateBuckets[player] = nil
+	end)
+end
+
 function Net.OnServerEvent(remoteName: string, callback: (Player, ...any) -> ()): RBXScriptConnection
-	return Net.GetEvent(remoteName).OnServerEvent:Connect(callback)
+	return Net.GetEvent(remoteName).OnServerEvent:Connect(function(player: Player, ...: any)
+		local now = os.clock()
+		local bucket = rateBuckets[player]
+		if not bucket or (now - bucket.windowStart) >= 1.0 then
+			rateBuckets[player] = { windowStart = now, count = 1 }
+		else
+			bucket.count += 1
+			if bucket.count > MAX_REMOTE_CALLS_PER_SEC then
+				return
+			end
+		end
+		callback(player, ...)
+	end)
 end
 
 function Net.OnClientEvent(remoteName: string, callback: (...any) -> ()): RBXScriptConnection

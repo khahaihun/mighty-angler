@@ -13,6 +13,9 @@ local PerkService = require(script.Parent.PerkService)
 local CurrencyService = require(script.Parent.CurrencyService)
 local ShopAndItemsService = require(script.Parent.ShopAndItemsService)
 local FishingService = require(script.Parent.FishingService)
+local IslandService = require(script.Parent.IslandService)
+local PetsService = require(script.Parent.PetsService)
+local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 
 local DevTestService = {}
 
@@ -94,6 +97,9 @@ function DevTestService.Init()
 		elseif rawAction == "ResetSave" then
 			FishingService.CancelSession(player, true)
 			DataService.ResetProfileForDev(player)
+			IslandService.TeleportCharacterToIsland(player, 1)
+			RodVisuals.EquipRodOnCharacter(player, "Twig")
+			PetsService.SyncVisualsAndClient(player)
 			ShopAndItemsService.PushInventory(player)
 			CurrencyService.PushCurrencies(player)
 			Net.FireClient(player, Net.ServerToClient.Toast, {

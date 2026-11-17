@@ -219,9 +219,9 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
   - Tạo config cá/boss/giá tiền cho `Island2`..`Island5` và dựng cảnh quan riêng biệt (San hô phát sáng, Đầm lầy nấm tím, Núi lửa dung nham, Thiên hà tinh thể + cổng hẹn bản Update kế tiếp); hoàn thiện `IslandService` mở khóa & dịch chuyển.
 - [x] **M2.2 — Mồi câu (Bait), Đồ tập Gym (Gear) & Lọ thuốc (Potions):**
   - Hoàn thiện `BaitConfig`, `GymGearConfig`, `PotionsConfig`, `ShopAndItemsService`; nối toàn bộ hệ số vào `BuffAggregator`; mở rộng đủ 3 tab cho `ShopPanel` và `BagPanel`, hiển thị icon thuốc/mồi đang kích hoạt trên HUD.
-- [ ] **M2.3 — Hệ thống 10 Trứng Pet (Gold & Gems) & Mô hình Pet bay theo sau lưng:**
+- [x] **M2.3 — Hệ thống 10 Trứng Pet (Gold & Gems) & Mô hình Pet bay theo sau lưng:**
   - Hoàn thiện `PetsConfig` (2 trứng × 5 đảo), `PetsService`, mô hình 3D Low-Poly cho các dòng Pet (bay/nhảy mượt mà 2 bên vai nhân vật), cùng giao diện `PetsPanel` và trụ ấp trứng trực quan tại mỗi đảo.
-- [ ] **M2.4 — Cân bằng Kinh tế 5 Đảo & Đóng gói Check Studio Lần 2:**
+- [x] **M2.4 — Cân bằng Kinh tế 5 Đảo & Đóng gói Check Studio Lần 2:**
   - Kiểm toán đường cong giá cá / tốc độ tập Gym / giá mở Đảo / mốc Cần câu từ Đảo 1 đến Đảo 5 đảm bảo mượt, không bị kẹt tiền hay nhảy vọt vô lý; xuất bản build cho **Lần Check Studio 2**.
 
 ---
@@ -230,13 +230,13 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 > **Mục tiêu:** Đưa game đạt độ hoàn thiện thương mại sẵn sàng Publish lên Roblox, giữ chân người chơi lâu dài và tối ưu doanh thu Robux.
 > **Nghiệm thu Studio Lần 3 (~10 phút):** Tổng duyệt Chuyển sinh, Sổ sưu tập, Sự kiện 30 phút, Bảng xếp hạng, Âm thanh và các nút mua Gamepass.
 
-- [ ] **M3.1 — Chuyển sinh (Rebirth) & Sổ sưu tập (Fish/Pet Index):**
+- [x] **M3.1 — Chuyển sinh (Rebirth) & Sổ sưu tập (Fish/Pet Index):**
   - Hoàn thiện chức năng Rebirth cuối Đảo 5 (nhận Gems + gói thuốc + nhân vĩnh viễn) và Sổ sưu tập thưởng Gems mỗi khi câu được loài cá mới hoặc mở trúng Pet mới.
-- [ ] **M3.2 — Thành tựu (Achievements), Quà đăng nhập & Nhiệm vụ hằng ngày:**
+- [x] **M3.2 — Thành tựu (Achievements), Quà đăng nhập & Nhiệm vụ hằng ngày:**
   - Hoàn thiện `AchievementsConfig`, bảng tiến độ nhận Gems/Potions tự động, quà điểm danh theo chuỗi ngày và 3 nhiệm vụ đổi mới mỗi ngày trong `ProgressPanel`.
-- [ ] **M3.3 — Sự kiện Toàn Server 30 phút, Bảng xếp hạng Đảo 1 & Hướng dẫn Tân thủ:**
+- [x] **M3.3 — Sự kiện Toàn Server 30 phút, Bảng xếp hạng Đảo 1 & Hướng dẫn Tân thủ:**
   - Vòng quay sự kiện tự động mỗi 30 phút (`Lucky Tide`, `Mutation Surge`, `Iron Will`...), 2 bảng Vinh danh Top Strength & Top Gold tại Đảo 1, cùng mũi tên hướng dẫn nhẹ nhàng cho người mới vào game lần đầu.
-- [ ] **M3.4 — Âm thanh (SFX/BGM), Cửa hàng Gamepass Thương mại & Rà soát Bảo mật/Hiệu năng:**
+- [x] **M3.4 — Âm thanh (SFX/BGM), Cửa hàng Gamepass Thương mại & Rà soát Bảo mật/Hiệu năng:**
   - Lắp đặt hiệu ứng âm thanh sống động (`SoundAndFxController`), hoàn thiện tab/nút mua nhanh 4 gói Gamepass (`Auto-Fish`, `x2 Gold`, `x2 Strength`, `+2 Pet Equip`), kiểm tra chống spam/hack trên toàn bộ RemoteEvent và tối ưu FPS trên điện thoại trước **Lần Check Studio 3 (Bản Phát Hành)**.
 
 ---
