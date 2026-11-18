@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 $paths = @{
+ CatchControl='src/shared/CatchControl.luau'
  FishingService='src/server/Services/FishingService.luau'
  FishingController='src/client/Controllers/FishingController.luau'
  FishingCastState='src/server/Services/FishingCastState.luau'
