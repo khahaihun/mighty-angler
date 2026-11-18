@@ -19,6 +19,7 @@ local BuffAggregator = require(script.Parent.BuffAggregator)
 local CurrencyService = require(script.Parent.CurrencyService)
 local ShopAndItemsService = require(script.Parent.ShopAndItemsService)
 local FishingRoller = require(script.Parent.FishingRoller)
+local FishingCastState = require(script.Parent.FishingCastState)
 local FishingSessionManager = require(script.Parent.FishingSessionManager)
 
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
@@ -28,9 +29,6 @@ local WhirlpoolManager = require(script.Parent.Parent.World.WhirlpoolManager)
 local FishingService = {}
 
 local forcedRarityDev: { [Player]: string } = {}
-local autoFishActive: { [Player]: boolean } = {}
-local chargeStartedAt: { [Player]: number } = {}
-local nextAllowedAutoCastAt: { [Player]: number } = {}
 local catchRewardHooks: { (Player, Types.FishDef, Types.MutationName) -> () } = {}
 
 function FishingService.OnFishCaught(callback: (Player, Types.FishDef, Types.MutationName) -> ())
@@ -39,13 +37,6 @@ end
 
 function FishingService.SetForcedRarityForDev(player: Player, rarity: string?)
 	if rarity then forcedRarityDev[player] = rarity else forcedRarityDev[player] = nil end
-end
-
-local function markAutoCooldownOnEnd(player: Player)
-	local cd = if PerkService.HasGamepass(player, "AutoFish")
-		then (GameConfig.AUTO_FISH_PRO_RECAST_SEC - 0.06)
-		else (GameConfig.AUTO_FISH_FREE_RECAST_SEC - 0.08)
-	nextAllowedAutoCastAt[player] = os.clock() + math.max(0.25, cd)
 end
 
 local function checkVoidScytheWhirlpoolDrop(player: Player, profile: Types.PlayerProfile, sess: FishingSessionManager.CastSession)
@@ -64,8 +55,11 @@ local function checkVoidScytheWhirlpoolDrop(player: Player, profile: Types.Playe
 end
 
 local function finalizeFishAward(player: Player, sess: FishingSessionManager.CastSession)
-	markAutoCooldownOnEnd(player)
 	local profile = DataService.Get(player)
+ if not profile or DataService.IsTransactionLocked(player, true) then
+  FishingCastState.Reset(player, "ReadOnly")
+  return
+ end
 	local fishDef = sess.rolledFish
 	if not profile or not fishDef then return end
 
@@ -104,7 +98,7 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 
 	Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
 	Net.FireClient(player, Net.ServerToClient.FishingCatchResult, {
-		success = true, uid = entry.uid, fishId = fishDef.id, fishName = fishDef.name,
+		sessionId = sess.sessionId, success = true, uid = entry.uid, fishId = fishDef.id, fishName = fishDef.name,
 		rarity = fishDef.rarity, sizeTier = sizeTier, weight = weight, mutation = mutName,
 		sellValue = sellValue, locked = shouldAutoLock, strengthGained = gainedStr,
 		bagCount = #profile.fishBag, bagCap = GameConfig.BAG_CAPACITY,
@@ -120,37 +114,42 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 end
 
 function FishingService.CancelSession(player: Player, silent: boolean?, customReason: string?)
-	FishingSessionManager.CloseSessionOnce(player, nil, customReason or "Cancel", silent)
+ FishingCastState.TakeCharge(player)
+ local reason = customReason or "Cancel"
+ local closed = FishingSessionManager.CloseSessionOnce(player, nil, reason, silent)
+ if not closed then FishingCastState.Reset(player, reason) end
 end
 
-local function triggerValidatedLandBounce(player: Player, rawHitPos: any)
-	local hitPos = FishingRoller.IsWithinLandBounceRange(player, rawHitPos)
-	if not hitPos then return end
+local function triggerValidatedLandBounce(player: Player, hitPos: Vector3)
 	RodVisuals.PlayLandBounce(player, hitPos)
 	Net.FireClient(player, Net.ServerToClient.FishingLandBounce, { hitPos = hitPos })
+	FishingCastState.Reset(player, "LandBounce")
 end
 
 function FishingService.StartCast(player: Player, aimPayload: any?)
 	local profile = DataService.Get(player)
 	if not profile or FishingSessionManager.Get(player) ~= nil then return end
+ if DataService.IsTransactionLocked(player, true) then
+  FishingCastState.SetAuto(player, false)
+  FishingCastState.Reset(player, "ReadOnly")
+  return
+ end
 
+ local character = player.Character
+ local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+ if not character or (humanoid and humanoid.Health <= 0) then FishingCastState.Reset(player, "Died"); return end
 	local isAuto = (type(aimPayload) == "table" and aimPayload.castMode == "Auto")
 	if isAuto then
-		if not autoFishActive[player] or os.clock() < (nextAllowedAutoCastAt[player] or 0) then return end
-		if profile.equippedHotbarSlot ~= 1 then ShopAndItemsService.SetHotbarSlot(player, 1) end
+		if not FishingCastState.CanAutoCast(player) then FishingCastState.Reply(player); return end
+		if profile.equippedHotbarSlot ~= 1 then FishingCastState.SetAuto(player, false); FishingCastState.Reply(player); return end
 	elseif profile.equippedHotbarSlot ~= 1 then
 		return
 	end
 
-	if type(aimPayload) == "table" and aimPayload.hitWater == false then
-		chargeStartedAt[player] = nil
-		triggerValidatedLandBounce(player, aimPayload.targetPos)
-		return
-	end
 
 	if #profile.fishBag >= GameConfig.BAG_CAPACITY then
 		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Error", text = "Fish Bag is full! Talk to Captain Barnaby to sell fish!" })
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { bagFull = true })
+		FishingCastState.Reset(player, "BagFull")
 		return
 	end
 
@@ -160,7 +159,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 	local candidates = FishingRoller.GetEligibleCandidates(islandDef, effRod.power, effRod.maxWeight)
 	if #candidates == 0 and forcedRarityDev[player] == nil then
 		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Error", text = "Your rod is too weak for these waters! Equip a stronger rod!" })
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { weakRod = true })
+		FishingCastState.Reset(player, "WeakRod")
 		return
 	end
 
@@ -172,7 +171,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 			player, islandId, if type(aimPayload) == "table" then aimPayload.targetPos else nil
 		)
 		if bounceObstaclePos then
-			chargeStartedAt[player] = nil
+			FishingCastState.TakeCharge(player)
 			triggerValidatedLandBounce(player, bounceObstaclePos)
 			return
 		end
@@ -180,12 +179,12 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 	end
 
 	if not waterPos then
-		chargeStartedAt[player] = nil
+		FishingCastState.TakeCharge(player)
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Info",
 			text = if isAuto then "Walk closer to the pier or beach to use Auto-Fish!" else "Stand near the ocean & aim directly at open water to cast!",
 		})
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { tooFar = true })
+		FishingCastState.Reset(player, "NoWater")
 		return
 	end
 
@@ -197,8 +196,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 			castMode = "AutoFree"
 		end
 	else
-		local started = chargeStartedAt[player]
-		chargeStartedAt[player] = nil
+		local started = FishingCastState.TakeCharge(player)
 		castMode, castLuckAdd, castLureAdd = FishingRoller.ResolveManualHoldBonuses(
 			started, if type(aimPayload) == "table" then aimPayload.holdRatio else nil
 		)
@@ -241,8 +239,8 @@ function FishingService.Init()
 		task.spawn(function()
 			local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
 			if hum and hum:IsA("Humanoid") then
-				if hum.Health <= 0 then FishingSessionManager.CloseSessionOnce(player, nil, "Died", false)
-				else hum.Died:Connect(function() FishingSessionManager.CloseSessionOnce(player, nil, "Died", false) end) end
+				if hum.Health <= 0 then FishingService.CancelSession(player, false, "Died")
+				else hum.Died:Connect(function() FishingService.CancelSession(player, false, "Died") end) end
 			end
 			task.wait(0.15)
 			ShopAndItemsService.SyncCharacterHandVisuals(player)
@@ -256,26 +254,34 @@ function FishingService.Init()
 
 	ShopAndItemsService.OnHotbarSlotChanged(function(player: Player, slot: number)
 		if slot ~= 1 then
-			autoFishActive[player] = false
+			FishingCastState.SetAuto(player, false)
 			FishingSessionManager.CloseSessionOnce(player, nil, "Unequip", false)
 		end
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.FishingChargeStart, function(p: Player) chargeStartedAt[p] = os.clock() end)
+	Net.OnServerEvent(Net.ClientToServer.FishingChargeStart, function(p: Player)
+		local profile = DataService.Get(p)
+		if profile and profile.equippedHotbarSlot == 1 and not FishingSessionManager.Get(p) then FishingCastState.StartCharge(p) end
+	end)
 	Net.OnServerEvent(Net.ClientToServer.FishingCast, function(p: Player) FishingService.StartCast(p, { castMode = "Auto", hitWater = true }) end)
 	Net.OnServerEvent(Net.ClientToServer.FishingCastWithAim, function(p: Player, payload: any) FishingService.StartCast(p, payload) end)
 	Net.OnServerEvent(Net.ClientToServer.FishingCancel, function(p: Player)
-		autoFishActive[p] = false
+		FishingCastState.SetAuto(p, false)
 		FishingService.CancelSession(p, false, "ManualCancel")
 	end)
 	Net.OnServerEvent(Net.ClientToServer.FishingMinigameStrike, function(p: Player, sid: any, r: any, elapsed: any)
 		FishingSessionManager.HandleStrike(p, sid, r, elapsed, finalizeFishAward)
-		if FishingSessionManager.Get(p) == nil then markAutoCooldownOnEnd(p) end
 	end)
-	Net.OnServerEvent(Net.ClientToServer.SetAutoFish, function(p: Player, rawEnable: any) autoFishActive[p] = (rawEnable == true) end)
+	Net.OnServerEvent(Net.ClientToServer.SetAutoFish, function(p: Player, rawEnable: any, requestId: any)
+  local profile = DataService.Get(p)
+  local active = rawEnable == true and profile ~= nil
+  local accepted = FishingCastState.ApplyRequest(p, active, requestId)
+  if accepted and active and profile and profile.equippedHotbarSlot ~= 1 then ShopAndItemsService.SetHotbarSlot(p, 1) end
+  FishingCastState.Reply(p)
+ end)
 
 	Players.PlayerRemoving:Connect(function(p: Player)
-		forcedRarityDev[p] = nil; autoFishActive[p] = nil; chargeStartedAt[p] = nil; nextAllowedAutoCastAt[p] = nil
+		forcedRarityDev[p] = nil; FishingCastState.Forget(p)
 	end)
 end
 

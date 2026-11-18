@@ -10,6 +10,7 @@ local CatchControl = require(Shared:WaitForChild("CatchControl"))
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
 
+local FishingCastState = require(script.Parent.FishingCastState)
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 
 export type CastSession = {
@@ -93,6 +94,7 @@ function FishingSessionManager.CloseSessionOnce(
 		return nil
 	end
 	sessions[player] = nil
+	FishingCastState.Close(player, cur.sessionId, reason)
 	RodVisuals.ClearBobber(player)
 
 	if not silent then
@@ -113,8 +115,6 @@ function FishingSessionManager.CloseSessionOnce(
 				kind = "Error",
 				text = "The rare fish slipped off the hook! Train Strength or Steadiness!",
 			})
-		elseif reason ~= "Win" then
-			Net.FireClient(player, Net.ServerToClient.FishingStateReset, { reason = reason })
 		end
 	end
 	return cur

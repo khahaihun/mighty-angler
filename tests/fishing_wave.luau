@@ -6,7 +6,7 @@ return function(sources)
  local function signal(setter)
   return {Connect=function(_, fn) setter(fn); return {Disconnect=function() end} end}
  end
- local config = {SizeTiers={{name="Titanic",chance=1,weightMult=5,valueMult=4}}}
+ local config = {PERFECT_HOLD_MIN=.78,PERFECT_HOLD_MAX=.95,PERFECT_CAST_LUCK_ADD=.25,PERFECT_CAST_LURE_ADD=.15,SizeTiers={{name="Titanic",chance=1,weightMult=5,valueMult=4}}}
  local util = {PickWeighted=function(items) return items[1] end, TriangleBounce=function() return 0.5 end}
  local services = {
   ReplicatedStorage=node("ReplicatedStorage"), Players={}, Workspace={},
@@ -25,6 +25,13 @@ return function(sources)
   local fn=assert(loadstring(sources[name], "@"..name)); setfenv(fn,env); return fn()
  end
  local roller=load("FishingRoller")
+ for _,ratio in ipairs({.78,.95,.779,.951}) do
+  clock=10+ratio*1.15
+  local mode,luck,lure=roller.ResolveManualHoldBonuses(10, .9)
+  local perfect=ratio>=.78 and ratio<=.95
+  assert(mode==(if perfect then "ManualPerfect" else "ManualNormal"),"server hold boundary, client claim ignored")
+  assert(luck==(if perfect then .25 else 0) and lure==(if perfect then .15 else 0))
+ end
  local fish={minWeight=5,maxWeight=22}
  for _, max in ipairs({10,17}) do
   local tier, kg, value=roller.RollSizeTierAndWeight(fish,max,1)

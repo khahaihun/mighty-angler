@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
+local FishingRayFilter = require(Shared:WaitForChild("FishingRayFilter"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local FishingController = require(script.Parent.FishingController)
@@ -53,25 +54,7 @@ local function raycastPointerAim(screenPos: Vector2, isTouchCoord: boolean): (bo
 		then cam:ScreenPointToRay(screenPos.X, screenPos.Y)
 		else cam:ViewportPointToRay(screenPos.X, screenPos.Y)
 
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.IgnoreWater = false
-
-	local excludeList: { Instance } = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Character then
-			table.insert(excludeList, p.Character)
-		end
-	end
-	local wpFolder = Workspace:FindFirstChild("OceanWhirlpools")
-	if wpFolder then
-		table.insert(excludeList, wpFolder)
-	end
-	local petsFolder = Workspace:FindFirstChild("ClientRenderedPets")
-	if petsFolder then
-		table.insert(excludeList, petsFolder)
-	end
-	params.FilterDescendantsInstances = excludeList
+	local params = FishingRayFilter.Create()
 
 	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 320, params)
 	if not hit then

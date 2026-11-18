@@ -1,13 +1,13 @@
 --!strict
 -- FishingRoller.luau: Server Raycast xac thuc Mat Nuoc vs Vat Can, Cong kep (Power + MaxKg), Titan Cap & Roll Ca
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Util = require(Shared:WaitForChild("Util"))
+local FishingRayFilter = require(Shared:WaitForChild("FishingRayFilter"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local FishingRoller = {}
@@ -31,103 +31,46 @@ local function getIslandWaterPart(islandId: number): BasePart?
 	return nil
 end
 
-local function buildServerWaterRayParams(): RaycastParams
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.IgnoreWater = false
-	local exclude: { Instance } = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Character then
-			table.insert(exclude, p.Character)
-		end
-	end
-	local wp = Workspace:FindFirstChild("OceanWhirlpools")
-	if wp then table.insert(exclude, wp) end
-	params.FilterDescendantsInstances = exclude
-	return params
-end
-
--- Tra ve: (waterPos: Vector3?, obstacleBouncePos: Vector3?)
+-- All casts use the first real server hit. Client material and bounce position are never trusted.
 function FishingRoller.ValidateAimedWaterPoint(player: Player, islandId: number, rawTarget: any): (Vector3?, Vector3?)
-	if not FishingRoller.IsFiniteVector3(rawTarget) then
-		return nil, nil
-	end
-	local char = player.Character
-	local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
-	local waterPart = getIslandWaterPart(islandId)
-	if not (root and root:IsA("BasePart")) or not waterPart then
-		return nil, nil
-	end
-
-	local target = rawTarget :: Vector3
-	local pPos = root.Position
-	local horizDist = Vector3.new(pPos.X - target.X, 0, pPos.Z - target.Z).Magnitude
-	if horizDist > GameConfig.FISHING_MAX_WATER_DIST then
-		return nil, nil
-	end
-
-	local half = waterPart.Size * 0.5
-	local wCenter = waterPart.Position
-	if math.abs(target.X - wCenter.X) > half.X or math.abs(target.Z - wCenter.Z) > half.Z then
-		return nil, nil
-	end
-
-	local surfacePos = Vector3.new(target.X, wCenter.Y + half.Y, target.Z)
-	local params = buildServerWaterRayParams()
-
-	-- 1. Kiem tra duong nem tu vai nguoi choi toi diem nuoc: neu trung Cau go / Da truoc -> nay phao!
-	local origin = pPos + Vector3.new(0, 2.2, 0)
-	local toSurface = (surfacePos - Vector3.new(0, 0.25, 0)) - origin
-	local lineHit = Workspace:Raycast(origin, toSurface, params)
-	if lineHit and lineHit.Material ~= Enum.Material.Water then
-		return nil, lineHit.Position
-	end
-
-	-- 2. Kiem tra thang dung tu tren xuong dam bao diem roi thuc su la Terrain Water (khong bi che gam cau!)
-	local skyCheck = Workspace:Raycast(surfacePos + Vector3.new(0, 18, 0), Vector3.new(0, -24, 0), params)
-	if skyCheck and skyCheck.Material ~= Enum.Material.Water then
-		return nil, skyCheck.Position
-	end
-	if not skyCheck then
-		return nil, nil
-	end
-
-	return Vector3.new(surfacePos.X, skyCheck.Position.Y, surfacePos.Z), nil
+ if not FishingRoller.IsFiniteVector3(rawTarget) then return nil, nil end
+ local char = player.Character
+ local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
+ local water = getIslandWaterPart(islandId)
+ if not root or not root:IsA("BasePart") or not water then return nil, nil end
+ local origin = root.Position + Vector3.new(0, 2.2, 0)
+ local target = rawTarget :: Vector3
+ local delta = target - origin
+ if delta.Magnitude < 0.1 or delta.Magnitude > GameConfig.FISHING_MAX_WATER_DIST or target.Y > origin.Y then return nil, nil end
+ local hit = Workspace:Raycast(origin, delta + delta.Unit * 0.5, FishingRayFilter.Create())
+ if not hit then return nil, nil end
+ if hit.Material ~= Enum.Material.Water then return nil, hit.Position end
+ local half, center = water.Size * 0.5, water.Position
+ local pos = hit.Position
+ if math.abs(pos.X - center.X) > half.X or math.abs(pos.Z - center.Z) > half.Z
+  or math.abs(pos.Y - (center.Y + half.Y)) > 2 then return nil, nil end
+ return pos, nil
 end
 
 function FishingRoller.FindWaterCastPoint(player: Player, islandId: number): Vector3?
-	local char = player.Character
-	local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
-	local waterPart = getIslandWaterPart(islandId)
-	if not (root and root:IsA("BasePart")) or not waterPart then
-		return nil
-	end
-
-	local pPos = root.Position
-	local forwardTarget = pPos + root.CFrame.LookVector * 20
-	local half = waterPart.Size * 0.5
-	local wCenter = waterPart.Position
-
-	local clampedX = math.clamp(forwardTarget.X, wCenter.X - half.X + 4, wCenter.X + half.X - 4)
-	local clampedZ = math.clamp(forwardTarget.Z, wCenter.Z - half.Z + 4, wCenter.Z + half.Z - 4)
-
-	local relX = clampedX - wCenter.X
-	local dockEndZ = wCenter.Z + 10
-	if math.abs(relX) < 15.5 and clampedZ < dockEndZ then
-		if pPos.Z > (wCenter.Z - 18) then
-			clampedZ = dockEndZ + 4
-		else
-			local side = if relX >= 0 then 1 else -1
-			clampedX = wCenter.X + side * 16.5
-		end
-	end
-
-	local nearestWater = Vector3.new(clampedX, wCenter.Y + half.Y, clampedZ)
-	local horizDist = Vector3.new(pPos.X - nearestWater.X, 0, pPos.Z - nearestWater.Z).Magnitude
-	if horizDist > GameConfig.FISHING_MAX_WATER_DIST then
-		return nil
-	end
-	return nearestWater
+ local char = player.Character
+ local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
+ local water = getIslandWaterPart(islandId)
+ if not root or not root:IsA("BasePart") or not water then return nil end
+ local surfaceY = water.Position.Y + water.Size.Y * 0.5
+ local forward = root.Position + root.CFrame.LookVector * 24
+ local first = FishingRoller.ValidateAimedWaterPoint(player, islandId, Vector3.new(forward.X, surfaceY, forward.Z))
+ if first then return first end
+ -- Deterministic bounded search, validated by exactly the same first-hit path as manual casts.
+ for _, radius in ipairs({16, 24, 36, 52, 72}) do
+  for angle = 0, 11 do
+   local theta = angle * math.pi / 6
+   local target = Vector3.new(root.Position.X + math.cos(theta) * radius, surfaceY, root.Position.Z + math.sin(theta) * radius)
+   local pos = FishingRoller.ValidateAimedWaterPoint(player, islandId, target)
+   if pos then return pos end
+  end
+ end
+ return nil
 end
 
 function FishingRoller.GetEligibleCandidates(
@@ -239,7 +182,7 @@ function FishingRoller.ComputeChargeRatio(elapsed: number): number
 	return if u <= 1.0 then u else (2.0 - u)
 end
 
-function FishingRoller.ResolveManualHoldBonuses(startedAt: number?, rawHoldRatio: any): (string, number, number)
+function FishingRoller.ResolveManualHoldBonuses(startedAt: number?, _rawHoldRatio: any): (string, number, number)
 	if not startedAt then
 		return "ManualNormal", 0, 0
 	end
@@ -247,29 +190,11 @@ function FishingRoller.ResolveManualHoldBonuses(startedAt: number?, rawHoldRatio
 	if serverHoldElapsed < 0.55 then
 		return "ManualNormal", 0, 0
 	end
-	local clientHold = tonumber(rawHoldRatio) or 0
-	local serverRatio = FishingRoller.ComputeChargeRatio(serverHoldElapsed)
-	local trustedRatio = if math.abs(clientHold - serverRatio) <= 0.24 then clientHold else serverRatio
+	local trustedRatio = FishingRoller.ComputeChargeRatio(serverHoldElapsed)
 	if trustedRatio >= GameConfig.PERFECT_HOLD_MIN and trustedRatio <= GameConfig.PERFECT_HOLD_MAX then
 		return "ManualPerfect", GameConfig.PERFECT_CAST_LUCK_ADD, GameConfig.PERFECT_CAST_LURE_ADD
 	end
 	return "ManualNormal", 0, 0
-end
-
-function FishingRoller.IsWithinLandBounceRange(player: Player, rawHitPos: any): Vector3?
-	if not FishingRoller.IsFiniteVector3(rawHitPos) then
-		return nil
-	end
-	local char = player.Character
-	local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
-	if not (root and root:IsA("BasePart")) then
-		return nil
-	end
-	local hitPos = rawHitPos :: Vector3
-	if (hitPos - root.Position).Magnitude > (GameConfig.FISHING_MAX_WATER_DIST + 45) then
-		return nil
-	end
-	return hitPos
 end
 
 return FishingRoller

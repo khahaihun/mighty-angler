@@ -64,3 +64,10 @@ Xem `docs/V3_REGRESSION_MATRIX.md` để phân biệt 23 ca VM với 21 ID kiể
 chỉ chuỗi nhúng trong build runner bị thay, không sửa nguồn game.
 Sau đó chạy không probe phải **exit 0**. Không đưa probe âm vào lệnh CI bắt buộc.
 
+## Hồi quy Đợt 2 (logic thật, biên Engine giả)
+Chạy `powershell -ExecutionPolicy Bypass -File tools\test_fishing_wave.ps1`.
+Bốn bộ thử kiểm cân thường/Titan, biên Perfect server, MinigameBar Mount/nút/chuột trước-sau hạn và ack trễ;
+phạm vi prompt 3D/override và vùng hàng lưới; tia đầu tiên/Auto; SessionManager 1–3 vòng với gói trễ 200ms,
+đóng một lần và cooldown; FishingController bật lại Auto trong hồi, gói trùng, hủy/cất cần/chết.
+Các phép thử này không thay nghiệm thu Studio, điện thoại, số kết nối/thẻ thực tế hoặc hai client.
+
