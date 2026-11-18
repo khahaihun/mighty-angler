@@ -4,6 +4,7 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -161,8 +162,10 @@ local function refreshLeaderboards()
 	-- Chi cap nhat OrderedDataStore khi ho so da tai thanh cong va giu Session Lock hop le (khong bao gio ghi diem 0 cua che do Read-Only!)
 	if game.PlaceId > 0 then
 		pcall(function()
-			local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2")
-			local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2")
+			-- Studio da publish van phai cach ly diem DEV, cung quy tac voi kho ho so.
+			local storeSuffix = if RunService:IsStudio() then "_StudioDev" else ""
+			local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2" .. storeSuffix)
+			local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2" .. storeSuffix)
 			for _, p in ipairs(Players:GetPlayers()) do
 				local prof = DataService.Get(p)
 				if prof and DataService.CanWritePersistent(p) then

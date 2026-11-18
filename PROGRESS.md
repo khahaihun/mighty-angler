@@ -1,7 +1,55 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 16:31 bởi Codex
-- **Trạng thái hiện tại:** Codex đã tiếp nhận vai trò Kỹ sư trưởng và ban hành kế hoạch cho Antigravity. **Chưa duyệt phát hành.** Có 23 mục chờ sửa, 21 mục đã đạt theo mã cần kiểm lại trên bản ứng viên. [Kế hoạch chỉ đạo V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 17:30 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Đã thi công bản vá mở đầu Đợt 1: cách ly hai bảng điểm Studio, giữ kho hồ sơ thử sẵn có. Mô phỏng đạt, bộ kiểm định tự động PASS 6/6, exit 0. **Chờ Kỹ sư trưởng review; chưa duyệt phát hành.** Chưa chuyển sang khóa phiên/lưu cuối. [Kế hoạch chỉ đạo V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Bản vá mở đầu Đợt 1 — Cách ly dữ liệu Studio (2026-11-18)
+
+### Đã hoàn thành [x]
+
+- [x] Nhận ca ở `51c020c`, `git status --short` và `git diff` rỗng, đọc 5 commit gần nhất cùng AGENTS/PROGRESS/V3/blueprint và phần dữ liệu của PLAN. Không có commit mới hơn hoặc thay đổi người dùng cần giữ lại. Thi công tại đường dẫn được giao, trên nhánh cục bộ `codex/studio-data-isolation`.
+- [x] **Lỗi gốc — đọc mã + tái hiện bằng mô phỏng:** `DataStoreLockHelper.TryGetStore()` đã tách `MightyAngler_Profile_v2_StudioDev`; `LiveOpsService.refreshLeaderboards()` chỉ kiểm `PlaceId > 0`, mở `MightyAngler_TopStr_v2` và `MightyAngler_TopGold_v2` ngay cả khi Studio đang chạy place đã publish. Điểm DEV có thể thành kỷ lục bền ở kho thật nếu API được bật. Đây là phát hiện bổ sung về kho điểm trong V3, bảo vệ hai mục đã đạt **Codex P1-02 / Argon P0-1**; chưa đóng các mã khóa phiên/lưu cuối của Đợt 1.
+- [x] **Bản vá:** `src/server/Services/LiveOpsService.luau` thêm `RunService:IsStudio()` khi mở cả hai OrderedDataStore: Studio dùng hậu tố `_StudioDev`, máy chủ thật giữ tên cũ. Giữ nguyên `PlaceId > 0`, điều kiện `DataService.CanWritePersistent`, bỏ điểm 0 và `UpdateAsync` lấy `math.max`. `DataStoreLockHelper` không cần sửa vì đường hồ sơ đã chọn đúng kho và đã được thực thi trong phép thử.
+- [x] **Phép thử mới:** `tools/test_studio_data_isolation.ps1`, `tests/studio_data_isolation.luau`, `tests/README.md`. Chạy nguyên văn 5 module nguồn trong Luau CLI 0.747, thay dịch vụ Roblox bằng kho RAM; spy ghi tên ngay tại lời gọi mở kho. Chạy cả refresh đầu tiên và refresh định kỳ. Không gọi Roblox API, không bật API Services, không ghi dữ liệu sản xuất. Binary Luau và runner sinh ra chỉ nằm trong `tools/` và `build/` đã được Git bỏ qua.
+- [x] **RED → GREEN:** trước bản vá, lệnh mô phỏng exit **1**, lỗi `expected MightyAngler_TopStr_v2_StudioDev, got MightyAngler_TopStr_v2`; trace cũng ghi Gold dùng tên sản xuất. Sau một vòng sửa, lệnh dưới exit **0**, toàn bộ ca mô phỏng đạt. Không có lỗi tồn đọng sau hai vòng sửa.
+
+| Ca | Loại bằng chứng | Kết quả thực tế |
+|---|---|---|
+| Studio, `PlaceId = 0` | Chạy mô phỏng | 0 lời gọi mở kho, 0 ghi bền; hồ sơ báo RAM-Only Fallback. |
+| Studio, `PlaceId = 123456` (đã publish) | Chạy mô phỏng | Cả hồ sơ, Top Strength, Top Gold dùng `_StudioDev`; **0 yêu cầu tên kho sản xuất**, kể cả refresh định kỳ và các ca kỷ lục. |
+| Máy chủ thật, `IsStudio = false`, `PlaceId = 123456` | Chạy mô phỏng, kho RAM | Mở đúng 3 tên sản xuất cũ. Trace routing có 5 lời gọi (1 hồ sơ + 2 bảng × 2 refresh); không có kết nối dữ liệu thật. |
+| Lỗi API khi mở lần lượt hồ sơ/Strength/Gold Studio | Chạy mô phỏng | Vẫn chỉ yêu cầu kho `_StudioDev`, không thử chuyển sang tên sản xuất. |
+| Hồ sơ chỉ đọc hoặc chưa tải | Chạy mô phỏng đầu vào quyền ghi của LiveOps | Không cập nhật điểm của các hồ sơ này. `DataService.Get/CanWritePersistent` là đầu vào điều khiển; chưa kiểm tính đúng của khóa phiên. |
+| Kỷ lục hai bảng | Chạy mô phỏng | 125,9/250,8 → 125/250; gửi 5/10 vẫn giữ 125/250; gửi 400/800 nâng đúng; điểm 0 không tạo lượt UpdateAsync. |
+| Studio thật: place cục bộ và place đã publish, API tắt/bật trên kho thử | Chưa chạy trong Studio | **Chờ nghiệm thu**: ca này không có phiên Studio kết nối để thực thi/ghi bằng chứng Engine. Không bật API sản xuất để thử. |
+
+**Lệnh và kiểm định thực tế:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
+# exit 0; trace ở logs/studio-data-isolation.log của ca thi công
+powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
+# exit 0; PASS 6/6; logs/app.log; build/mighty-angler-dev.rbxlx
+```
+
+- [x] Bộ verify cũng đã đạt trên nền trước sửa. Lần kiểm sau sửa đạt 6/6 (dòng/API/sourcemap/Luau-LSP/Selene/build). **PASS 6/6 chỉ xác nhận bộ kiểm định tự động**, không phải ký nghiệm thu Studio hay phát hành.
+- [x] Đếm độc lập bằng `[IO.File]::ReadAllLines`: **88/88** file mã game ≤ 350, lớn nhất `CurrencyService` **342**. `HudPanel` **268**, `PetsService` **298**, `ProgressPanel` **268**, `BagPanel` **307**, `FishingService` **282**, đều < 310; `LiveOpsService` **259**. `git diff --check` đạt.
+- [x] Đọc XML bản build, đối chiếu nguyên văn `Source` của `LiveOpsService` với file nguồn: **1/1 khớp** sau chuẩn hóa xuống dòng. Place: `build/mighty-angler-dev.rbxlx`, SHA-256 **`4F186A6D7D2DFA82971B270EDD1FE712CC98BD5C673C5B34736EEED9AEA99874`**. Đây là bản build tự động, chưa được mở Play trong Studio ở ca này.
+
+### Đang làm dở [~]
+
+- [~] Bản vá đang chờ Kỹ sư trưởng ở chat riêng review diff/commit và quyết định nghiệm thu. Commit của bản vá là commit chứa mục bàn giao này; tra bằng `git log -n 1 --oneline` trên nhánh trên.
+
+### Bước tiếp theo [ ]
+
+- [ ] Nghiệm thu hai chế độ Studio thật trên đúng bản build, ghi trace mở kho với số yêu cầu tên sản xuất bằng 0; kiểm API bị chặn trên kho thử. Không tự bật API sản xuất.
+- [ ] Sau khi Kỹ sư trưởng duyệt, mới tiếp tục khóa phiên và lưu cuối theo 1.1/1.2. Hai server trực tuyến trong experience thử riêng còn **chờ nghiệm thu**; chưa cấu hình hay chạy các server đó ở bản vá này.
+
+### Quyết định kỹ thuật & Lưu ý cho AI ca sau
+
+- Giới hạn ca này ở phần mở đầu Đợt 1 theo yêu cầu trực tiếp; không thực hiện toàn bộ blueprint, không thay session lock/Reset/migration và không gọi Gemini. Quyền review/phát hành thuộc Kỹ sư trưởng, khác vai trò thi công của Codex ở ca này.
+- Giữ quy tắc đặt tên `_StudioDev` hiện có, không đổi kiến trúc kho dữ liệu. Việc cách ly này chỉ dựa vào Studio; server trực tuyến cần experience thử riêng theo blueprint trước khi thử ghi. Không suy diễn rằng bản vá đã cách ly một server thử chạy trong experience sản xuất.
+- Phép thử là VM Luau với biên Roblox giả lập, không phải Play trong Studio; không dùng kết quả này để ký các lỗi khóa phiên hoặc lưu cuối. Giữ các phần bàn giao cũ bên dưới làm lịch sử; trạng thái mới nhất là mục đầu file này.
 
 ## Bàn giao chỉ đạo thi công sau V3
 
