@@ -18,8 +18,8 @@ local function client(sources)
 		FishingController = { OnStateChanged = ignore, IsAutoFishEnabled = function() return false end },
 		GymController = panel, SoundAndFxController = panel, HotbarAndBaitUi = panel,
 		BagPanel = panel, ShopPanel = panel, PetsPanel = panel, EnchantAndBountyModal = panel,
-		PlaytimeAndSettingsModal = panel, OddsCalculator = { BuildHudLiveOddsSummary = function() return "" end },
-		Islands = { Get = function() return { id = 1, name = "Sunny Shores" } end },
+		PlaytimeAndSettingsModal = panel,
+		
 	}
 	local f = Client.new(sources, true, deps)
 	f.load("HudPanel").Mount({}, { OnTogglePanel=ignore,OnCancelCast=ignore,OnToggleAutoFish=ignore,OnToggleAutoTrain=ignore,OnManualGymTap=ignore })
@@ -178,6 +178,31 @@ return function(sources)
 		local latest;for _,item in ipairs(f.messages) do if item.event=="ProfileAccessChanged" then latest=item.payload end end
 		assert(rejected and latest and latest.safeReadOnly,"failed status must retry rather than be cached as delivered")
 	end)
+	test("Live Odds and read-only warning coexist through loading protection and recovery",function()
+ local f=client(sources)
+ local function item(name)
+  for i=#f.instances,1,-1 do if f.instances[i].Name==name then return f.instances[i] end end
+ end
+ local button=assert(item("LiveOddsBanner"),"Live Odds button preserved")
+ assert(button.Activated.callback,"Live Odds remains clickable")
+ button.Activated.callback(); equal(item("OddsText"),nil,"loading has no invented odds")
+ equal(warning(f).Visible,true,"loading warning visible")
+ local p=f.load("GameConfig").CreateDefaultProfile()
+ p.ownedRods.SeraphimDragon=true; p.rodId="SeraphimDragon"
+ f.emit("StateSnapshot",{profile=p,safeReadOnly=false,loading=false,accessVersion=2})
+ equal(warning(f).Visible,false,"initial confirmed state clears warning")
+ button.Activated.callback()
+ local text=assert(item("OddsText"),"full snapshot enables real live odds")
+ assert(string.find(text.Text,"Base") and string.find(text.Text,"whirlpool"),"per-species odds provided")
+ f.emit("ProfileAccessChanged",{safeReadOnly=true,loading=false,accessVersion=3})
+ equal(warning(f).Visible,true,"access loss warning visible")
+ equal(button.Visible,true,"Live Odds stays visible in read-only")
+ button.Activated.callback(); assert(item("OddsText"),"read-only can still inspect odds")
+ f.emit("ProfileAccessChanged",{safeReadOnly=false,loading=false,accessVersion=4})
+ equal(warning(f).Visible,false,"recovery clears warning")
+ button.Activated.callback(); assert(item("OddsText"),"recovery keeps Live Odds")
+ for _,request in ipairs(f.requests) do assert(request[1]~="PromptGamepass","viewing odds must never prompt purchase") end
+end)
 	print(string.format("INITIAL_SUITE passed=%d failed=%d",passed,failed))
 	assert(failed==0,"initial state suite failed")
 end

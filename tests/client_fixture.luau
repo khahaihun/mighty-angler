@@ -26,14 +26,15 @@ function ClientFixture.new(sources, studio, extra)
 	for name, value in pairs(extra or {}) do deps[name] = value end
 	local globals = setmetatable({
 		game = { GetService = function(_, name)
-			if name == "RunService" then return { IsStudio = function() return studio end } end
+			if name == "Players" then return { LocalPlayer = { WaitForChild = function() return {} end } } end
+            if name == "RunService" then return { IsStudio = function() return studio end } end
 			return { WaitForChild = function(_, key) return node(key) end }
 		end },
-		Color3 = { fromRGB = blank }, Vector2 = { new = blank },
+		Color3 = { fromRGB = blank, new = blank }, Vector2 = { new = blank }, Vector3 = { new = blank },
 		UDim2 = { new = blank, fromOffset = blank, fromScale = blank }, UDim = { new = blank },
 		Enum = setmetatable({}, { __index = function() return names end }),
 		Instance = { new = function(class)
-			local item = { ClassName = class, Text = "", Visible = true }
+			local item = { ClassName = class, Text = "", Visible = true, Activated = { Connect = function(signal, cb) signal.callback = cb; return { Disconnect = blank } end }, Destroy = blank }
 			table.insert(f.instances, item); return item
 		end },
 		task = { spawn = function(fn)
