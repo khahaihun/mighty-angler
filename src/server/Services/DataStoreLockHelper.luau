@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
+local Validator = require(script.Parent.ProfileValidator)
 
 local DataStoreLockHelper = {}
 
@@ -103,6 +104,7 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 			warn("[DataStoreLockHelper] Claim setup error:", tostring(claimNonce))
 			break
 		end
+		local rejected: any = nil
 		local ok, updated = pcall(function()
 			return store:UpdateAsync(key, function(oldData: any)
 				local now = os.time()
@@ -114,7 +116,8 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 					fresh.lastWriteNonce = claimNonce
 					return fresh
 				end
-				if type(oldData) ~= "table" or (tonumber(oldData.dataVersion) or 1) > 2 then
+				if Validator.Validate(oldData) ~= nil then
+					rejected = Util.DeepCopy(oldData)
 					return nil
 				end
 				local holder = oldData.activeSessionId
@@ -130,6 +133,7 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 			end)
 		end)
 		claimMayBeOwned = not ok or (type(updated) == "table" and updated.activeSessionId == myToken)
+		if ok and updated == nil and rejected ~= nil then return false, rejected, false end
 		if ok and type(updated) == "table" and updated.activeSessionId == myToken and updated.lastWriteNonce == claimNonce then
 			return true, updated, true
 		end

@@ -6,13 +6,14 @@ local Types = require(Shared:WaitForChild("Types"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local Lock = require(script.Parent.DataStoreLockHelper)
 local Writer = require(script.Parent.ProfileWriteHelper)
+local Validator = require(script.Parent.ProfileValidator)
 
 export type Session = {
 	player: Player?, userId: number, token: string, profile: Types.PlayerProfile?,
 	loading: boolean, readOnly: boolean, closed: boolean, closing: boolean, closeStarted: boolean,
 	closeDeadline: number, closeResult: string?, loadCloseResult: string?, failure: string?,
 	confirmedAt: number, revision: number, savedRevision: number, nextSaveAt: number,
-	saveQueued: boolean, pending: Writer.Operation?,
+	saveQueued: boolean, resetting: boolean, pending: Writer.Operation?,
 }
 local ProfilePersistenceService = {}
 local sessions: { [Player]: Session } = {}
@@ -41,14 +42,24 @@ function ProfilePersistenceService.Begin(player: Player, token: string): Session
 	local s: Session = { player = player, userId = player.UserId, token = token,
 		loading = true, readOnly = true, closed = false, closing = shuttingDown, closeStarted = false,
 		closeDeadline = math.huge, confirmedAt = 0, revision = 0, savedRevision = 0,
-		nextSaveAt = nextAt, saveQueued = false }
+		nextSaveAt = nextAt, saveQueued = false, resetting = false }
 	sessions[player] = s
 	return s
 end
 
+local function hasLease(s: Session): boolean
+	return Lock.IsStudioOfflineFallback() or os.time() < s.confirmedAt + GameConfig.SESSION_LOCK_EXPIRE_SEC
+end
+
 function ProfilePersistenceService.Locked(s: Session?): boolean
-	if not s or not s.profile or s.loading or s.readOnly or s.closing or s.closed or shuttingDown then return true end
-	return not Lock.IsStudioOfflineFallback() and os.time() >= s.confirmedAt + GameConfig.SESSION_LOCK_EXPIRE_SEC
+	if not s or not s.profile or s.loading or s.readOnly or s.closing or s.closed or s.resetting or shuttingDown then return true end
+	return not hasLease(s)
+end
+
+function ProfilePersistenceService.Quarantine(s: Session, reason: string)
+	if not s.readOnly then warn(string.format("[ProfilePersistence] Quarantine user=%d token=%s reason=%s", s.userId, s.token, reason)) end
+	s.readOnly = true
+	s.failure = "InvalidProfile:" .. reason
 end
 
 local function applyPending(s: Session, store: DataStore): string
@@ -73,11 +84,14 @@ end
 function ProfilePersistenceService.Save(s: Session, release: boolean): string
 	if s.closed or not s.profile then return "Skipped" end
 	if s.readOnly then return s.failure or "Skipped" end
+	if s.resetting and not release then return "Skipped" end
 	if s.closing and not release then return "Skipped" end
 	local status = "TransientError"
 	Lock.WithUserLock(s.userId, function()
-		if s.closed or not s.profile or (s.closing and not release) then status = "Skipped"; return end
+		if s.closed or not s.profile or ((s.closing or s.resetting) and not release) then status = "Skipped"; return end
 		if s.readOnly then status = s.failure or "Skipped"; return end
+		local invalid = Validator.Validate(s.profile)
+		if invalid then ProfilePersistenceService.Quarantine(s, invalid); status = "InvalidProfile"; return end
 		local store = Lock.TryGetStore()
 		if not store then
 			status = if Lock.IsStudioOfflineFallback() then "Saved" else "TransientError"
@@ -94,6 +108,52 @@ function ProfilePersistenceService.Save(s: Session, release: boolean): string
 		status = applyPending(s, store)
 	end)
 	return status
+end
+
+function ProfilePersistenceService.Reset(s: Session): (Types.PlayerProfile?, string)
+	if s.resetting then return nil, "Busy" end
+	if s.closed or s.closing or s.readOnly or not s.profile then return nil, "Unavailable" end
+	if not hasLease(s) then return nil, "Expired" end
+	s.resetting = true
+	local fresh: Types.PlayerProfile? = nil
+	local status = "NotApplied"
+	Lock.WithUserLock(s.userId, function()
+		if s.closed or s.closing or s.readOnly or not s.profile then status = "Unavailable"; return end
+		if not hasLease(s) then status = "Expired"; return end
+		local store = Lock.TryGetStore()
+		if not store and not Lock.IsStudioOfflineFallback() then return end
+		if s.pending then
+			if not store then return end
+			local prior = "TransientError"
+			for attempt = 1, 3 do
+				prior = applyPending(s, store)
+				if prior ~= "TransientError" then break end
+				if attempt < 3 then task.wait(0.5) end
+			end
+			if prior ~= "Saved" then return end
+		end
+		if s.closed or s.closing or s.readOnly then status = "Unavailable"; return end
+		if not hasLease(s) then status = "Expired"; return end
+		local current = s.profile
+		if not current then return end
+		local candidate = GameConfig.CreateDefaultProfile()
+		candidate.saveSeq, candidate.activeSessionId, candidate.lockTimestamp = current.saveSeq, s.token, s.confirmedAt
+		fresh, s.profile = candidate, candidate
+		s.revision += 1
+		if not store then status = "RAMOnly"; return end
+		s.pending = Writer.Create(candidate, s.token, false, s.revision)
+		status = "Unconfirmed"
+		for attempt = 1, 3 do
+			local result = applyPending(s, store)
+			if result == "Saved" then status = "Saved"; return end
+			if result ~= "TransientError" then status = result; return end
+			if attempt < 3 then task.wait(0.5) end
+		end
+		s.nextSaveAt = math.min(s.nextSaveAt, os.clock() + 3 + s.userId % 3)
+	end)
+	s.resetting = false
+	if s.closed then return nil, "Unavailable" end
+	return fresh, status
 end
 
 local function finishClose(s: Session, result: string)
@@ -128,7 +188,7 @@ local function requestClose(s: Session, deadline: number)
 					finishClose(s, if Lock.IsStudioOfflineFallback() then "RAMOnly" else result)
 					return true
 				end
-				if result == "LostLock" then s.failure = result; break end
+				if result ~= "TransientError" then s.failure = result; break end
 				task.wait(math.min(0.8, math.max(0, s.closeDeadline - os.clock())))
 			end
 			return true

@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Util = require(Shared:WaitForChild("Util"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
+local Validator = require(script.Parent.ProfileValidator)
 local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
 
 local ProfileMigrator = {}
@@ -101,6 +102,8 @@ end
 -- Tra ve (profile, quarantineReason): neu quarantineReason ~= nil thi DataService bat che do Read-Only de bao ve du lieu goc!
 function ProfileMigrator.SanitizeLoadedProfile(raw: any): (Types.PlayerProfile, string?)
 	local defaults = GameConfig.CreateDefaultProfile()
+	local invalid = Validator.Validate(raw)
+	if invalid then return defaults, invalid end
 	if raw == nil then
 		ProfileMigrator.MigrateProfileToV2(defaults)
 		return defaults, nil

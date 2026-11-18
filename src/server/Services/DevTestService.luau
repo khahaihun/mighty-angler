@@ -114,17 +114,25 @@ function DevTestService.Init()
 			end
 		elseif rawAction == "ResetSave" then
 			FishingService.CancelSession(player, true, "ManualCancel")
-			local fresh = DataService.ResetProfileForDev(player)
-			local saveRes = DataService.SaveProfile(player, false)
+			local fresh, saveRes = DataService.ResetProfileForDev(player)
+			local resetInfo = { ramApplied = fresh ~= nil, persistent = saveRes, saveSeq = if fresh then fresh.saveSeq else 0 }
+			if not fresh then
+				Net.FireClient(player, Net.ServerToClient.Toast, {
+					kind = "Error", text = "[DEV] Reset NOT applied (" .. saveRes .. ").", devReset = resetInfo,
+				})
+				return
+			end
 			IslandService.TeleportCharacterToIsland(player, 1)
 			RodVisuals.EquipRodOnCharacter(player, "Twig")
 			PetsService.SyncVisualsAndClient(player)
 			ShopAndItemsService.PushInventory(player)
 			CurrencyService.PushCurrencies(player)
-			local seqVal = if fresh then fresh.saveSeq else 0
+			local text = if saveRes == "Saved" then "[DEV] RAM reset applied. Persistent save confirmed."
+				elseif saveRes == "RAMOnly" then "[DEV] RAM reset applied. RAM-only mode; no persistent store."
+				else "[DEV] RAM reset applied. Persistent save NOT confirmed (" .. saveRes .. ")."
 			Net.FireClient(player, Net.ServerToClient.Toast, {
-				kind = "Info",
-				text = string.format("[DEV] Profile reset (%s • saveSeq=%d)!", saveRes, seqVal),
+				kind = if saveRes == "Saved" then "Success" elseif saveRes == "RAMOnly" then "Info" else "Error",
+				text = text, devReset = resetInfo,
 			})
 		end
 	end)

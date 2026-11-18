@@ -150,6 +150,7 @@ function Fixture.server(sources, backend, job, placeId, options)
 		ServerToClient = setmetatable({ Toast = "toast", StateSnapshot = "snapshot" }, eventNames),
 		OnServerEvent = function(event, fn) handlers[event] = fn end,
 		FireClient = function(player, event, payload)
+			if f.beforeClientFire then f.beforeClientFire(player, event, payload) end
 			table.insert(f.messages, { player = player, event = event, payload = payload })
 		end }
 	if not options.useIslandConfig then cache.Islands = { List = {} } end
