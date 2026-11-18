@@ -140,6 +140,8 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 		return
 	end
 
+	char:SetAttribute("VisualAction", stationType)
+	char:SetAttribute("VisualActionAt", workspace:GetServerTimeNow())
 	local nextTicket = (gymWeightClearTicket[player] or 0) + 1
 	gymWeightClearTicket[player] = nextTicket
 
@@ -190,10 +192,10 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 				end
 			end
 		elseif stationType == "BenchPress" then
-			local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+			local torso = rHand
 			if torso and torso:IsA("BasePart") then
 				local bb, shaft = RodAndWeightBuilder.BuildHandheldBarbell(isl.theme.accentColor, scale)
-				local targetCf = torso.CFrame * CFrame.new(0, 0.52, -1.42)
+				local targetCf = torso.CFrame * CFrame.new(0, -0.18, 0)
 				local inv = shaft.CFrame:Inverse()
 				for _, d in ipairs(bb:GetDescendants()) do
 					if d:IsA("BasePart") and d ~= shaft then

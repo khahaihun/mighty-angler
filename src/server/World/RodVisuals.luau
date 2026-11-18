@@ -86,6 +86,12 @@ function RodVisuals.UnequipRodFromCharacter(player: Player)
 end
 
 function RodVisuals.ClearBobber(player: Player)
+	local character = player.Character
+	if character then
+		character:SetAttribute("FishingPoseActive", false)
+		character:SetAttribute("VisualAction", "Reel")
+		character:SetAttribute("VisualActionAt", Workspace:GetServerTimeNow())
+	end
 	local bob = activeBobbers[player]
 	if bob then
 		bob:Destroy()
@@ -125,6 +131,9 @@ function RodVisuals.SpawnCastBobber(player: Player, waterTargetPos: Vector3)
 	if not character then
 		return
 	end
+	character:SetAttribute("FishingPoseActive", true)
+	character:SetAttribute("VisualAction", "Cast")
+	character:SetAttribute("VisualActionAt", Workspace:GetServerTimeNow())
 	local rodModel = character:FindFirstChild("EquippedFishingRod")
 	local tipAtt = if rodModel then rodModel:FindFirstChild("RodTipAttachment", true) else nil
 

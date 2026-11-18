@@ -1,279 +1,110 @@
 --!strict
--- AnimationController.luau: Dien hoat toan than ho tro du R6, R15 Motor6D VA R15 AnimationConstraint + Animator Replication
-
+-- Action-specific procedural poses, evaluated after Animator on every observing client.
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local AnimationController = {}
 
+type Joint = { instance: any, role: string, r6: boolean, lastOffset: CFrame }
+type Rig = { joints: { Joint }, dirty: boolean, connection: RBXScriptConnection }
+local rigs: { [Model]: Rig } = {}
+local localAction = ""
+local localActionAt = 0
 local localPlayer = Players.LocalPlayer
-local savedC0s: { [Motor6D]: CFrame } = {}
-local cachedTracks: { [string]: AnimationTrack } = {}
-local activeHoldTrack: AnimationTrack? = nil
-local fishingHoldActive = false
 
-local R15_ANIMS = {
-	CastSlash = "rbxassetid://522635514",
-	ReelLunge = "rbxassetid://522638767",
-	ToolHold = "rbxassetid://507768375",
-	FlexCheer = "rbxassetid://507770677",
-}
-local R6_ANIMS = {
-	CastSlash = "rbxassetid://129967390",
-	ReelLunge = "rbxassetid://129967478",
-	ToolHold = "rbxassetid://182393478",
-	FlexCheer = "rbxassetid://129423030",
-}
+local function angle(x: number, y: number?, z: number?): CFrame
+	return CFrame.Angles(math.rad(x), math.rad(y or 0), math.rad(z or 0))
+end
 
-local function playAnimatorAction(char: Model, key: string, looped: boolean, speed: number): AnimationTrack?
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum then
-		return nil
+local function pose(action: string, elapsed: number): (CFrame, CFrame, CFrame)
+	if action == "FishHold" then return angle(82, -18, -14), angle(82, 18, 14), angle(-6) end
+	if action == "Cast" then
+		local lift = if elapsed < 0.16 then 142 else 50
+		return angle(lift, 0, 10), angle(35, 0, -10), angle(if elapsed < 0.16 then 14 else -12)
 	end
-	local animator = hum:FindFirstChildOfClass("Animator")
-	if not animator then
-		return nil
-	end
-	local idMap = if hum.RigType == Enum.HumanoidRigType.R6 then R6_ANIMS else R15_ANIMS
-	local animId = (idMap :: any)[key]
-	if type(animId) ~= "string" then
-		return nil
-	end
-	local cacheKey = tostring(hum.RigType.Name) .. "_" .. key
-	local track = cachedTracks[cacheKey]
-	if not track then
-		local ok, loaded = pcall(function()
-			local anim = Instance.new("Animation")
-			anim.AnimationId = animId
-			return animator:LoadAnimation(anim)
-		end)
-		if ok and loaded then
-			cachedTracks[cacheKey] = loaded
-			track = loaded
+	if action == "Reel" then return angle(124, 0, -14), angle(88, 0, 18), angle(16) end
+	if action == "FishingHold" then return angle(66, 0, -5), angle(42, 16), angle(-4) end
+	local wave = math.sin(elapsed * math.pi * 4)
+	if action == "Dumbbells" then return angle(65 + 45 * wave, 0, -8), angle(65 - 45 * wave, 0, 8), angle(-5) end
+	if action == "BenchPress" then return angle(110 + 28 * wave), angle(110 + 28 * wave), angle(10) end
+	if action == "Treadmill" then return angle(30 + 48 * wave), angle(30 - 48 * wave), angle(-10) end
+	return CFrame.identity, CFrame.identity, CFrame.identity
+end
+
+local function watchCharacter(character: Model)
+	if rigs[character] then return end
+	local rig: Rig = { joints = {}, dirty = true, connection = nil :: any }
+	rig.connection = character.DescendantAdded:Connect(function() rig.dirty = true end)
+	rigs[character] = rig
+end
+
+local function watchPlayer(player: Player)
+	if player.Character then watchCharacter(player.Character) end
+	player.CharacterAdded:Connect(watchCharacter)
+end
+
+local function rebuild(character: Model, rig: Rig)
+	table.clear(rig.joints)
+	for _, joint in ipairs(character:GetDescendants()) do
+		if joint:IsA("Motor6D") or joint:IsA("AnimationConstraint") then
+			local role = if joint.Name == "RightShoulder" or joint.Name == "Right Shoulder" then "Right"
+				elseif joint.Name == "LeftShoulder" or joint.Name == "Left Shoulder" then "Left"
+				elseif joint.Name == "Waist" then "Waist" else ""
+			if role ~= "" then table.insert(rig.joints, { instance = joint, role = role, r6 = string.find(joint.Name, " ") ~= nil, lastOffset = CFrame.identity }) end
 		end
 	end
-	if track then
-		pcall(function()
-			track.Priority = if looped then Enum.AnimationPriority.Movement else Enum.AnimationPriority.Action
-			track.Looped = looped
-			track:Play(0.12, 1.0, speed)
-		end)
-	end
-	return track
+	rig.dirty = false
 end
 
-local function stopHoldTrack()
-	if activeHoldTrack then
-		pcall(function()
-			activeHoldTrack:Stop(0.18)
-		end)
-		activeHoldTrack = nil
-	end
+local function getAction(character: Model): (string, number)
+	if character:GetAttribute("HoldingFlexFish") == true then return "FishHold", 0 end
+	local now = Workspace:GetServerTimeNow()
+	local action = tostring(character:GetAttribute("VisualAction") or "")
+	local at = tonumber(character:GetAttribute("VisualActionAt")) or 0
+	if character == localPlayer.Character and localActionAt > at then action = localAction; at = localActionAt end
+	local elapsed = now - at
+	if action == "Cast" and elapsed > 0.34 then action = "" end
+	if action == "Reel" and elapsed > 0.5 then action = "" end
+	if (action == "Dumbbells" or action == "BenchPress" or action == "Treadmill") and elapsed > 0.55 then action = "" end
+	if action == "" and character:GetAttribute("FishingPoseActive") == true then action = "FishingHold" end
+	return action, math.max(0, elapsed)
 end
 
-local function findBodyJoints(character: Model): (Motor6D?, Motor6D?, Motor6D?, any?, any?, any?)
-	local rightUpper = character:FindFirstChild("RightUpperArm")
-	local leftUpper = character:FindFirstChild("LeftUpperArm")
-	local upperTorso = character:FindFirstChild("UpperTorso")
-	local rMotor: Motor6D? = nil
-	local lMotor: Motor6D? = nil
-	local waistMotor: Motor6D? = nil
-
-	if rightUpper then
-		local m = rightUpper:FindFirstChild("RightShoulder")
-		if m and m:IsA("Motor6D") then rMotor = m end
-	end
-	if leftUpper then
-		local m = leftUpper:FindFirstChild("LeftShoulder")
-		if m and m:IsA("Motor6D") then lMotor = m end
-	end
-	if upperTorso then
-		local w = upperTorso:FindFirstChild("Waist")
-		if w and w:IsA("Motor6D") then waistMotor = w end
-	end
-	if rMotor then
-		return rMotor, lMotor, waistMotor, nil, nil, nil
-	end
-
-	local torso = character:FindFirstChild("Torso")
-	if torso then
-		local rm = torso:FindFirstChild("Right Shoulder")
-		local lm = torso:FindFirstChild("Left Shoulder")
-		if rm and rm:IsA("Motor6D") then rMotor = rm end
-		if lm and lm:IsA("Motor6D") then lMotor = lm end
-		if rMotor then
-			return rMotor, lMotor, nil, nil, nil, nil
+-- Remove our previous offset before Animator evaluates, then layer a fresh one after it.
+RunService.PreAnimation:Connect(function()
+	for character, rig in pairs(rigs) do
+		if not character.Parent then rig.connection:Disconnect(); rigs[character] = nil; continue end
+		for _, joint in ipairs(rig.joints) do
+			if joint.instance.Parent then joint.instance.Transform = joint.instance.Transform * joint.lastOffset:Inverse() end
+			joint.lastOffset = CFrame.identity
 		end
 	end
-
-	-- Ho tro R15 Avatar Joint Upgrade su dung AnimationConstraint
-	local rCon: any, lCon: any, wCon: any = nil, nil, nil
-	for _, d in ipairs(character:GetDescendants()) do
-		if d.ClassName == "AnimationConstraint" then
-			if d.Name == "RightShoulder" then rCon = d
-			elseif d.Name == "LeftShoulder" then lCon = d
-			elseif d.Name == "Waist" then wCon = d end
-		end
-	end
-	return nil, nil, nil, rCon, lCon, wCon
-end
-
-local function getBaseC0(motor: Motor6D): CFrame
-	local saved = savedC0s[motor]
-	if saved then return saved end
-	savedC0s[motor] = motor.C0
-	return motor.C0
-end
-
-local function applyJointPose(motor: Motor6D?, constraint: any?, offsetAngles: CFrame, duration: number)
-	if motor and motor.Parent then
-		local base = getBaseC0(motor)
-		local isR6 = (motor.Name == "Right Shoulder" or motor.Name == "Left Shoulder")
-		local adjusted = offsetAngles
-		if isR6 then
-			local rx, ry, rz = offsetAngles:ToEulerAnglesXYZ()
-			local sign = if motor.Name == "Right Shoulder" then 1 else -1
-			adjusted = CFrame.Angles(rz, ry, rx * sign)
-		end
-		TweenService:Create(motor, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			C0 = base * adjusted,
-		}):Play()
-	elseif constraint ~= nil and constraint.Parent ~= nil then
-		pcall(function()
-			TweenService:Create(constraint, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Transform = offsetAngles,
-			}):Play()
-		end)
-	end
-end
-
-local function applyFlexFishHoldIfActive(char: Model): boolean
-	if char:GetAttribute("HoldingFlexFish") == true then
-		local rM, lM, wM, rC, lC, wC = findBodyJoints(char)
-		applyJointPose(rM, rC, CFrame.Angles(math.rad(82), math.rad(-18), math.rad(-14)), 0.22)
-		applyJointPose(lM, lC, CFrame.Angles(math.rad(82), math.rad(18), math.rad(14)), 0.22)
-		applyJointPose(wM, wC, CFrame.Angles(math.rad(-6), 0, 0), 0.22)
-		activeHoldTrack = playAnimatorAction(char, "ToolHold", true, 1.0)
-		return true
-	end
-	return false
-end
-
-function AnimationController.ResetArms(duration: number?)
-	local char = localPlayer.Character
-	if not char then return end
-	stopHoldTrack()
-	if applyFlexFishHoldIfActive(char) then return end
-	local rM, lM, wM, rC, lC, wC = findBodyJoints(char)
-	local dur = duration or 0.22
-	applyJointPose(rM, rC, CFrame.Angles(0, 0, 0), dur)
-	applyJointPose(lM, lC, CFrame.Angles(0, 0, 0), dur)
-	applyJointPose(wM, wC, CFrame.Angles(0, 0, 0), dur)
-end
-
-function AnimationController.PlayCast()
-	local char = localPlayer.Character
-	if not char then return end
-	fishingHoldActive = true
-	playAnimatorAction(char, "CastSlash", false, 1.35)
-	local rM, lM, wM, rC, lC, wC = findBodyJoints(char)
-
-	task.spawn(function()
-		applyJointPose(wM, wC, CFrame.Angles(math.rad(14), math.rad(-12), 0), 0.15)
-		applyJointPose(rM, rC, CFrame.Angles(math.rad(142), 0, math.rad(12)), 0.15)
-		applyJointPose(lM, lC, CFrame.Angles(math.rad(35), 0, math.rad(-10)), 0.15)
-		task.wait(0.16)
-		applyJointPose(wM, wC, CFrame.Angles(math.rad(-12), math.rad(8), 0), 0.14)
-		applyJointPose(rM, rC, CFrame.Angles(math.rad(50), 0, math.rad(-6)), 0.14)
-		task.wait(0.16)
-		if fishingHoldActive and localPlayer.Character == char then
-			applyJointPose(wM, wC, CFrame.Angles(math.rad(-4), 0, 0), 0.25)
-			applyJointPose(rM, rC, CFrame.Angles(math.rad(66), 0, math.rad(-5)), 0.25)
-			applyJointPose(lM, lC, CFrame.Angles(math.rad(42), math.rad(16), 0), 0.25)
-			activeHoldTrack = playAnimatorAction(char, "ToolHold", true, 1.0)
-		end
-	end)
-end
-
-function AnimationController.PlayReelPull()
-	local char = localPlayer.Character
-	if not char then return end
-	fishingHoldActive = false
-	stopHoldTrack()
-	playAnimatorAction(char, "ReelLunge", false, 1.45)
-	local rM, lM, wM, rC, lC, wC = findBodyJoints(char)
-
-	task.spawn(function()
-		applyJointPose(wM, wC, CFrame.Angles(math.rad(16), 0, 0), 0.16)
-		applyJointPose(rM, rC, CFrame.Angles(math.rad(124), 0, math.rad(-14)), 0.16)
-		applyJointPose(lM, lC, CFrame.Angles(math.rad(88), 0, math.rad(18)), 0.16)
-		task.wait(0.24)
-		AnimationController.ResetArms(0.26)
-	end)
-end
-
-function AnimationController.StopFishingHold()
-	fishingHoldActive = false
-	AnimationController.ResetArms(0.22)
-end
-
-local gymToggleSide = false
-
-function AnimationController.PlayGymRep(stationType: string)
-	local char = localPlayer.Character
-	if not char then return end
-	gymToggleSide = not gymToggleSide
-	playAnimatorAction(char, if stationType == "BenchPress" then "ReelLunge" else "CastSlash", false, 1.5)
-	local rM, lM, wM, rC, lC, wC = findBodyJoints(char)
-
-	task.spawn(function()
-		if stationType == "Dumbbells" then
-			if gymToggleSide then
-				applyJointPose(rM, rC, CFrame.Angles(math.rad(118), 0, math.rad(-8)), 0.15)
-				applyJointPose(lM, lC, CFrame.Angles(math.rad(26), 0, 0), 0.15)
-				applyJointPose(wM, wC, CFrame.Angles(math.rad(-5), math.rad(8), 0), 0.15)
-			else
-				applyJointPose(lM, lC, CFrame.Angles(math.rad(118), 0, math.rad(8)), 0.15)
-				applyJointPose(rM, rC, CFrame.Angles(math.rad(26), 0, 0), 0.15)
-				applyJointPose(wM, wC, CFrame.Angles(math.rad(-5), math.rad(-8), 0), 0.15)
+end)
+RunService.PreSimulation:Connect(function()
+	for character, rig in pairs(rigs) do
+		if rig.dirty then rebuild(character, rig) end
+		local action, elapsed = getAction(character)
+		local right, left, waist = pose(action, elapsed)
+		for _, joint in ipairs(rig.joints) do
+			local offset = if joint.role == "Right" then right elseif joint.role == "Left" then left else waist
+			if joint.r6 then
+				local x, y, z = offset:ToEulerAnglesXYZ()
+				offset = CFrame.Angles(z, y, x * (if joint.role == "Right" then 1 else -1))
 			end
-			task.wait(0.22)
-			AnimationController.ResetArms(0.20)
-		elseif stationType == "Treadmill" then
-			local fwd = if gymToggleSide then 72 else -38
-			local bwd = if gymToggleSide then -38 else 72
-			applyJointPose(wM, wC, CFrame.Angles(math.rad(-10), 0, 0), 0.14)
-			applyJointPose(rM, rC, CFrame.Angles(math.rad(fwd), 0, 0), 0.14)
-			applyJointPose(lM, lC, CFrame.Angles(math.rad(bwd), 0, 0), 0.14)
-			task.wait(0.20)
-			AnimationController.ResetArms(0.20)
-		else
-			applyJointPose(wM, wC, CFrame.Angles(math.rad(10), 0, 0), 0.16)
-			applyJointPose(rM, rC, CFrame.Angles(math.rad(138), 0, math.rad(-4)), 0.16)
-			applyJointPose(lM, lC, CFrame.Angles(math.rad(138), 0, math.rad(4)), 0.16)
-			task.wait(0.22)
-			applyJointPose(rM, rC, CFrame.Angles(math.rad(58), 0, math.rad(-6)), 0.18)
-			applyJointPose(lM, lC, CFrame.Angles(math.rad(58), 0, math.rad(6)), 0.18)
-			task.wait(0.18)
-			AnimationController.ResetArms(0.22)
+			if joint.instance.Parent then joint.instance.Transform = joint.instance.Transform * offset; joint.lastOffset = offset end
 		end
-	end)
+	end
+end)
+
+local function play(action: string)
+	localAction = action
+	localActionAt = Workspace:GetServerTimeNow()
 end
-
-local function bindCharacterFlexWatcher(char: Model)
-	table.clear(savedC0s)
-	table.clear(cachedTracks)
-	activeHoldTrack = nil
-	fishingHoldActive = false
-	char:GetAttributeChangedSignal("HoldingFlexFish"):Connect(function()
-		AnimationController.ResetArms(0.22)
-	end)
-	task.delay(0.35, function()
-		if char.Parent then applyFlexFishHoldIfActive(char) end
-	end)
-end
-
-if localPlayer.Character then bindCharacterFlexWatcher(localPlayer.Character) end
-localPlayer.CharacterAdded:Connect(bindCharacterFlexWatcher)
-
+function AnimationController.ResetArms(_duration: number?) play("") end
+function AnimationController.PlayCast() play("Cast") end
+function AnimationController.PlayReelPull() play("Reel") end
+function AnimationController.StopFishingHold() play("") end
+function AnimationController.PlayGymRep(stationType: string) play(stationType) end
+for _, player in ipairs(Players:GetPlayers()) do watchPlayer(player) end
+Players.PlayerAdded:Connect(watchPlayer)
 return AnimationController
