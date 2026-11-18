@@ -53,52 +53,49 @@ function OddsCalculator.ComputeEnchantOdds(currentEnchantId: string?): { Enchant
 	return out
 end
 
-function OddsCalculator.ComputeFishOdds(
-	islandDef: Types.IslandDef,
-	effPower: number,
-	effMaxWeight: number,
-	luckMult: number,
-	bossChanceMult: number,
-	inWhirlpool: boolean
-): { FishOddsEntry }
+function OddsCalculator.GetEligibleCandidates(islandDef: Types.IslandDef, power: number, maxWeight: number): { Types.FishDef }
 	local eligible: { Types.FishDef } = {}
-	for _, f in ipairs(islandDef.fishPool) do
-		if effPower >= f.minRodPower and f.minWeight <= effMaxWeight then
-			table.insert(eligible, f)
-		end
+	for _, fish in ipairs(islandDef.fishPool) do
+		if power >= fish.minRodPower and fish.minWeight <= maxWeight then table.insert(eligible, fish) end
 	end
-	if #eligible == 0 then
-		return {}
+	return eligible
+end
+
+function OddsCalculator.GetFishWeight(fish: Types.FishDef, luck: number, bossMult: number, whirlpool: boolean): number
+	local wp = if whirlpool then 2 else 1
+	local effectiveLuck = luck * wp
+	if fish.rarity == "Boss" then return fish.weightChance * bossMult * wp * (1 + 0.25 * math.max(0, effectiveLuck - 1)) end
+	return fish.weightChance * (if (GameConfig.RarityOrder[fish.rarity] or 1) >= 3 then effectiveLuck else 1)
+end
+
+function OddsCalculator.ComputeFishOdds(
+	islandDef: Types.IslandDef, effPower: number, effMaxWeight: number,
+	luckMult: number, bossChanceMult: number, inWhirlpool: boolean
+): { FishOddsEntry }
+	local eligible = OddsCalculator.GetEligibleCandidates(islandDef, effPower, effMaxWeight)
+	local allowed: { [string]: boolean } = {}
+	local baseSum, effectiveSum = 0, 0
+	for _, fish in ipairs(eligible) do
+		allowed[fish.id] = true
+		baseSum += fish.weightChance
+		effectiveSum += OddsCalculator.GetFishWeight(fish, luckMult, bossChanceMult, inWhirlpool)
 	end
-
-	local wpMult = if inWhirlpool then 2.0 else 1.0
-	local effLuck = math.max(1.0, luckMult) * wpMult
-
-	local baseSum = 0
-	local effSum = 0
-	local effWeights: { number } = {}
-
-	for idx, f in ipairs(eligible) do
-		baseSum += f.weightChance
-		local w = f.weightChance
-		local order = GameConfig.RarityOrder[f.rarity] or 1
-		if f.rarity == "Boss" then
-			w = w * bossChanceMult * wpMult * (1 + 0.25 * math.max(0, effLuck - 1))
-		elseif order >= 3 then
-			w = w * effLuck
-		end
-		effWeights[idx] = w
-		effSum += w
-	end
-
 	local out: { FishOddsEntry } = {}
-	for idx, f in ipairs(eligible) do
+	for _, fish in ipairs(islandDef.fishPool) do
 		table.insert(out, {
-			fish = f,
-			basePct = (f.weightChance / math.max(0.0001, baseSum)) * 100,
-			effectivePct = (effWeights[idx] / math.max(0.0001, effSum)) * 100,
+			fish = fish,
+			basePct = if allowed[fish.id] then fish.weightChance / math.max(0.0001, baseSum) * 100 else 0,
+			effectivePct = if allowed[fish.id] then OddsCalculator.GetFishWeight(fish, luckMult, bossChanceMult, inWhirlpool) / math.max(0.0001, effectiveSum) * 100 else 0,
 		})
 	end
+	return out
+end
+
+function OddsCalculator.ComputeEggOdds(egg: Types.EggDef): { { pet: Types.PetDef, pct: number } }
+	local total = 0
+	for _, pet in ipairs(egg.pets) do total += pet.weightChance end
+	local out = {}
+	for _, pet in ipairs(egg.pets) do table.insert(out, { pet = pet, pct = pet.weightChance / math.max(0.0001, total) * 100 }) end
 	return out
 end
 
@@ -120,7 +117,7 @@ for _, ev in ipairs(EventsConfig.List) do
 	eventsById[ev.id] = ev
 end
 
-function OddsCalculator.BuildHudLiveOddsSummary(
+function OddsCalculator.ComputeLiveOdds(
 	islandId: number,
 	rodId: string,
 	ownedRods: { [string]: boolean },
@@ -133,7 +130,7 @@ function OddsCalculator.BuildHudLiveOddsSummary(
 	castLuckAdd: number,
 	activeEventId: string?,
 	nowSec: number
-): string
+)
 	local islDef = IslandsRegistry.Get(islandId)
 	local effRod = RodsConfig.GetEffectiveStats(rodId, ownedRods, rodEnchants)
 	local ench = if effRod.isExclusive and effRod.enchantId then EnchantsConfig.ById[effRod.enchantId] else nil
@@ -156,13 +153,13 @@ function OddsCalculator.BuildHudLiveOddsSummary(
 		end
 	end
 
-	local petLuckAdd = 0
+	local petLuckAdd, petMutAdd = 0, 0
 	local eqSet: { [string]: boolean } = {}
 	for _, u in ipairs(equippedPetUids) do eqSet[tostring(u)] = true end
 	for _, inst in ipairs(petsList) do
 		if type(inst) == "table" and eqSet[tostring(inst.uid)] then
 			local pDef = PetsConfig.PetsById[tostring(inst.petId)]
-			if pDef then petLuckAdd += pDef.luckBonus end
+			if pDef then petLuckAdd += pDef.luckBonus; petMutAdd += pDef.mutationBonus end
 		end
 	end
 
@@ -171,26 +168,33 @@ function OddsCalculator.BuildHudLiveOddsSummary(
 	local evMut = if ev then ev.mutationAdd else 0
 
 	local luckMult = (1 + effRod.luckBonus + (if ench then ench.luckBonus else 0) + castLuckAdd) * (1 + itemLuckAdd) * (1 + petLuckAdd) * (1 + evLuck)
-	local mutMult = (1 + (if ench then ench.mutationBonus else 0)) * (1 + itemMutAdd) * (1 + evMut)
+	local mutMult = (1 + (if ench then ench.mutationBonus else 0)) * (1 + itemMutAdd) * (1 + petMutAdd) * (1 + evMut)
 	local midasActive = (ench ~= nil and ench.midasSellBonus > 1.01)
 
 	local fishOdds = OddsCalculator.ComputeFishOdds(islDef, effRod.power, effRod.maxWeight, luckMult, bossMult, false)
-	if #fishOdds == 0 then
-		return "⚠️ Current Rod cannot catch fish in these waters — Equip a higher Power/Kg Rod!"
-	end
 	local wpOdds = OddsCalculator.ComputeFishOdds(islDef, effRod.power, effRod.maxWeight, luckMult, bossMult, true)
+	return { fishOdds = fishOdds, wpOdds = wpOdds, mutationSummary = OddsCalculator.ComputeMutationSummary(mutMult, midasActive) }
+end
 
+function OddsCalculator.BuildHudLiveOddsSummary(
+	islandId: number, rodId: string, ownedRods: { [string]: boolean }, rodEnchants: { [string]: string },
+	activeBait: any, baitMap: any, activePotions: any, petsList: { any }, equippedPetUids: { string },
+	castLuckAdd: number, activeEventId: string?, nowSec: number
+): string
+	local live = OddsCalculator.ComputeLiveOdds(islandId, rodId, ownedRods, rodEnchants, activeBait, baitMap, activePotions, petsList, equippedPetUids, castLuckAdd, activeEventId, nowSec)
+	local fishOdds, wpOdds = live.fishOdds, live.wpOdds
 	local baseRare, effRare, baseBoss, effBoss, wpBoss = 0, 0, 0, 0, 0
 	for i, fo in ipairs(fishOdds) do
 		local ord = GameConfig.RarityOrder[fo.fish.rarity] or 1
 		if fo.fish.rarity == "Boss" then
 			baseBoss += fo.basePct; effBoss += fo.effectivePct
 			if wpOdds[i] then wpBoss += wpOdds[i].effectivePct end
-		elseif ord >= 3 then
+		end
+		if ord >= 3 then
 			baseRare += fo.basePct; effRare += fo.effectivePct
 		end
 	end
-	local mutTxt = OddsCalculator.ComputeMutationSummary(mutMult, midasActive)
+	local mutTxt = live.mutationSummary
 	return string.format(
 		"📊 Odds (Base → Live): Rare+ %.1f%% → %.1f%% • Boss %.2f%% → %.2f%% (🌀 Whirlpool %.2f%%)  |  Mutations: %s",
 		baseRare, effRare, baseBoss, effBoss, wpBoss, mutTxt

@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local OddsCalculator = require(Shared:WaitForChild("OddsCalculator"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfig"))
 
@@ -56,10 +57,8 @@ local function rebuildTopToolbar()
 		if not egg then return end
 
 		local lines: { string } = {}
-		local weightSum = 0
-		for _, p in ipairs(egg.pets) do weightSum += p.weightChance end
-		for _, p in ipairs(egg.pets) do
-			local pct = (p.weightChance / math.max(0.01, weightSum)) * 100
+		for _, odds in ipairs(OddsCalculator.ComputeEggOdds(egg)) do
+			local p, pct = odds.pet, odds.pct
 			table.insert(lines, string.format("• [%s] %s: Base %.1f%% → Effective %.1f%% (+%d%%G/+%d%%Str/+%d%%Lk)", p.rarity, p.name, pct, pct, math.floor(p.sellBonus * 100), math.floor(p.strengthBonus * 100), math.floor(p.luckBonus * 100)))
 		end
 

@@ -71,3 +71,21 @@ phạm vi prompt 3D/override và vùng hàng lưới; tia đầu tiên/Auto; Ses
 đóng một lần và cooldown; FishingController bật lại Auto trong hồi, gói trùng, hủy/cất cần/chết.
 Các phép thử này không thay nghiệm thu Studio, điện thoại, số kết nối/thẻ thực tế hoặc hai client.
 
+## Hồi quy Đợt 3 (không truy cập kho Roblox)
+
+Chạy cùng `tools/luau.exe` như trên:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_paid_random_policy.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_paid_random_transactions.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_live_odds.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_catch_control.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_camera_focus.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_particle_budget.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_animation_pose.ps1
+```
+
+Các runner tự tạo `build/`, nhúng nguồn thật, giả lập các biên Engine rồi trả exit khác 0 nếu lỗi. Policy transactions chạy nguyên hàm tải policy và handler HatchEgg/RollEnchant; biên tiền, vị trí, cấp pet và roll được giả lập. Live odds tải cấu hình, OddsCalculator, FishingRoller, BuffAggregator, provider pet và vật phẩm thật; 19.200 rổ gồm năm đảo, cần thường/Exclusive, phù phép, mồi, thuốc, pet Tiki, mọi sự kiện, bốn chế độ và hai loại nước. Bộ này đối chiếu callback trọng số đi qua RollFishSpecies, tổng rổ, loài bị loại, Swift/Midas, trứng và biên Shiny của RollMutation. Thời gian, quyền gamepass và chọn số ngẫu nhiên là biên điều khiển.
+
+Pose dùng đại số CFrame giản lược để kiểm vòng đời và thứ tự cập nhật, không kiểm hướng khớp hay hình học trên Engine. Camera/particle cũng là mô phỏng. Nghiệm thu hai client R6/R15, hai thứ tự đóng thoại, đa cảm ứng, ảnh/video và frame time median/p95 trên điện thoại vẫn cần chạy riêng; PASS không thay các ca đó.
+

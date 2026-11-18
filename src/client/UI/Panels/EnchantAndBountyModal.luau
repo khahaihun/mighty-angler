@@ -13,6 +13,7 @@ local BountiesConfig = require(Shared:WaitForChild("Config"):WaitForChild("Bount
 local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
 
 local Theme = require(script.Parent.Parent.Theme)
+local PurchaseOddsController = require(script.Parent.Parent.Parent.Controllers.PurchaseOddsController)
 local WindowFrame = require(script.Parent.Parent.Components.WindowFrame)
 
 local EnchantAndBountyModal = {}
@@ -189,7 +190,7 @@ function EnchantAndBountyModal.Render()
 				if owned then
 					selectedExclRod = ex.id; Net.FireServer(Net.ClientToServer.EquipRod, ex.id)
 				elseif ex.id == "SeraphimDragon" then
-					Net.FireServer(Net.ClientToServer.PromptGamepass, "ExclusiveDragonRod")
+					PurchaseOddsController.Show("ExclusiveDragonRod")
 				elseif ex.id == "RelicTrident" then
 					if pickedBoss and type(pickedBoss.uid) == "string" then
 						Net.FireServer(Net.ClientToServer.UnlockExclusiveRod, ex.id, pickedBoss.uid)

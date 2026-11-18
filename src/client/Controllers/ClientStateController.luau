@@ -6,6 +6,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
 local OddsCalculator = require(Shared:WaitForChild("OddsCalculator"))
+local PurchaseOddsSummary = require(Shared:WaitForChild("PurchaseOddsSummary"))
+local PurchaseOddsController = require(script.Parent.PurchaseOddsController)
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local BaitConfig = require(Shared:WaitForChild("Config"):WaitForChild("BaitConfig"))
 local PotionsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PotionsConfig"))
@@ -55,8 +57,15 @@ local function refreshTopBuffLine()
 	end
 end
 
+local activeCastMode: string? = nil
+local hasFullSnapshot = false
 local function refreshHudLiveOdds()
-	local castLuckAdd = if FishingController.IsAutoFishEnabled() and hasAutoProCache then GameConfig.PERFECT_CAST_LUCK_ADD else 0
+	if not hasFullSnapshot then return end
+	PurchaseOddsController.SetProvider(function(key: string)
+		return PurchaseOddsSummary.BuildLines({ islandId = islandCache, rodId = rodIdCache, ownedRods = ownedRodsCache, rodEnchants = rodEnchantsCache, activeBait = activeBaitCache, baitMap = baitMapCache, activePotions = activePotionsCache, pets = petsCache, equippedPets = equippedPetsCache, activeEventId = activeEventIdCache, nowSec = os.time() + serverClockOffset, hasAutoPro = hasAutoProCache }, key)
+	end)
+	local perfect = if activeCastMode then (activeCastMode == "ManualPerfect" or activeCastMode == "AutoPro") else FishingController.IsAutoFishEnabled() and hasAutoProCache
+	local castLuckAdd = if perfect then GameConfig.PERFECT_CAST_LUCK_ADD else 0
 	local summary = OddsCalculator.BuildHudLiveOddsSummary(
 		islandCache, rodIdCache, ownedRodsCache, rodEnchantsCache,
 		activeBaitCache, baitMapCache, activePotionsCache,
@@ -93,6 +102,13 @@ local function syncEnchantModal()
 end
 
 function ClientStateController.Init(progressModRef: any)
+	Net.OnClientEvent(Net.ServerToClient.FishingCastStarted, function(payload: any)
+		activeCastMode = if type(payload) == "table" then tostring(payload.castMode) else nil
+		refreshHudLiveOdds()
+	end)
+	local function clearCastOdds() activeCastMode = nil; refreshHudLiveOdds() end
+	Net.OnClientEvent(Net.ServerToClient.FishingCatchResult, clearCastOdds)
+	Net.OnClientEvent(Net.ServerToClient.FishingStateReset, clearCastOdds)
 	FishingController.OnStateChanged(function(_isCasting: boolean, _isAutoFish: boolean)
 		refreshHudLiveOdds()
 	end)
@@ -132,6 +148,7 @@ function ClientStateController.Init(progressModRef: any)
 		PlaytimeAndSettingsModal.SyncSettings(lockRare, lockMut, low, mute)
 		SoundAndFxController.SetClientPrefs(mute, low)
 
+		hasFullSnapshot = true
 		activePotionsCache = p.activePotions or {}
 		activeBaitCache = p.activeBait
 		baitMapCache = p.bait or {}
