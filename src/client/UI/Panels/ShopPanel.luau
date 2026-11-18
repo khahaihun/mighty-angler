@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local CatchControl = require(Shared:WaitForChild("CatchControl"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
 local BaitConfig = require(Shared:WaitForChild("Config"):WaitForChild("BaitConfig"))
@@ -48,7 +49,7 @@ local function getPassBeforeAfterNote(gpKey: string): string
 	elseif gpKey == "DoubleStrength" then
 		return "Multiplies Strength gained from Gym Stations & Fish Catches by 2.0x permanently!"
 	end
-	return "Expands Active Pet Companion equip slots from 4 Pets → 7 Pets simultaneously!"
+	return string.format("Active Pet slots: %d → %d simultaneously!", GameConfig.BASE_PET_EQUIP_SLOTS, GameConfig.BASE_PET_EQUIP_SLOTS + GameConfig.BONUS_PET_EQUIP_SLOTS)
 end
 
 local function setDetailHeader(titleTxt: string, subTxt: string, col: Color3, btnTxt: string?, btnCol: Color3?, onBtn: (() -> ())?)
@@ -86,8 +87,9 @@ function ShopPanel.Render()
 			local isOwned = ownedRods[rod.id] == true
 			local isEquipped = (curRodId == rod.id)
 			local strMet = (curStrength >= rod.strengthReq)
-			local rareBar = math.floor(math.clamp(0.28 + rod.controlBonus, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
-			local bossBar = math.floor(math.clamp(0.22 + rod.controlBonus, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
+			local bonus = CatchControl.ComputeWidthBonus(curStrength, rod.strengthReq, rod.controlBonus)
+			local rareBar = math.floor(CatchControl.ComputeWidth(false, bonus) * 100 + 0.5)
+			local bossBar = math.floor(CatchControl.ComputeWidth(true, bonus) * 100 + 0.5)
 			local fText = if isEquipped then "EQUIPPED"
 				elseif isOwned then (if strMet then "EQUIP" else ("NEED " .. Util.FormatNumber(rod.strengthReq) .. " STR"))
 				elseif not strMet then ("REQ " .. Util.FormatNumber(rod.strengthReq) .. " STR")

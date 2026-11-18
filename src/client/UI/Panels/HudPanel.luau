@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
+local CatchControl = require(Shared:WaitForChild("CatchControl"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
 local EnchantsConfig = require(Shared:WaitForChild("Config"):WaitForChild("EnchantsConfig"))
@@ -70,11 +71,9 @@ local function refreshRodProgressHint()
 	if not rodHintLbl then return end
 	local eff = RodsConfig.GetEffectiveStats(curRodId, ownedRodsCache, rodEnchantsCache)
 	local ench = if eff.enchantId then EnchantsConfig.ById[eff.enchantId] else nil
-	local baseline = math.max(eff.masteryBaselineStrength, 300)
-	local mastery = math.clamp(math.log10(1 + curStrength / baseline) / 2.0, 0, 1)
-	local ctrlTotal = eff.controlBonus + (if ench then ench.controlBonus else 0) + mastery * GameConfig.STRENGTH_MAX_BAR_BONUS
-	local rareBarPct = math.floor(math.clamp(0.28 + ctrlTotal, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
-	local bossBarPct = math.floor(math.clamp(0.22 + ctrlTotal, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
+	local ctrlTotal = CatchControl.ComputeWidthBonus(curStrength, eff.masteryBaselineStrength, eff.controlBonus + (if ench then ench.controlBonus else 0))
+	local rareBarPct = math.floor(CatchControl.ComputeWidth(false, ctrlTotal) * 100 + 0.5)
+	local bossBarPct = math.floor(CatchControl.ComputeWidth(true, ctrlTotal) * 100 + 0.5)
 	local rodLuckPct = math.floor((eff.luckBonus + (if ench then ench.luckBonus else 0) + (if autoFishOn and hasAutoFishPerk then GameConfig.PERFECT_CAST_LUCK_ADD else 0)) * 100 + 0.5)
 	local enchTag = if ench then (" • 🔮 " .. ench.name) else ""
 
