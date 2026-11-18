@@ -12,7 +12,7 @@ Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lif
 
 ## Reset DEV — mục 1.4
 
-`-Suite dev_reset` chạy 8 ca qua handler thật, gồm giữ đối tượng cũ đến khi pending write được xác nhận, báo riêng RAM/lưu bền, lỗi API, RAM-only, Reset đồng thời và rời lúc chờ. `client_fixture` giả lập các biên Instance/Theme/Net để kiểm module DevTestPanel nhận kết quả và đổi Text; không chứng minh bố cục/render hay input của Roblox Engine.
+`-Suite dev_reset` chạy 12 ca qua handler thật, gồm giữ đối tượng cũ đến khi pending write được xác nhận, báo riêng RAM/lưu bền, lỗi API, RAM-only, Reset đồng thời, rời lúc chờ và bốn ca hết lease trước/trong hàng đợi có/không chủ B. `client_fixture` giả lập các biên Instance/Theme/Net để kiểm module DevTestPanel nhận kết quả và đổi Text; không chứng minh bố cục/render hay input của Roblox Engine.
 
 Sau 1.4, toàn bộ bộ hồi quy mặc định đạt exit 0: 19 acquisition, 12 lifecycle, 29 schema, 8 Reset, 7 persistence và cách ly Studio. Các kết quả đỏ ở mục lịch sử bên dưới được giữ để truy vết.
 

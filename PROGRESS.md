@@ -5,6 +5,8 @@
 
 ## Mục 1.4 — Reset cùng hàng đợi, kết quả RAM và lưu bền
 
+- [x] **Vá review lease Reset:** không dùng riêng cờ readOnly để suy ra quyền ghi. Dùng cùng phép kiểm lease từ confirmedAt+TTL tại lúc nhận, sau khi vào hàng đợi và ngay trước đổi candidate; bỏ qua cờ resetting của chính thao tác, RAM-only vẫn hợp lệ. Bốn ca mới (hết hạn trước/trong hàng đợi, có/không chủ B) đỏ trước sửa, nay Reset **12/12**; giữ nguyên RAM/số dư/kho/seq/chủ B, không thêm ghi. Bộ chung exit 0 và verify 6/6 exit 0 (`logs/reset-lease-red.log`, `logs/reset-lease-final.log`, `logs/reset-lease-verify.log`).
+
 - [x] Nền gồm `bbce374` và vá review `d139bbf`; tiếp tục không dừng theo giao việc. Tái hiện 6 ca Reset đỏ trước sửa (`logs/phase14-red.log`).
 - [x] Persistence.Reset khóa giao dịch và chặn Reset đồng thời; trong hàng đợi UserId, xác nhận pending write trước khi đổi đối tượng, lấy seq mới nhất rồi chụp bản mặc định thành một thao tác ghi cố định. Không xác nhận được thao tác trước thì không đổi RAM. Đóng phiên trong lúc đợi thì hủy Reset, không cài lại người đã rời.
 - [x] Mỗi bước xác nhận/ghi Reset thử tối đa ba lần; giữ pending thao tác chưa chắc chắn để tự lưu tiếp khi API hồi phục. RAM-only không mở kho; phản hồi Saved/RAMOnly/Unconfirmed/Busy/NotApplied tách khỏi cờ ramApplied, không báo Success nếu chỉ đổi RAM hoặc chưa xác nhận ghi.

@@ -127,6 +127,50 @@ return function(sources)
 		equal(b.document.saveSeq, 2, "one reset operation")
 		equal(b.commits, 2, "claim and reset only")
 	end)
+	for _, moved in ipairs({ false, true }) do
+		test("expired lease rejects reset without RAM change; moved=" .. tostring(moved), function()
+			local b, f, p = setup(sources)
+			local original = f.data.Get(p); original.gold = 505; f.data.SaveProfile(p)
+			b.now += 121
+			if moved then
+				local other = Fixture.server(sources, b, "B")
+				local pB = other.add(101)
+				other.data.Get(pB).gold = 999; other.data.SaveProfile(pB)
+			end
+			local owner, gold, seq = b.document.activeSessionId, b.document.gold, b.document.saveSeq
+			local calls = #b.calls
+			f.finish(f.fireRemote("DevAction", p, "ResetSave"))
+			equal(f.data.Get(p), original, "expired reset keeps RAM object")
+			equal(original.gold, 505, "expired reset keeps RAM balance")
+			equal(b.document.activeSessionId, owner, "expired reset preserves store owner")
+			equal(b.document.gold, gold, "expired reset preserves store balance")
+			equal(b.document.saveSeq, seq, "expired reset preserves sequence")
+			equal(#b.calls, calls, "expired request does not attempt write")
+			equal(feedback(f).devReset.ramApplied, false, "expired reset reported not applied")
+		end)
+		test("lease expires while reset queues; moved=" .. tostring(moved), function()
+			local b, f, p = setup(sources)
+			local original = f.data.Get(p); original.gold = 505
+			local held
+			f.afterUpdate = function(kind) if kind == "save" and not held then held = coroutine.running(); coroutine.yield("old ack") end end
+			local save = f.spawn(function() return f.data.SaveProfile(p) end)
+			local reset = f.fireRemote("DevAction", p, "ResetSave")
+			b.now += 121
+			if moved then
+				local other = Fixture.server(sources, b, "B")
+				local pB = other.add(101)
+				other.data.Get(pB).gold = 999; other.data.SaveProfile(pB)
+			end
+			local owner, gold, seq = b.document.activeSessionId, b.document.gold, b.document.saveSeq
+			f.afterUpdate = nil; f.resume(held); f.finish(save); f.finish(reset)
+			equal(f.data.Get(p), original, "queued expired reset keeps object")
+			equal(original.gold, 505, "queued expired reset keeps RAM money")
+			equal(b.document.activeSessionId, owner, "queued reset preserves latest owner")
+			equal(b.document.gold, gold, "queued reset preserves latest money")
+			equal(b.document.saveSeq, seq, "queued reset does not add a write")
+			equal(feedback(f).devReset.ramApplied, false, "queued expired reset reported not applied")
+		end)
+	end
 	print(string.format("RESET_SUITE passed=%d failed=%d", passed, failed))
 	assert(failed == 0, "DEV reset suite failed")
 end

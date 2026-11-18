@@ -47,9 +47,13 @@ function ProfilePersistenceService.Begin(player: Player, token: string): Session
 	return s
 end
 
+local function hasLease(s: Session): boolean
+	return Lock.IsStudioOfflineFallback() or os.time() < s.confirmedAt + GameConfig.SESSION_LOCK_EXPIRE_SEC
+end
+
 function ProfilePersistenceService.Locked(s: Session?): boolean
 	if not s or not s.profile or s.loading or s.readOnly or s.closing or s.closed or s.resetting or shuttingDown then return true end
-	return not Lock.IsStudioOfflineFallback() and os.time() >= s.confirmedAt + GameConfig.SESSION_LOCK_EXPIRE_SEC
+	return not hasLease(s)
 end
 
 function ProfilePersistenceService.Quarantine(s: Session, reason: string)
@@ -109,11 +113,13 @@ end
 function ProfilePersistenceService.Reset(s: Session): (Types.PlayerProfile?, string)
 	if s.resetting then return nil, "Busy" end
 	if s.closed or s.closing or s.readOnly or not s.profile then return nil, "Unavailable" end
+	if not hasLease(s) then return nil, "Expired" end
 	s.resetting = true
 	local fresh: Types.PlayerProfile? = nil
 	local status = "NotApplied"
 	Lock.WithUserLock(s.userId, function()
 		if s.closed or s.closing or s.readOnly or not s.profile then status = "Unavailable"; return end
+		if not hasLease(s) then status = "Expired"; return end
 		local store = Lock.TryGetStore()
 		if not store and not Lock.IsStudioOfflineFallback() then return end
 		if s.pending then
@@ -127,6 +133,7 @@ function ProfilePersistenceService.Reset(s: Session): (Types.PlayerProfile?, str
 			if prior ~= "Saved" then return end
 		end
 		if s.closed or s.closing or s.readOnly then status = "Unavailable"; return end
+		if not hasLease(s) then status = "Expired"; return end
 		local current = s.profile
 		if not current then return end
 		local candidate = GameConfig.CreateDefaultProfile()
