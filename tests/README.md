@@ -39,3 +39,11 @@ Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉ
 `data_persistence.luau` dùng lại kho RAM và lịch coroutine của `session_fixture.luau`. Bảy ca kiểm hai phiên tranh khóa, thử lại lưu cuối khi lỗi tạm, phản hồi lưu muộn, hai đường đóng đồng thời, hồ sơ sai kiểu, nút Reset DEV trong lúc autosave và nộp lại cùng UID cá trước/sau đổi máy chủ.
 
 Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.
+
+
+## Hồi quy Đợt 2 (logic thật, biên Engine giả)
+Chạy `powershell -ExecutionPolicy Bypass -File tools\test_fishing_wave.ps1`.
+Bốn bộ thử kiểm cân thường/Titan, biên Perfect server, MinigameBar Mount/nút/chuột trước-sau hạn và ack trễ;
+phạm vi prompt 3D/override và vùng hàng lưới; tia đầu tiên/Auto; SessionManager 1–3 vòng với gói trễ 200ms,
+đóng một lần và cooldown; FishingController bật lại Auto trong hồi, gói trùng, hủy/cất cần/chết.
+Các phép thử này không thay nghiệm thu Studio, điện thoại, số kết nối/thẻ thực tế hoặc hai client.

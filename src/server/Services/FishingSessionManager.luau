@@ -10,6 +10,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
+local FishingCastState = require(script.Parent.FishingCastState)
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 
 export type CastSession = {
@@ -93,6 +94,7 @@ function FishingSessionManager.CloseSessionOnce(
 		return nil
 	end
 	sessions[player] = nil
+	FishingCastState.Close(player, cur.sessionId, reason)
 	RodVisuals.ClearBobber(player)
 
 	if not silent then

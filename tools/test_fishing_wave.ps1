@@ -1,6 +1,10 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 $paths = @{
+ FishingController='src/client/Controllers/FishingController.luau'
+ FishingCastState='src/server/Services/FishingCastState.luau'
+ FishingSessionManager='src/server/Services/FishingSessionManager.luau'
+ FishingRayFilter='src/shared/FishingRayFilter.luau'
  FishingRoller='src/server/Services/FishingRoller.luau'
  GridWindow='src/client/UI/Components/GridWindow.luau'
  WorldPromptAccess='src/server/Services/WorldPromptAccess.luau'
@@ -14,6 +18,8 @@ foreach ($name in $paths.Keys) {
 }
 [void]$runner.AppendLine('require("../tests/fishing_wave")(sources)')
 [void]$runner.AppendLine('require("../tests/fishing_prompt_grid")(sources)')
+[void]$runner.AppendLine('require("../tests/fishing_cast_lifecycle")(sources)')
+[void]$runner.AppendLine('require("../tests/fishing_client_schedule")(sources)')
 [IO.Directory]::CreateDirectory((Join-Path (Get-Location) 'build')) | Out-Null
 [IO.File]::WriteAllText((Join-Path (Get-Location) 'build/test_fishing_wave.luau'), $runner.ToString(), [Text.UTF8Encoding]::new($false))
 & tools/luau.exe build/test_fishing_wave.luau
