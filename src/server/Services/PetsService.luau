@@ -187,7 +187,8 @@ local function handleEquipPet(player: Player, uid: string)
 
 	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 	if #profile.equippedPetUids >= maxSlots then
-		table.remove(profile.equippedPetUids, 1)
+		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Info", text = "Pet slots are full. Unequip a pet first!" })
+		return
 	end
 	table.insert(profile.equippedPetUids, uid)
 	DataService.MarkDirty(player)

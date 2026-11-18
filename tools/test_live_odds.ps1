@@ -4,7 +4,8 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 [IO.Directory]::CreateDirectory((Join-Path $root 'build')) | Out-Null
 $paths = @('src/shared/FishingRayFilter.luau', 'src/shared/Types.luau', 'src/shared/Util.luau', 'src/shared/OddsCalculator.luau', 'src/shared/PurchaseOddsSummary.luau', 'src/shared/CatchControl.luau',
-    'src/server/Services/FishingRoller.luau', 'src/server/Services/BuffAggregator.luau', 'src/server/Services/PetsService.luau', 'src/server/Services/PotionAndBaitHelper.luau')
+    'src/client/Controllers/PurchaseOddsController.luau', 'src/server/Services/FishingRoller.luau', 'src/server/Services/BuffAggregator.luau', 'src/server/Services/PetsService.luau', 'src/server/Services/PotionAndBaitHelper.luau')
+
 $paths += Get-ChildItem src/shared/Config -Filter '*.luau' | ForEach-Object { $_.FullName }
 $paths += Get-ChildItem src/shared/Config/Islands -Filter '*.luau' | ForEach-Object { $_.FullName }
 $runner = "local sources = {}`n"

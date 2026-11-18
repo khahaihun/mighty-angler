@@ -66,6 +66,9 @@ local function refreshHudLiveOdds()
 	end)
 	local perfect = if activeCastMode then (activeCastMode == "ManualPerfect" or activeCastMode == "AutoPro") else FishingController.IsAutoFishEnabled() and hasAutoProCache
 	local castLuckAdd = if perfect then GameConfig.PERFECT_CAST_LUCK_ADD else 0
+	PurchaseOddsController.SetLiveProvider(function()
+		return PurchaseOddsSummary.BuildLiveLines({ islandId = islandCache, rodId = rodIdCache, ownedRods = ownedRodsCache, rodEnchants = rodEnchantsCache, activeBait = activeBaitCache, baitMap = baitMapCache, activePotions = activePotionsCache, pets = petsCache, equippedPets = equippedPetsCache, activeEventId = activeEventIdCache, nowSec = os.time() + serverClockOffset }, castLuckAdd, activeCastMode or (if FishingController.IsAutoFishEnabled() then (if hasAutoProCache then "AutoPro" else "AutoFree") else "ManualNormal"))
+	end)
 	local summary = OddsCalculator.BuildHudLiveOddsSummary(
 		islandCache, rodIdCache, ownedRodsCache, rodEnchantsCache,
 		activeBaitCache, baitMapCache, activePotionsCache,
