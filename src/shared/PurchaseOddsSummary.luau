@@ -3,6 +3,20 @@ local OddsCalculator = require(script.Parent.OddsCalculator)
 local GameConfig = require(script.Parent.Config.GameConfig)
 local PurchaseOddsSummary = {}
 
+function PurchaseOddsSummary.BuildLiveLines(context: any, castLuckAdd: number, mode: string): { string }
+	local live = OddsCalculator.ComputeLiveOdds(context.islandId, context.rodId, context.ownedRods, context.rodEnchants,
+		context.activeBait, context.baitMap, context.activePotions, context.pets, context.equippedPets,
+		castLuckAdd, context.activeEventId, context.nowSec)
+	local lines = { "Current mode: " .. mode, "Each species: Base → Live | normal water / whirlpool" }
+	for idx, entry in ipairs(live.fishOdds) do
+		local whirlpool = live.wpOdds[idx]
+		table.insert(lines, string.format("%s: %.3f%% → %.3f%% | whirlpool %.3f%% → %.3f%%",
+			entry.fish.name, entry.basePct, entry.effectivePct, whirlpool.basePct, whirlpool.effectivePct))
+	end
+	table.insert(lines, "Mutations: " .. live.mutationSummary)
+	return lines
+end
+
 function PurchaseOddsSummary.BuildLines(context: any, key: string): { string }
 	local lines = { "Each result: BEFORE → AFTER purchase. Same equipped bait, pets, potions and event." }
 	local afterRod = if key == "ExclusiveDragonRod" then "SeraphimDragon" else context.rodId
@@ -10,7 +24,7 @@ function PurchaseOddsSummary.BuildLines(context: any, key: string): { string }
 		{ name = "Manual normal", before = 0, after = 0 },
 		{ name = "Manual Perfect", before = GameConfig.PERFECT_CAST_LUCK_ADD, after = GameConfig.PERFECT_CAST_LUCK_ADD },
 		{ name = "Auto Free", before = 0, after = 0 },
-		{ name = "Auto Pro", before = if context.hasAutoPro then GameConfig.PERFECT_CAST_LUCK_ADD else 0,
+		{ name = if context.hasAutoPro then "Auto Pro" else "Auto Free → Auto Pro (after upgrade)", before = if context.hasAutoPro then GameConfig.PERFECT_CAST_LUCK_ADD else 0,
 			after = if context.hasAutoPro or key == "AutoFish" then GameConfig.PERFECT_CAST_LUCK_ADD else 0 },
 	}
 	local function compute(rod: string, castLuck: number)

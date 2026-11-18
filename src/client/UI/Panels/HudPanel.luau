@@ -11,6 +11,7 @@ local EnchantsConfig = require(Shared:WaitForChild("Config"):WaitForChild("Encha
 local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
 
 local Theme = require(script.Parent.Parent.Theme)
+local PurchaseOddsController = require(script.Parent.Parent.Parent.Controllers.PurchaseOddsController)
 local HotbarAndBaitUi = require(script.Parent.Parent.Components.HotbarAndBaitUi)
 
 export type HudActions = {
@@ -27,7 +28,7 @@ local goldLbl: TextLabel? = nil
 local gemsLbl: TextLabel? = nil
 local strengthLbl: TextLabel? = nil
 local rodHintLbl: TextLabel? = nil
-local liveOddsLbl: TextLabel? = nil
+local liveOddsLbl: TextButton? = nil
 local islandBannerLbl: TextLabel? = nil
 local eventBannerLbl: TextLabel? = nil
 local bagBtnRef: TextButton? = nil
@@ -128,7 +129,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	Theme.AddTextStroke(subHint, 1.5)
 	rodHintLbl = subHint
 
-	local oddsHint = Instance.new("TextLabel")
+	local oddsHint = Instance.new("TextButton")
 	oddsHint.Name = "LiveOddsBanner"
 	oddsHint.AnchorPoint = Vector2.new(0.5, 0)
 	oddsHint.Position = UDim2.new(0.5, 0, 0, 71)
@@ -139,6 +140,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	oddsHint.TextColor3 = Color3.fromRGB(132, 238, 255)
 	oddsHint.Text = ""
 	oddsHint.Parent = rootGui
+	oddsHint.Activated:Connect(PurchaseOddsController.ShowLive)
 	Theme.AddTextStroke(oddsHint, 1.4)
 	liveOddsLbl = oddsHint
 
@@ -261,7 +263,7 @@ function HudPanel.UpdateEventBanner(text: string)
 end
 
 function HudPanel.UpdateLiveOddsText(text: string)
-	if liveOddsLbl then liveOddsLbl.Text = text end
+	if liveOddsLbl then liveOddsLbl.Text = "[View all odds] " .. text end
 end
 
 return HudPanel

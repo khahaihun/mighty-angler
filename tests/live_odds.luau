@@ -12,10 +12,18 @@ local profile, activeEvent = {}, nil
 local randomValue: number? = nil
 local testMath = table.clone(math)
 testMath.random = function(...) return if randomValue then randomValue else math.random(...) end
-local net = { OnServerEvent = function() end, ClientToServer = node("C2S") }
+local handlers, buttons, created = {}, {}, {}
+local promptCalls = 0
+local function instanceNew(class)
+	local obj = { ClassName = class, Destroy = function(self) self.Parent = nil end }
+	table.insert(created, obj); return obj
+end
+local net = { OnServerEvent = function(key, callback) handlers[key.Name] = callback end, FireClient = function() end, FireServer = function() promptCalls += 1 end, ServerToClient = node("S2C"), ClientToServer = node("C2S") }
+local extraPets = false
 local cache = {
-	DataService = { Get = function() return profile end, OnProfileLoaded = function() end },
-	PerkService = { HasGamepass = function() return false end },
+	DataService = { Get = function() return profile end, OnProfileLoaded = function() end, MarkDirty = function() end },
+	PerkService = { HasGamepass = function(_, key) return extraPets and key == "ExtraPets" end },
+	Theme = { Colors = {}, AddCorner = function() end, CreateButton = function(_, name, _, _, _, _, callback) buttons[name] = callback end },
 	Net = net, CurrencyService = {}, RodVisuals = {}, PetAndFishVisuals = {},
 }
 local loadModule
@@ -26,9 +34,10 @@ loadModule = function(ref)
 	local chunk = assert(loadstring(sources[name], name))
 	local environment = setmetatable({
 		script = node(name), require = loadModule, math = testMath,
+		Instance = { new = instanceNew }, UDim2 = { fromScale = function() return {} end, fromOffset = function() return {} end, new = function() return {} end }, Enum = node("Enum"),
 		game = { GetService = function(_, service) return node(service) end },
 		Color3 = { fromRGB = function() return {} end, new = function() return {} end },
-		Vector3 = { new = function() return {} end },
+		Vector3 = { new = function() return {} end }, Vector2 = { new = function() return {} end },
 		os = { time = function() return 10000 end },
 	}, { __index = getfenv() })
 	setfenv(chunk, environment)
@@ -119,3 +128,31 @@ local preview = loadModule("PurchaseOddsSummary").BuildLines({ islandId = 1, rod
 	activeBait = nil, baitMap = {}, activePotions = {}, pets = {}, equippedPets = {}, nowSec = 10000, hasAutoPro = false }, "ExclusiveDragonRod")
 assert(#preview > 30, "all modes/species must be disclosed")
 print("PASS live odds: " .. tests .. " server/provider buckets, excluded species, Swift/Midas, 10 eggs, Tiki 5.5%, purchase preview")
+
+profile = { pets = {}, equippedPetUids = {} }
+for idx = 1, 5 do table.insert(profile.pets, { uid = tostring(idx), petId = pets.Eggs[1].pets[1].id }) end
+local equipPlayer = { SetAttribute = function() end }
+for idx = 1, 3 do handlers.EquipPet(equipPlayer, tostring(idx)) end
+assert(#profile.equippedPetUids == 2 and profile.equippedPetUids[1] == "1" and profile.equippedPetUids[2] == "2", "third pet must not replace existing two")
+extraPets = true
+handlers.EquipPet(equipPlayer, "3"); handlers.EquipPet(equipPlayer, "4"); handlers.EquipPet(equipPlayer, "5")
+assert(#profile.equippedPetUids == 4 and profile.equippedPetUids[1] == "1" and profile.equippedPetUids[4] == "4", "fifth pet must be rejected without replacing existing pets")
+print("PASS pet equip: server 2 -> 4, third/fifth reject without replacement")
+
+local view = loadModule("PurchaseOddsController")
+local ownedBoth = { islandId = 1, rodId = "SeraphimDragon", ownedRods = { Twig = true, SeraphimDragon = true }, rodEnchants = {}, activeBait = nil, baitMap = {}, activePotions = {}, pets = {}, equippedPets = {}, nowSec = 10000, hasAutoPro = true }
+local summary = loadModule("PurchaseOddsSummary")
+view.SetProvider(function() error("live view must not use the purchase provider") end)
+view.SetLiveProvider(function() return summary.BuildLiveLines(ownedBoth, 0, "ManualNormal") end)
+view.ShowLive()
+local text
+for _, object in ipairs(created) do if object.Name == "OddsText" then text = object end end
+assert(text and string.find(text.Text, "Base") and string.find(text.Text, "whirlpool"))
+local originalText = text.Text
+ownedBoth.activeBait = loadModule("BaitConfig").List[1].id; ownedBoth.baitMap[ownedBoth.activeBait] = 5
+view.SetLiveProvider(function() return summary.BuildLiveLines(ownedBoth, 0.25, "ManualPerfect") end)
+assert(text.Text ~= originalText and string.find(text.Text, "ManualPerfect"), "open live view must refresh cast and buff changes")
+assert(buttons.Continue == nil, "viewing live odds cannot expose a purchase action")
+buttons.Cancel()
+assert(promptCalls == 0, "opening, refreshing, closing live odds must never prompt a purchase")
+print("PASS HUD live view: both passes owned, Base/Live by species, cast+buff refresh, close without prompt")
