@@ -224,3 +224,13 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 ## Bước tiếp theo dành cho Chủ dự án khi thức dậy [ ]
 - [ ] Mở Roblox Studio → **File → Open from File...** → chọn `D:\Projects\mighty-angler\build\mighty-angler-dev.rbxlx` (hoặc chạy `run.bat`) → bấm **Play (F5)** để trải nghiệm & dùng nút **`🛠️ [DEV]`** góc phải trên màn hình test nhanh toàn bộ 5 Đảo, Boss, Pet, Rebirth và Server Event.
 - [ ] Trước khi Publish chính thức lên Roblox: điền `ROBLOX_GROUP_ID` thật vào `src/shared/Config/GameConfig.luau` và 4 mã `id` Gamepass thật vào `src/shared/Config/GamepassesConfig.luau`.
+
+
+## Nhánh Đợt 2 · cân nặng và hạn bấm (Codex Sol, 2026-11-18)
+- [x] Checkout riêng `build/v3-fishing-sol`, nhánh `codex/v3-fishing`, nền `9282aa6`; không sửa checkout gốc.
+- [x] Quyết định cân nặng: thường dùng max(species.maxWeight, rod*1.15), làm tròn gần nhất; Titan giữ cap rod*1.25 và làm tròn xuống. Luau VM chạy nguồn thật kiểm Twig/Trident thường 22.0kg, Trident Titan 21.2kg, nhãn/hệ số giá giữ nguyên.
+- [x] 2.3 Codex P1-10: MinigameBar không gửi sau timeoutSec, không tự đóng do đồng hồ local; đợi máy chủ. Mỗi vòng chờ ack tới khi server trả thay vì tự gửi lại sau 0.5s.
+- [x] `tools/test_fishing_wave.ps1`: PASS; `tools/verify_project.ps1`: PASS 6/6 exit 0.
+- [~] Test chung `tools/test_studio_data_isolation.ps1`: isolation/acquisition PASS; 4 ca persistence đỏ của nền Đợt 1 (late_save_response_cannot_extend_ownership, both_close_paths_wait_for_final_save, malformed_profile_is_quarantined, dev_reset_during_autosave), đã báo trưởng nhóm; không sửa tại nhánh gameplay.
+- [ ] Chuột/chạm, 200ms 1/2/3 vòng trong Studio: chờ nghiệm thu; test VM hiện xác nhận việc giữ UI tới kết quả server, không suy ra đã thử Engine.
+- File: FishingRoller.luau, MinigameBar.luau, tools/test_fishing_wave.ps1, tests/fishing_wave.luau, PROGRESS.md.

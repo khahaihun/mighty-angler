@@ -192,11 +192,9 @@ function FishingRoller.RollSizeTierAndWeight(
 
 	local baseKg = fishDef.minWeight + (fishDef.maxWeight - fishDef.minWeight) * math.random()
 	local scaledKg = baseKg * pickedTier.weightMult * titanWeightFactor
-	-- Kep tran dung theo tai trong can (1.25x khi co Titan Line, lam tron xuong 0.1kg de khong bao gio vuot tran!)
-	local capMult = if boostBig then 1.25 else 1.15
-	local finalCap = effMaxWeight * capMult
+	local finalCap = if boostBig then effMaxWeight * 1.25 else math.max(fishDef.maxWeight, effMaxWeight * 1.15)
 	local clamped = math.min(scaledKg, finalCap)
-	local weight = math.max(0.1, math.floor(clamped * 10 + 1e-6) / 10)
+	local weight = math.max(0.1, if boostBig then math.floor(clamped * 10 + 1e-6) / 10 else math.floor(clamped * 10 + 0.5) / 10)
 	return pickedTier.name, weight, pickedTier.valueMult
 end
 
