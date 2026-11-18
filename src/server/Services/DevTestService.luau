@@ -1,6 +1,7 @@
 --!strict
 -- DevTestService.luau: Bang quyen nang test nhanh cho Chu Game — KHOA CUNG 100% chi hoat dong trong Roblox Studio
 
+local LogService = game:GetService("LogService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -26,6 +27,22 @@ function DevTestService.SetTriggerEventHook(hook: () -> ())
 end
 
 function DevTestService.Init()
+	if RunService:IsStudio() then
+		local reportingErr = false
+		LogService.MessageOut:Connect(function(message: string, messageType: Enum.MessageType)
+			if messageType == Enum.MessageType.MessageError and not reportingErr then
+				reportingErr = true
+				pcall(function()
+					Net.FireAllClients(Net.ServerToClient.Toast, {
+						kind = "Error",
+						text = "⚠️ SERVER ERROR: " .. string.sub(message, 1, 120),
+					})
+				end)
+				reportingErr = false
+			end
+		end)
+	end
+
 	Net.OnServerEvent(Net.ClientToServer.DevAction, function(player: Player, rawAction: any)
 		-- CHOT AN TOAN TUYET DOI: Nguoi choi ngoai Server Publish khong bao gio goi duoc!
 		if not RunService:IsStudio() then

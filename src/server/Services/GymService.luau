@@ -102,6 +102,24 @@ local function performStationRep(player: Player, isAuto: boolean): boolean
 	return true
 end
 
+local function movePlayerToBestGymStation(player: Player, profile: Types.PlayerProfile)
+	local char = player.Character
+	if not char then
+		return
+	end
+	local islandDef = IslandsRegistry.Get(profile.currentIsland)
+	local chosen = islandDef.gymStations[1]
+	for _, st in ipairs(islandDef.gymStations) do
+		if profile.strength >= st.minStrength then
+			chosen = st
+		end
+	end
+	if chosen then
+		local padPos = islandDef.centerPosition + chosen.offset + Vector3.new(0, 3.8, 1.8)
+		char:PivotTo(CFrame.new(padPos))
+	end
+end
+
 function GymService.Init()
 	Net.OnServerEvent(Net.ClientToServer.GymRep, function(player: Player)
 		local now = os.clock()
@@ -125,6 +143,17 @@ function GymService.Init()
 			return
 		end
 		autoTrainActive[player] = want
+		if want then
+			local profile = DataService.Get(player)
+			if profile then
+				local islandDef = IslandsRegistry.Get(profile.currentIsland)
+				local st, _ = findNearbyStation(player, islandDef)
+				if not st then
+					movePlayerToBestGymStation(player, profile)
+				end
+				performStationRep(player, true)
+			end
+		end
 	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)

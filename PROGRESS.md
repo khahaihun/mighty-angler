@@ -1,9 +1,18 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 02:28 bởi Antigravity
-- **Trạng thái hiện tại:** **ĐÃ HOÀN THÀNH 100% CẢ 3 CHẶNG (M1.1 → M3.4)** — Toàn bộ 49 file `.luau` đạt chuẩn `≤ 350 dòng/file` (cao nhất 336 dòng), vượt qua trọn vẹn **6/6 chốt chặn tự động (`luau-lsp --strict` + `globalTypes.d.luau` + `selene` + `rojo build`)** và đã đóng gói sẵn vào `build\mighty-angler-dev.rbxlx`.
+- **Cập nhật lần cuối:** 2026-11-18 09:43 bởi Antigravity
+- **Trạng thái hiện tại:** **ĐÃ HOÀN THÀNH 100% CẢ 3 CHẶNG (M1.1 → M3.4) + ĐÃ FIX DỨT ĐIỂM LỖI TREO ĐƠ KHI CÂU CÁ / TRAIN** — Đã xuất mới `build\mighty-angler-dev.rbxlx` (PASS 6/6).
 
 ---
+
+## Nhật ký Hotfix sau lần test Studio đầu tiên [x]
+- [x] **Fix lỗi treo đơ màn hình khi bấm Câu cá / Train (`BuffAggregator ↔ PetsService` mutual recursion):**
+  - *Nguyên nhân gốc:* Provider của `PetsService` gọi `sanitizeEquippedList`, hàm này lại gọi ngược `BuffAggregator.GetMultipliers(player).maxEquippedPets` gây vòng lặp đệ quy vô tận (`C stack overflow`) làm Studio đơ 1–2 giây rồi hủy luồng Server.
+  - *Cách khắc phục:* Tách riêng hàm trực tiếp `BuffAggregator.GetMaxEquippedPets(player)` (không đi qua danh sách provider) + khóa chống gọi lồng `evaluatingPlayers` trong `BuffAggregator.luau`.
+- [x] **Nâng cấp trải nghiệm bấm 1 chạm:**
+  - Nếu đứng xa biển mà bấm **`🎣 CAST ROD`** hoặc bật **`Auto-Fish`**, nhân vật tự động dịch chuyển ra ngay mũi Cầu gỗ câu cá của đảo đang đứng và quăng cần luôn.
+  - Khi bật **`Auto-Train`** mà chưa đứng trên máy tập, nhân vật tự động bước vào máy tập mạnh nhất đủ điều kiện trên đảo và tập ngay lập tức.
+  - Bỏ qua gọi mạng DataStore khi mở file `.rbxlx` cục bộ chưa publish (`game.PlaceId == 0`) giúp tốc độ phản hồi tức thì `0ms`, đồng thời chuyển tiếp mọi lỗi Server lên Toast trong Studio.
 
 ## Đã hoàn thành [x]
 

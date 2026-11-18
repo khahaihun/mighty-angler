@@ -21,7 +21,8 @@ local dataStore: DataStore? = nil
 local studioMemoryFallback = false
 
 local function tryGetDataStore(): DataStore?
-	if studioMemoryFallback then
+	if studioMemoryFallback or game.PlaceId == 0 then
+		studioMemoryFallback = true
 		return nil
 	end
 	if dataStore then

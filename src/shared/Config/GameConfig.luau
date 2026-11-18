@@ -20,7 +20,7 @@ GameConfig.DEV_UNLOCK_PERKS_IN_STUDIO = true
 -- Thong so cau ca & Minigame
 GameConfig.BASE_BITE_MIN_SEC = 1.8
 GameConfig.BASE_BITE_MAX_SEC = 4.0
-GameConfig.FISHING_MAX_WATER_DIST = 52
+GameConfig.FISHING_MAX_WATER_DIST = 68
 GameConfig.STRENGTH_MAX_SPEED_BONUS = 0.20 -- Toi da +20% toc do can cau nho Strength
 GameConfig.STRENGTH_MAX_BAR_BONUS = 0.25   -- Toi da +25% do rong thanh Minigame nho Strength
 

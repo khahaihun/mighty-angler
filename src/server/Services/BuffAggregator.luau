@@ -22,9 +22,15 @@ export type BonusContribution = {
 local BuffAggregator = {}
 
 local externalProviders: { (Player, Types.PlayerProfile) -> BonusContribution } = {}
+local evaluatingPlayers: { [Player]: boolean } = {}
 
 function BuffAggregator.RegisterProvider(provider: (Player, Types.PlayerProfile) -> BonusContribution)
 	table.insert(externalProviders, provider)
+end
+
+function BuffAggregator.GetMaxEquippedPets(player: Player): number
+	return GameConfig.BASE_PET_EQUIP_SLOTS
+		+ (if PerkService.HasGamepass(player, "ExtraPets") then GameConfig.BONUS_PET_EQUIP_SLOTS else 0)
 end
 
 -- Tinh do thuan thuc Strength so voi moc yeu cau cua Can cau dang cam (0.0 -> 1.0)
@@ -60,8 +66,7 @@ function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipli
 	local rebirthMult = 1 + (0.5 * profile.rebirths)
 	local gpGoldMult = if PerkService.HasGamepass(player, "DoubleGold") then 2.0 else 1.0
 	local gpStrMult = if PerkService.HasGamepass(player, "DoubleStrength") then 2.0 else 1.0
-	local maxPets = GameConfig.BASE_PET_EQUIP_SLOTS
-		+ (if PerkService.HasGamepass(player, "ExtraPets") then GameConfig.BONUS_PET_EQUIP_SLOTS else 0)
+	local maxPets = BuffAggregator.GetMaxEquippedPets(player)
 
 	local luckFactor = 1 + rod.luckBonus
 	local bossMult = 1.0
@@ -70,26 +75,30 @@ function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipli
 	local mutationFactor = 1.0
 	local biteSpeedFactor = 1 + strengthBiteBonus
 
-	for _, provider in ipairs(externalProviders) do
-		local c = provider(player, profile)
-		if c.luckAdd and c.luckAdd > 0 then
-			luckFactor *= (1 + c.luckAdd)
+	if not evaluatingPlayers[player] then
+		evaluatingPlayers[player] = true
+		for _, provider in ipairs(externalProviders) do
+			local c = provider(player, profile)
+			if c.luckAdd and c.luckAdd > 0 then
+				luckFactor *= (1 + c.luckAdd)
+			end
+			if c.bossChanceMult and c.bossChanceMult > 1 then
+				bossMult *= c.bossChanceMult
+			end
+			if c.sellAdd and c.sellAdd > 0 then
+				sellFactor *= (1 + c.sellAdd)
+			end
+			if c.strengthAdd and c.strengthAdd > 0 then
+				strengthFactor *= (1 + c.strengthAdd)
+			end
+			if c.mutationAdd and c.mutationAdd > 0 then
+				mutationFactor *= (1 + c.mutationAdd)
+			end
+			if c.biteSpeedAdd and c.biteSpeedAdd > 0 then
+				biteSpeedFactor *= (1 + c.biteSpeedAdd)
+			end
 		end
-		if c.bossChanceMult and c.bossChanceMult > 1 then
-			bossMult *= c.bossChanceMult
-		end
-		if c.sellAdd and c.sellAdd > 0 then
-			sellFactor *= (1 + c.sellAdd)
-		end
-		if c.strengthAdd and c.strengthAdd > 0 then
-			strengthFactor *= (1 + c.strengthAdd)
-		end
-		if c.mutationAdd and c.mutationAdd > 0 then
-			mutationFactor *= (1 + c.mutationAdd)
-		end
-		if c.biteSpeedAdd and c.biteSpeedAdd > 0 then
-			biteSpeedFactor *= (1 + c.biteSpeedAdd)
-		end
+		evaluatingPlayers[player] = nil
 	end
 
 	return {

@@ -29,7 +29,7 @@ local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile
 		ownedByUid[inst.uid] = inst.petId
 	end
 
-	local maxSlots = BuffAggregator.GetMultipliers(player).maxEquippedPets
+	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 	local clean: { string } = {}
 	local seen: { [string]: boolean } = {}
 	for _, uid in ipairs(profile.equippedPetUids) do
@@ -67,7 +67,7 @@ function PetsService.SyncVisualsAndClient(player: Player)
 	Net.FireClient(player, Net.ServerToClient.PetsUpdated, {
 		pets = profile.pets,
 		equippedPetUids = profile.equippedPetUids,
-		maxSlots = BuffAggregator.GetMultipliers(player).maxEquippedPets,
+		maxSlots = BuffAggregator.GetMaxEquippedPets(player),
 	})
 end
 
@@ -84,7 +84,7 @@ function PetsService.AwardPetDirect(player: Player, petDef: Types.PetDef, source
 	table.insert(profile.pets, inst)
 	profile.indexPets[petDef.id] = (profile.indexPets[petDef.id] or 0) + 1
 
-	local maxSlots = BuffAggregator.GetMultipliers(player).maxEquippedPets
+	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 	if #profile.equippedPetUids < maxSlots then
 		table.insert(profile.equippedPetUids, inst.uid)
 	end
@@ -184,7 +184,7 @@ local function handleEquipPet(player: Player, uid: string)
 		return
 	end
 
-	local maxSlots = BuffAggregator.GetMultipliers(player).maxEquippedPets
+	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 	if #profile.equippedPetUids >= maxSlots then
 		table.remove(profile.equippedPetUids, 1)
 	end
@@ -227,7 +227,7 @@ local function handleEquipBest(player: Player)
 		return scoreA > scoreB
 	end)
 
-	local maxSlots = BuffAggregator.GetMultipliers(player).maxEquippedPets
+	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 	table.clear(profile.equippedPetUids)
 	for i = 1, math.min(maxSlots, #sorted) do
 		table.insert(profile.equippedPetUids, sorted[i].uid)
@@ -263,9 +263,9 @@ local function handleDeletePet(player: Player, uid: string)
 end
 
 function PetsService.Init()
-	-- Dang ky buff Pet vao BuffAggregator (tinh chinh xac theo tung uid dang trang bi, chong cong trung)
+	-- Dang ky buff Pet vao BuffAggregator (KHONG goi nguoc GetMultipliers de tuyet doi khong de quy!)
 	BuffAggregator.RegisterProvider(function(player: Player, profile: Types.PlayerProfile)
-		sanitizeEquippedList(player, profile)
+		local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 		local ownedByUid: { [string]: string } = {}
 		for _, inst in ipairs(profile.pets) do
 			ownedByUid[inst.uid] = inst.petId
@@ -275,15 +275,20 @@ function PetsService.Init()
 		local strAdd = 0
 		local luckAdd = 0
 		local mutAdd = 0
+		local count = 0
 
 		for _, uid in ipairs(profile.equippedPetUids) do
 			local petId = ownedByUid[uid]
 			local def = if petId then PetsConfig.PetsById[petId] else nil
 			if def then
+				count += 1
 				sellAdd += def.sellBonus
 				strAdd += def.strengthBonus
 				luckAdd += def.luckBonus
 				mutAdd += def.mutationBonus
+				if count >= maxSlots then
+					break
+				end
 			end
 		end
 

@@ -158,18 +158,20 @@ local function refreshLeaderboards()
 		end
 	end
 
-	-- Co gang cap nhat OrderedDataStore neu API Services dang bat, khong crash khi tat trong Studio
-	pcall(function()
-		local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2")
-		local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2")
-		for _, p in ipairs(Players:GetPlayers()) do
-			local prof = DataService.Get(p)
-			if prof then
-				strStore:SetAsync(tostring(p.UserId), math.floor(prof.strength))
-				goldStore:SetAsync(tostring(p.UserId), math.floor(prof.stats.goldEarned))
+	-- Co gang cap nhat OrderedDataStore neu Place da publish (PlaceId > 0)
+	if game.PlaceId > 0 then
+		pcall(function()
+			local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2")
+			local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2")
+			for _, p in ipairs(Players:GetPlayers()) do
+				local prof = DataService.Get(p)
+				if prof then
+					strStore:SetAsync(tostring(p.UserId), math.floor(prof.strength))
+					goldStore:SetAsync(tostring(p.UserId), math.floor(prof.stats.goldEarned))
+				end
 			end
-		end
-	end)
+		end)
+	end
 
 	table.sort(strEntries, function(a, b)
 		return a.score > b.score

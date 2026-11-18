@@ -168,10 +168,16 @@ function FishingService.StartCast(player: Player)
 	local islandId = profile.currentIsland
 	local waterPos = FishingRoller.FindWaterCastPoint(player, islandId)
 	if not waterPos then
-		Net.FireClient(player, Net.ServerToClient.Toast, {
-			kind = "Info",
-			text = "Walk closer to the Fishing Pier or Ocean Water to cast!",
-		})
+		-- Tu dong dua nhan vat ra mui Cau go cau ca cua Dao hien tai de bam Cast an ngay 100%!
+		local char = player.Character
+		if char then
+			local islandDef = IslandsRegistry.Get(islandId)
+			local pierSpot = islandDef.centerPosition + Vector3.new(0, 4.2, 112)
+			char:PivotTo(CFrame.new(pierSpot) * CFrame.Angles(0, math.rad(180), 0))
+			waterPos = FishingRoller.FindWaterCastPoint(player, islandId)
+		end
+	end
+	if not waterPos then
 		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { tooFar = true })
 		return
 	end
