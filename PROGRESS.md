@@ -1,7 +1,15 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 16:06 bởi Codex
-- **Trạng thái hiện tại:** Tái kiểm toán commit `8227545` đã hoàn tất. **Cần bản vá trước phát hành.** Trong 44 mục V2, 21 mục đạt theo mã và 23 mục mới xử lý một phần. [Biên bản Codex V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 16:31 bởi Codex
+- **Trạng thái hiện tại:** Codex đã tiếp nhận vai trò Kỹ sư trưởng và ban hành kế hoạch cho Antigravity. **Chưa duyệt phát hành.** Có 23 mục chờ sửa, 21 mục đã đạt theo mã cần kiểm lại trên bản ứng viên. [Kế hoạch chỉ đạo V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Bàn giao chỉ đạo thi công sau V3
+
+- [x] Đối chiếu mốc bổ nhiệm `76916a6` với mã game đã kiểm toán ở `8227545`. Ban hành bảng giao việc cho 6 mã Argon và 17 mã Codex, kèm phép thử và người ký. Tài liệu của ca gồm kế hoạch chỉ đạo V3 và `PROGRESS.md`.
+- [x] Chốt tách kho hồ sơ và cả hai bảng điểm trước khi thử ghi. Với cân nặng, giao khôi phục cách tính trước hotfix cho lượt không có Titan Line và giữ trần theo `PLAN.md` cho lượt có Titan.
+- [x] Đối chiếu bằng danh sách mã trong biên bản V3, đủ 23/23 mã và mỗi mã có một đầu việc chính. Kiểm các liên kết bàn giao. Chạy lại `tools/verify_project.ps1` trên bản sao của nguồn và cấu hình hiện tại, **PASS 6/6, exit 0**. Đếm độc lập 88 file mã game, dài nhất 342 dòng, cả năm file cam kết đều < 310 dòng.
+- [ ] Antigravity bắt đầu Đợt 1 (7 mã) với kho thử riêng. Nộp kết quả hai server và bằng chứng vào lại đúng tiến độ sau Bounty. Đợt 2 (10 mã) kiểm vòng câu và Index. Đợt 3 (6 mã) kiểm quyền mua, xác suất và hiển thị.
+- [ ] Chờ kết quả chạy thực tế của bản vá trong Studio, trên hai server và trên điện thoại. Codex duyệt từng đợt và ký đúng bản place có đủ bằng chứng.
 
 ## Bàn giao tái kiểm toán V3
 
