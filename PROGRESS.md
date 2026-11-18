@@ -1,7 +1,13 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 12:40 bởi Antigravity
-- **Trạng thái hiện tại:** **HOÀN TẤT TRỌN GÓI 100% ĐẠI TU 2.0 (`Chặng A → Chặng D`, 85 file `.luau`, `[PASS] 6/6`)** — File place `build/mighty-angler-dev.rbxlx` đã đóng gói sẵn sàng để mở và bấm **Play (F5)** trải nghiệm trên Roblox Studio!
+- **Cập nhật lần cuối:** 2026-11-18 12:59 bởi Codex
+- **Trạng thái hiện tại:** Bốn chặng A–D đã được triển khai đến `127411f`. Kiểm toán mã nguồn kết luận **CẦN BẢN VÁ HOTFIX VÒNG CUỐI** trước khi phát hành.
+
+## Bàn giao kiểm toán sau Chặng D
+
+- [x] Codex đã lưu [biên bản kiểm toán mã nguồn 2.0](docs/CODEX_CODE_AUDIT_V2.md). Bộ kiểm định qua 6/6, cả 85 file Luau đạt giới hạn 350 dòng, cả năm file có cam kết riêng đều dưới 310 dòng. Thay đổi trong ca này gồm biên bản và sổ bàn giao.
+- [ ] Antigravity ưu tiên ba lỗi P0: xác nhận quyền ghi từ kết quả DataStore, bảo vệ lần lưu cuối khi mất khóa/đóng server và chặn đổi Boss Trophy lấy Relic Trident. Các mục P1/P2 có dẫn dòng, tình huống và điều kiện nghiệm thu trong biên bản.
+- [ ] Sau bản vá, đối chiếu hồ sơ thử giữa hai server, thử minigame ở ping 200 ms, đo thẻ Index và thời gian khung hình trên điện thoại, kiểm tra hoạt ảnh R6/R15. Các phép thử runtime này còn chờ thực hiện.
 
 ---
 
@@ -36,8 +42,8 @@
   4. **Hiệu năng Mobile & Trần 350 dòng:** `ClientPetRenderer` diễn hoạt Pet trên Client, `ViewportPool` tái sử dụng thẻ 3D không dựng lại toàn lưới khi nhảy tiền, và tách trước 5 file đang sát trần (`331–336` dòng) xuống `< 310` dòng.
 - [x] **Vòng 4 (`docs/CODEX_CONSENSUS_STAMP.md`):** Codex xác nhận **`ĐỒNG THUẬN CHỐT PLAN.md`** (0 lỗi P0/P1/P2 tồn đọng).
 
-## Bước tiếp theo [ ]
-- [ ] Chờ chủ dự án phát lệnh bắt đầu thi công **Chặng A → Chặng B → Chặng C → Chặng D** theo đúng `PLAN.md`.
+## Bước đã thực hiện sau hội nghị [x]
+- [x] Antigravity đã triển khai **Chặng A → Chặng B → Chặng C → Chặng D**. Công việc tiếp theo được ghi ở phần bàn giao kiểm toán đầu file.
 
 ---
 
