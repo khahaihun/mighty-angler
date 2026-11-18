@@ -1,5 +1,5 @@
 --!strict
--- init.client.luau: Khoi dong Client UI responsive, ket noi Controllers & dong bo State tu Server
+-- init.client.luau: Khoi dong Client UI responsive, ket noi Controllers, Hotbar/Raycast Cast & dong bo State tu Server
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +11,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
 
 local FishingController = require(script.Controllers.FishingController)
+local HotbarAndCastController = require(script.Controllers.HotbarAndCastController)
 local GymController = require(script.Controllers.GymController)
 local SoundAndFxController = require(script.Controllers.SoundAndFxController)
 local PromptController = require(script.Controllers.PromptController)
@@ -25,6 +26,8 @@ local BagPanel = require(script.UI.Panels.BagPanel)
 local ShopPanel = require(script.UI.Panels.ShopPanel)
 local PetsPanel = require(script.UI.Panels.PetsPanel)
 local ProgressPanel = require(script.UI.Panels.ProgressPanel)
+local EnchantAndBountyModal = require(script.UI.Panels.EnchantAndBountyModal)
+local PlaytimeAndSettingsModal = require(script.UI.Panels.PlaytimeAndSettingsModal)
 local DevTestPanel = require(script.UI.Panels.DevTestPanel)
 
 local localPlayer = Players.LocalPlayer
@@ -63,40 +66,63 @@ windows["Shop"] = ShopPanel.Mount(rootGui)
 windows["Pets"] = PetsPanel.Mount(rootGui)
 windows["Progress"] = ProgressPanel.Mount(rootGui)
 windows["Islands"] = ProgressPanel.GetIslandsWindow(rootGui)
+windows["Enchant"] = EnchantAndBountyModal.Mount(rootGui)
+windows["Gifts"] = PlaytimeAndSettingsModal.Mount(rootGui)
 
 local progressModRef: any = ProgressPanel
+
+local function isAnyModalOrWindowOpen(): boolean
+	if NpcDialogueModal.IsOpen() then
+		return true
+	end
+	for _, w in pairs(windows) do
+		if w.IsVisible() then
+			return true
+		end
+	end
+	return false
+end
+
+local function openSpecificWindow(key: string)
+	NpcDialogueModal.Close()
+	for k, w in pairs(windows) do
+		w.SetVisible(k == key)
+	end
+	if key == "Bag" then
+		BagPanel.Render()
+	elseif key == "Shop" then
+		ShopPanel.Render()
+	elseif key == "Pets" then
+		PetsPanel.Render()
+	elseif key == "Progress" then
+		ProgressPanel.Render()
+	elseif key == "Islands" then
+		ProgressPanel.RenderIslands()
+	elseif key == "Enchant" then
+		EnchantAndBountyModal.Render()
+	elseif key == "Gifts" then
+		PlaytimeAndSettingsModal.Render()
+	end
+end
 
 local function toggleExclusivePanel(key: string)
 	SoundAndFxController.PlaySfx("Click")
 	local target = windows[key]
 	if not target then
-		SoundAndFxController.ShowToast("Info", key .. " unlocks in Milestone 3!")
 		return
 	end
-	local nextVisible = not target.IsVisible()
-	for k, w in pairs(windows) do
-		w.SetVisible(k == key and nextVisible)
-	end
-	if nextVisible then
-		if key == "Bag" then
-			BagPanel.Render()
-		elseif key == "Shop" then
-			ShopPanel.Render()
-		elseif key == "Pets" then
-			PetsPanel.Render()
-		elseif key == "Progress" then
-			ProgressPanel.Render()
-		elseif key == "Islands" then
-			ProgressPanel.RenderIslands()
-		end
+	if target.IsVisible() then
+		target.SetVisible(false)
+	else
+		openSpecificWindow(key)
 	end
 end
 
 HudPanel.Mount(rootGui, {
 	OnTogglePanel = toggleExclusivePanel,
-	OnCastOrCancel = function()
-		SoundAndFxController.PlaySfx("Cast")
-		FishingController.RequestCastOrCancel()
+	OnCancelCast = function()
+		SoundAndFxController.PlaySfx("Click")
+		FishingController.CancelCurrentCast()
 	end,
 	OnToggleAutoFish = function()
 		SoundAndFxController.PlaySfx("Click")
@@ -106,10 +132,6 @@ HudPanel.Mount(rootGui, {
 		SoundAndFxController.PlaySfx("Click")
 		GymController.ToggleAutoTrain()
 	end,
-	OnSellAllQuick = function()
-		SoundAndFxController.PlaySfx("Click")
-		Net.FireServer(Net.ClientToServer.SellAllFish)
-	end,
 	OnManualGymTap = function()
 		GymController.TriggerManualRep()
 	end,
@@ -118,27 +140,37 @@ HudPanel.Mount(rootGui, {
 DevTestPanel.Mount(rootGui)
 FishingController.Init(rootGui)
 GymController.Init()
+HotbarAndCastController.Init(isAnyModalOrWindowOpen)
 ClientStateController.Init(progressModRef)
 TutorialController.Init(rootGui)
 
 NpcDialogueModal.Mount(rootGui, {
-	OpenPanel = toggleExclusivePanel,
+	OpenPanel = openSpecificWindow,
 	OpenBagSelectMode = function()
-		toggleExclusivePanel("Bag")
+		local bagAny: any = BagPanel
+		if bagAny.EnableMultiSelectMode then
+			bagAny.EnableMultiSelectMode()
+		end
+		openSpecificWindow("Bag")
 	end,
-	OpenEnchantOrBounty = function(_tabName: string)
-		toggleExclusivePanel("Shop")
+	OpenEnchantOrBounty = function(tabName: string)
+		openSpecificWindow("Enchant")
+		if tabName == "Bounties" then
+			EnchantAndBountyModal.OpenTab("Bounties")
+		else
+			EnchantAndBountyModal.OpenTab("Enchants")
+		end
 	end,
 	SellHeldFish = function()
-		SoundAndFxController.ShowToast("Info", "Equip a fish onto your Hotbar (Stage B) to sell held fish!")
+		Net.FireServer(Net.ClientToServer.SellHeldFish)
 	end,
 	AppraiseHeldFish = function()
-		SoundAndFxController.ShowToast("Info", "Appraisal unlocks with Held Fish Hotbar in Stage B & C!")
+		Net.FireServer(Net.ClientToServer.AppraiseFish, nil)
 	end,
 })
 
 PromptController.Init({
-	OpenPanel = toggleExclusivePanel,
+	OpenPanel = openSpecificWindow,
 	OpenNpcDialogue = function(role: string)
 		SoundAndFxController.PlaySfx("Click")
 		for _, w in pairs(windows) do
@@ -148,7 +180,8 @@ PromptController.Init({
 	end,
 	OpenEnchantAltar = function()
 		SoundAndFxController.PlaySfx("Click")
-		toggleExclusivePanel("Shop")
+		openSpecificWindow("Enchant")
+		EnchantAndBountyModal.OpenTab("Enchants")
 	end,
 	TriggerGymRep = function()
 		GymController.TriggerManualRep()
@@ -171,11 +204,13 @@ FishingController.OnCatchResult(function(payload: any)
 		SoundAndFxController.PlaySfx("CatchCommon")
 	end
 	local mut = tostring(payload.mutation or "None")
+	local sizeTier = tostring(payload.sizeTier or "Normal")
 	local prefix = if mut ~= "None" then ("[" .. mut .. "] ") else ""
+	local tierTxt = if sizeTier ~= "Normal" then (sizeTier .. " ") else ""
 	SoundAndFxController.SpawnFloatingGain(
 		"Gold",
 		0,
-		string.format("🐟 %s%s (%s)", prefix, tostring(payload.fishName), Util.FormatWeight(tonumber(payload.weight) or 1))
+		string.format("🐟 %s%s%s (%s)", prefix, tierTxt, tostring(payload.fishName), Util.FormatWeight(tonumber(payload.weight) or 1))
 	)
 end)
 
@@ -202,6 +237,8 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 		toggleExclusivePanel("Islands")
 	elseif input.KeyCode == Enum.KeyCode.J then
 		toggleExclusivePanel("Progress")
+	elseif input.KeyCode == Enum.KeyCode.K then
+		toggleExclusivePanel("Enchant")
 	end
 end)
 

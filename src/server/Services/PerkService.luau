@@ -1,7 +1,8 @@
 --!strict
--- PerkService.luau: Quan ly quyen loi Auto-Train (Join Group mien phi) va Gamepasses (Auto-Fish, 2x...)
+-- PerkService.luau: Quan ly Auto-Train (Join Group mien phi), 5 Gamepasses & PolicyService (PaidRandomItems)
 
 local MarketplaceService = game:GetService("MarketplaceService")
+local PolicyService = game:GetService("PolicyService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -11,12 +12,20 @@ local Net = require(Shared:WaitForChild("Net"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GamepassesConfig = require(Shared:WaitForChild("Config"):WaitForChild("GamepassesConfig"))
 
+local DataService = require(script.Parent.DataService)
+
 local PerkService = {}
 
 local ownedPassesCache: { [Player]: { [string]: boolean } } = {}
 local groupMemberCache: { [Player]: boolean } = {}
+local paidRandomRestrictedCache: { [Player]: boolean } = {}
 local devSimulatedFreeMode: { [Player]: boolean } = {}
 local devGrantedPasses: { [Player]: { [string]: boolean } } = {}
+local passUnlockedCallbacks: { (Player, string) -> () } = {}
+
+function PerkService.OnGamepassUnlocked(callback: (Player, string) -> ())
+	table.insert(passUnlockedCallbacks, callback)
+end
 
 local function checkIsInGroup(player: Player): boolean
 	if GameConfig.ROBLOX_GROUP_ID <= 0 then
@@ -34,6 +43,35 @@ local function checkIsInGroup(player: Player): boolean
 	return res
 end
 
+local function loadPolicyForPlayer(player: Player)
+	local ok, info = pcall(function()
+		return PolicyService:GetPolicyInfoForPlayerAsync(player)
+	end)
+	if ok and type(info) == "table" then
+		paidRandomRestrictedCache[player] = (info.ArePaidRandomItemsRestricted == true)
+	else
+		paidRandomRestrictedCache[player] = false
+	end
+end
+
+function PerkService.ArePaidRandomItemsRestricted(player: Player): boolean
+	return paidRandomRestrictedCache[player] == true
+end
+
+local function syncExclusivePassRodIfNeeded(player: Player)
+	if not PerkService.HasGamepass(player, "ExclusiveDragonRod") then
+		return
+	end
+	local profile = DataService.Get(player)
+	if profile and not profile.ownedRods["SeraphimDragon"] then
+		profile.ownedRods["SeraphimDragon"] = true
+		DataService.MarkDirty(player)
+		for _, cb in ipairs(passUnlockedCallbacks) do
+			task.spawn(cb, player, "ExclusiveDragonRod")
+		end
+	end
+end
+
 local function loadGamepassOwnership(player: Player)
 	local map: { [string]: boolean } = {}
 	for _, gp in ipairs(GamepassesConfig.List) do
@@ -47,13 +85,11 @@ local function loadGamepassOwnership(player: Player)
 		end
 	end
 	ownedPassesCache[player] = map
+	syncExclusivePassRodIfNeeded(player)
 end
 
 function PerkService.IsStudioPerkUnlocked(player: Player): boolean
-	if not RunService:IsStudio() then
-		return false
-	end
-	if devSimulatedFreeMode[player] then
+	if not RunService:IsStudio() or devSimulatedFreeMode[player] then
 		return false
 	end
 	return GameConfig.DEV_UNLOCK_PERKS_IN_STUDIO
@@ -85,11 +121,14 @@ function PerkService.GetPerkSnapshot(player: Player)
 		doubleGold = PerkService.HasGamepass(player, "DoubleGold"),
 		doubleStrength = PerkService.HasGamepass(player, "DoubleStrength"),
 		extraPets = PerkService.HasGamepass(player, "ExtraPets"),
+		exclusiveDragonRod = PerkService.HasGamepass(player, "ExclusiveDragonRod"),
+		paidRandomRestricted = PerkService.ArePaidRandomItemsRestricted(player),
 		simFreeMode = devSimulatedFreeMode[player] == true,
 	}
 end
 
 function PerkService.PushPerks(player: Player)
+	syncExclusivePassRodIfNeeded(player)
 	Net.FireClient(player, Net.ServerToClient.PerksUpdated, PerkService.GetPerkSnapshot(player))
 end
 
@@ -110,17 +149,25 @@ function PerkService.GrantAllPassesInStudio(player: Player)
 		DoubleGold = true,
 		DoubleStrength = true,
 		ExtraPets = true,
+		ExclusiveDragonRod = true,
 	}
 	PerkService.PushPerks(player)
 end
 
 function PerkService.Init()
+	DataService.OnProfileLoaded(function(player: Player)
+		syncExclusivePassRodIfNeeded(player)
+		PerkService.PushPerks(player)
+	end)
+
 	Players.PlayerAdded:Connect(function(player: Player)
+		loadPolicyForPlayer(player)
 		loadGamepassOwnership(player)
 		PerkService.PushPerks(player)
 	end)
 	for _, p in ipairs(Players:GetPlayers()) do
 		task.spawn(function()
+			loadPolicyForPlayer(p)
 			loadGamepassOwnership(p)
 			PerkService.PushPerks(p)
 		end)
@@ -129,6 +176,7 @@ function PerkService.Init()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		ownedPassesCache[player] = nil
 		groupMemberCache[player] = nil
+		paidRandomRestrictedCache[player] = nil
 		devSimulatedFreeMode[player] = nil
 		devGrantedPasses[player] = nil
 	end)
@@ -146,6 +194,9 @@ function PerkService.Init()
 					kind = "Success",
 					text = "Unlocked Gamepass: " .. gp.name .. "!",
 				})
+				for _, cb in ipairs(passUnlockedCallbacks) do
+					task.spawn(cb, player, gp.key)
+				end
 			end
 		end
 		PerkService.PushPerks(player)
@@ -169,7 +220,7 @@ function PerkService.Init()
 			end)
 		else
 			local hint = if RunService:IsStudio()
-				then ("Studio Mode: Set real Gamepass ID for '" .. gp.name .. "' in GamepassesConfig before publishing!")
+				then ("Studio Mode: Use [DEV] Grant All Passes or set Gamepass ID for '" .. gp.name .. "' before publishing!")
 				else (gp.name .. " will be available shortly!")
 			Net.FireClient(player, Net.ServerToClient.Toast, {
 				kind = "Info",

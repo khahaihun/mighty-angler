@@ -134,6 +134,90 @@ function RodVisuals.EquipRodOnCharacter(player: Player, rodId: string)
 	handWeld.Parent = handlePart
 end
 
+function RodVisuals.UnequipRodFromCharacter(player: Player)
+	RodVisuals.ClearBobber(player)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local old = character:FindFirstChild("EquippedFishingRod")
+	if old then
+		old:Destroy()
+	end
+end
+
+function RodVisuals.PlayLandBounce(player: Player, hitPos: Vector3)
+	RodVisuals.ClearBobber(player)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local rodModel = character:FindFirstChild("EquippedFishingRod")
+	local tipAtt = if rodModel then rodModel:FindFirstChild("RodTipAttachment", true) else nil
+
+	local bobber = Instance.new("Part")
+	bobber.Name = "BounceBobber_" .. player.Name
+	bobber.Shape = Enum.PartType.Ball
+	bobber.Size = Vector3.new(1.05, 1.05, 1.05)
+	bobber.Position = hitPos + Vector3.new(0, 0.55, 0)
+	bobber.Color = Color3.fromRGB(255, 146, 68)
+	bobber.Material = Enum.Material.Neon
+	bobber.Anchored = true
+	bobber.CanCollide = false
+	bobber.CanQuery = false
+	bobber.Parent = Workspace
+
+	local lineAtt = Instance.new("Attachment")
+	lineAtt.Parent = bobber
+	if tipAtt and tipAtt:IsA("Attachment") then
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = tipAtt
+		beam.Attachment1 = lineAtt
+		beam.Width0 = 0.06
+		beam.Width1 = 0.05
+		beam.FaceCamera = true
+		beam.Color = ColorSequence.new(Color3.fromRGB(255, 212, 168))
+		beam.Parent = bobber
+	end
+
+	-- Bui dat tung len tai diem phao va dap dat/cau go
+	local dust = Instance.new("Part")
+	dust.Shape = Enum.PartType.Cylinder
+	dust.Size = Vector3.new(0.18, 1.1, 1.1)
+	dust.CFrame = CFrame.new(hitPos + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	dust.Color = Color3.fromRGB(224, 204, 168)
+	dust.Material = Enum.Material.SmoothPlastic
+	dust.Transparency = 0.25
+	dust.Anchored = true
+	dust.CanCollide = false
+	dust.CanQuery = false
+	dust.Parent = Workspace
+	TweenService:Create(dust, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.new(0.06, 4.4, 4.4),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(dust, 0.5)
+
+	task.spawn(function()
+		local hop1 = TweenService:Create(bobber, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), {
+			Position = hitPos + Vector3.new(0, 2.35, 0),
+		})
+		hop1:Play()
+		task.wait(0.28)
+		if bobber.Parent then
+			local hop2 = TweenService:Create(bobber, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), {
+				Position = hitPos + Vector3.new(0, 1.25, 0),
+			})
+			hop2:Play()
+			task.wait(0.22)
+		end
+		if bobber.Parent then
+			bobber:Destroy()
+		end
+	end)
+	Debris:AddItem(bobber, 0.75)
+end
+
 function RodVisuals.ClearBobber(player: Player)
 	local bob = activeBobbers[player]
 	if bob then

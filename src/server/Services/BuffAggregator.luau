@@ -1,11 +1,12 @@
 --!strict
--- BuffAggregator.luau: Noi DUY NHAT gop toan bo he so nhan (Rod, Strength, Rebirth, Gamepass, Pet, Potion, Bait, Gear, Event)
+-- BuffAggregator.luau: Noi DUY NHAT gop toan bo he so nhan (5-Stat Rod, Exclusive Scaling, Enchant, Cast, Pet, Potion, Bait, Event)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
+local EnchantsConfig = require(Shared:WaitForChild("Config"):WaitForChild("EnchantsConfig"))
 
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
@@ -33,9 +34,8 @@ function BuffAggregator.GetMaxEquippedPets(player: Player): number
 		+ (if PerkService.HasGamepass(player, "ExtraPets") then GameConfig.BONUS_PET_EQUIP_SLOTS else 0)
 end
 
--- Tinh do thuan thuc Strength so voi moc yeu cau cua Can cau dang cam (0.0 -> 1.0)
-function BuffAggregator.ComputeStrengthMastery(strength: number, rodReq: number): number
-	local baseline = math.max(rodReq, 300)
+function BuffAggregator.ComputeStrengthMastery(strength: number, masteryBaseline: number): number
+	local baseline = math.max(masteryBaseline, 300)
 	local ratio = strength / baseline
 	if ratio <= 0 then
 		return 0
@@ -43,7 +43,11 @@ function BuffAggregator.ComputeStrengthMastery(strength: number, rodReq: number)
 	return math.clamp(math.log10(1 + ratio) / 2.0, 0, 1)
 end
 
-function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipliers
+function BuffAggregator.GetMultipliers(
+	player: Player,
+	castLuckAdd: number?,
+	castLureAdd: number?
+): Types.AggregatedMultipliers
 	local profile = DataService.Get(player)
 	if not profile then
 		return {
@@ -54,12 +58,25 @@ function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipli
 			mutationMult = 1,
 			biteSpeedMult = 1,
 			minigameWidthBonus = 0,
+			minigameSpeedDivisor = 1,
+			titanWeightFactor = 1,
+			midasSellBonus = 1,
 			maxEquippedPets = GameConfig.BASE_PET_EQUIP_SLOTS,
 		}
 	end
 
-	local rod = RodsConfig.Get(profile.rodId)
-	local mastery = BuffAggregator.ComputeStrengthMastery(profile.strength, rod.strengthReq)
+	local effRod = RodsConfig.GetEffectiveStats(profile.rodId, profile.ownedRods, profile.rodEnchants)
+	local enchant = if effRod.isExclusive and effRod.enchantId then EnchantsConfig.ById[effRod.enchantId] else nil
+
+	local enchantLuck = if enchant then enchant.luckBonus else 0
+	local enchantLure = if enchant then enchant.lureBonus else 0
+	local enchantCtrl = if enchant then enchant.controlBonus else 0
+	local enchantStead = if enchant then enchant.steadinessBonus else 0
+	local enchantMut = if enchant then enchant.mutationBonus else 0
+	local titanWeightFactor = if enchant then enchant.titanWeightFactor else 1.0
+	local midasSellBonus = if enchant then enchant.midasSellBonus else 1.0
+
+	local mastery = BuffAggregator.ComputeStrengthMastery(profile.strength, effRod.masteryBaselineStrength)
 	local strengthBiteBonus = mastery * GameConfig.STRENGTH_MAX_SPEED_BONUS
 	local strengthWidthBonus = mastery * GameConfig.STRENGTH_MAX_BAR_BONUS
 
@@ -68,12 +85,15 @@ function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipli
 	local gpStrMult = if PerkService.HasGamepass(player, "DoubleStrength") then 2.0 else 1.0
 	local maxPets = BuffAggregator.GetMaxEquippedPets(player)
 
-	local luckFactor = 1 + rod.luckBonus
+	-- Theo dung cong thuc 2.2(1):
+	-- luckMult = (1 + rodLuck + enchantLuck + castLuckAdd) * (1 + baitLuck + potionLuck) * (1 + petLuck) * (1 + eventLuck)
+	-- biteSpeedMult = (1 + rodLureSpeed + enchantLure + castLureAdd + strengthSpeedBonus) * (1 + potionSpeed) * (1 + eventSpeed)
+	local luckFactor = 1 + effRod.luckBonus + enchantLuck + (castLuckAdd or 0)
 	local bossMult = 1.0
 	local sellFactor = 1.0
 	local strengthFactor = 1.0
-	local mutationFactor = 1.0
-	local biteSpeedFactor = 1 + strengthBiteBonus
+	local mutationFactor = 1 + enchantMut
+	local biteSpeedFactor = 1 + effRod.lureSpeed + enchantLure + (castLureAdd or 0) + strengthBiteBonus
 
 	if not evaluatingPlayers[player] then
 		evaluatingPlayers[player] = true
@@ -108,7 +128,10 @@ function BuffAggregator.GetMultipliers(player: Player): Types.AggregatedMultipli
 		strengthMult = strengthFactor * rebirthMult * gpStrMult,
 		mutationMult = mutationFactor,
 		biteSpeedMult = biteSpeedFactor,
-		minigameWidthBonus = math.clamp(rod.controlBonus + strengthWidthBonus, 0, 0.52),
+		minigameWidthBonus = effRod.controlBonus + enchantCtrl + strengthWidthBonus,
+		minigameSpeedDivisor = math.max(1.0, 1.0 + effRod.steadiness + enchantStead),
+		titanWeightFactor = titanWeightFactor,
+		midasSellBonus = midasSellBonus,
 		maxEquippedPets = maxPets,
 	}
 end

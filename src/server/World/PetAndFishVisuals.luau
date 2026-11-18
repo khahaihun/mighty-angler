@@ -9,13 +9,21 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local Util = require(Shared:WaitForChild("Util"))
 local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
+local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
 
 local PetAndFishVisuals = {}
 
 local activePetFolders: { [Player]: Folder } = {}
 local activePetDefs: { [Player]: { Types.PetDef } } = {}
+local fishLookup: { [string]: Types.FishDef } = {}
+for _, isl in ipairs(IslandsRegistry.List) do
+	for _, f in ipairs(isl.fishPool) do
+		fishLookup[f.id] = f
+	end
+end
 
 local function buildFishModel(fishDef: Types.FishDef, mutation: Types.MutationName): Model
 	local override = AssetRegistry.TryClone("Fish", fishDef.id, true)
@@ -53,23 +61,18 @@ local function buildFishModel(fishDef: Types.FishDef, mutation: Types.MutationNa
 	body.Parent = model
 	model.PrimaryPart = body
 
-	local tail = Instance.new("WedgePart")
-	tail.Name = "TailFin"
-	tail.Size = Vector3.new(0.32 * sc, 1.45 * sc, 1.15 * sc)
-	tail.Color = finCol
-	tail.Material = Enum.Material.SmoothPlastic
-	tail.Anchored = true
-	tail.CanCollide = false
-	tail.Parent = model
-
-	local dorsal = Instance.new("WedgePart")
-	dorsal.Name = "DorsalFin"
-	dorsal.Size = Vector3.new(0.24 * sc, 0.75 * sc, 1.0 * sc)
-	dorsal.Color = finCol
-	dorsal.Material = Enum.Material.SmoothPlastic
-	dorsal.Anchored = true
-	dorsal.CanCollide = false
-	dorsal.Parent = model
+	local function makeFin(finName: string, sz: Vector3)
+		local w = Instance.new("WedgePart")
+		w.Name = finName
+		w.Size = sz
+		w.Color = finCol
+		w.Material = Enum.Material.SmoothPlastic
+		w.Anchored = true
+		w.CanCollide = false
+		w.Parent = model
+	end
+	makeFin("TailFin", Vector3.new(0.32 * sc, 1.45 * sc, 1.15 * sc))
+	makeFin("DorsalFin", Vector3.new(0.24 * sc, 0.75 * sc, 1.0 * sc))
 
 	return model
 end
@@ -128,6 +131,70 @@ function PetAndFishVisuals.SpawnCaughtFishLeap(
 	Debris:AddItem(fishModel, 1.5)
 end
 
+function PetAndFishVisuals.EquipHeldFishOnCharacter(player: Player, entry: Types.CaughtFish?)
+	local char = player.Character
+	if not char then
+		return
+	end
+	local old = char:FindFirstChild("HeldFlexFish")
+	if old then
+		old:Destroy()
+	end
+	if not entry then
+		return
+	end
+	local def = fishLookup[entry.fishId]
+	local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+	if not def or not (torso and torso:IsA("BasePart")) then
+		return
+	end
+
+	local tierScale = 1.0
+	for _, st in ipairs(GameConfig.SizeTiers) do
+		if st.name == entry.sizeTier then
+			tierScale = st.scaleMult
+			break
+		end
+	end
+	local sc = math.clamp(def.scale * tierScale, 0.8, 3.8)
+	local m = buildFishModel(def, entry.mutation)
+	m.Name = "HeldFlexFish"
+	m.Parent = char
+	local centerCf = torso.CFrame * CFrame.new(0, 0.45, -(1.35 + sc * 0.42)) * CFrame.Angles(0, math.rad(90), 0)
+	positionFishParts(m, centerCf, sc)
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Size = d.Size * tierScale
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.Massless = true
+			local w = Instance.new("WeldConstraint")
+			w.Part0 = torso
+			w.Part1 = d
+			w.Parent = d
+		end
+	end
+	if m.PrimaryPart then
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromOffset(180, 38)
+		bb.StudsOffset = Vector3.new(0, 1.2 + sc * 0.55, 0)
+		bb.MaxDistance = 48
+		bb.Adornee = m.PrimaryPart
+		bb.Parent = m.PrimaryPart
+		local lbl = Instance.new("TextLabel")
+		lbl.Size = UDim2.fromScale(1, 1)
+		lbl.BackgroundTransparency = 1
+		lbl.Font = Enum.Font.FredokaOne
+		lbl.TextScaled = true
+		local mutTag = if entry.mutation ~= "None" then ("[" .. entry.mutation .. "] ") else ""
+		local tierTag = if entry.sizeTier ~= "Normal" then (entry.sizeTier .. " ") else ""
+		lbl.Text = string.format("%s%s%s (%s)", mutTag, tierTag, def.name, Util.FormatWeight(entry.weight))
+		lbl.TextColor3 = GameConfig.RarityColors[def.rarity] or Color3.fromRGB(255, 255, 255)
+		lbl.Parent = bb
+	end
+end
+
 local function createPetModel(petDef: Types.PetDef): Model
 	local override = AssetRegistry.TryClone("Pets", petDef.id, true)
 	if override and override.PrimaryPart then
@@ -137,38 +204,27 @@ local function createPetModel(petDef: Types.PetDef): Model
 	local m = Instance.new("Model")
 	m.Name = "Pet_" .. petDef.id
 
-	local head = Instance.new("Part")
-	head.Name = "Body"
-	head.Shape = if petDef.archetype == "Star" then Enum.PartType.Block else Enum.PartType.Ball
-	head.Size = Vector3.new(1.85, 1.75, 1.95)
-	head.Color = petDef.primaryColor
-	head.Material = if petDef.rarity == "Mythic" or petDef.rarity == "Legendary"
-		then Enum.Material.Neon
-		else Enum.Material.SmoothPlastic
-	head.Anchored = true
-	head.CanCollide = false
-	head.Parent = m
+	local function makePetPart(pName: string, shape: Enum.PartType, sz: Vector3, col: Color3, mat: Enum.Material): Part
+		local p = Instance.new("Part")
+		p.Name = pName
+		p.Shape = shape
+		p.Size = sz
+		p.Color = col
+		p.Material = mat
+		p.Anchored = true
+		p.CanCollide = false
+		p.Parent = m
+		return p
+	end
+
+	local bodyShape = if petDef.archetype == "Star" then Enum.PartType.Block else Enum.PartType.Ball
+	local bodyMat = if petDef.rarity == "Mythic" or petDef.rarity == "Legendary" then Enum.Material.Neon else Enum.Material.SmoothPlastic
+	local head = makePetPart("Body", bodyShape, Vector3.new(1.85, 1.75, 1.95), petDef.primaryColor, bodyMat)
 	m.PrimaryPart = head
 
 	for _, side in ipairs({ -0.65, 0.65 }) do
-		local wing = Instance.new("Part")
-		wing.Name = if side < 0 then "WingL" else "WingR"
-		wing.Size = Vector3.new(0.75, 0.45, 0.95)
-		wing.Color = petDef.secondaryColor
-		wing.Material = Enum.Material.SmoothPlastic
-		wing.Anchored = true
-		wing.CanCollide = false
-		wing.Parent = m
-
-		local eye = Instance.new("Part")
-		eye.Name = if side < 0 then "EyeL" else "EyeR"
-		eye.Shape = Enum.PartType.Ball
-		eye.Size = Vector3.new(0.32, 0.32, 0.32)
-		eye.Color = Color3.fromRGB(22, 26, 36)
-		eye.Material = Enum.Material.SmoothPlastic
-		eye.Anchored = true
-		eye.CanCollide = false
-		eye.Parent = m
+		makePetPart(if side < 0 then "WingL" else "WingR", Enum.PartType.Block, Vector3.new(0.75, 0.45, 0.95), petDef.secondaryColor, Enum.Material.SmoothPlastic)
+		makePetPart(if side < 0 then "EyeL" else "EyeR", Enum.PartType.Ball, Vector3.new(0.32, 0.32, 0.32), Color3.fromRGB(22, 26, 36), Enum.Material.SmoothPlastic)
 	end
 
 	local bb = Instance.new("BillboardGui")

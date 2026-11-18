@@ -91,4 +91,19 @@ function Util.GetUtcDayIndex(timestampSec: number?): number
 	return math.floor(nowSec / 86400)
 end
 
+-- Song tam giac tat dinh giua [0.02, 0.98] dung chung cho Client 60FPS & Server Per-Strike Verification
+function Util.TriangleBounce(startPos: number, speed: number, elapsed: number): number
+	local minP = 0.02
+	local maxP = 0.98
+	local span = maxP - minP -- 0.96
+	local period = span * 2
+	local d0 = math.clamp(startPos, minP, maxP) - minP
+	local u = (d0 + math.max(0.05, speed) * math.max(0, elapsed)) % period
+	if u <= span then
+		return minP + u
+	else
+		return maxP - (u - span)
+	end
+end
+
 return Util

@@ -1,8 +1,9 @@
 --!strict
--- Types.luau: Dinh nghia kieu du lieu dung chung toan du an Mighty Angler v2
+-- Types.luau: Dinh nghia kieu du lieu dung chung toan du an Mighty Angler v2.0
 
 export type Rarity = string
 export type MutationName = string
+export type SizeTier = string
 
 export type FishDef = {
 	id: string,
@@ -26,6 +27,11 @@ export type CaughtFish = {
 	weight: number,
 	mutation: MutationName,
 	sellValue: number,
+	originalValue: number,
+	sizeTier: SizeTier,
+	locked: boolean,
+	soulbound: boolean,
+	midasBonus: number,
 }
 
 export type GymStationDef = {
@@ -70,10 +76,65 @@ export type RodDef = {
 	priceGold: number,
 	strengthReq: number,
 	power: number,
+	maxWeight: number,
+	lureSpeed: number,
 	luckBonus: number,
 	controlBonus: number,
+	steadiness: number,
 	rodColor: Color3,
 	accentColor: Color3,
+	description: string,
+	isExclusive: boolean?,
+	scaleFactor: number?,
+	flatLure: number?,
+	flatLuck: number?,
+	flatControl: number?,
+	flatSteadiness: number?,
+	unlockHint: string?,
+}
+
+export type EffectiveRodStats = {
+	id: string,
+	name: string,
+	power: number,
+	equipStrengthReq: number,
+	masteryBaselineStrength: number,
+	maxWeight: number,
+	lureSpeed: number,
+	luckBonus: number,
+	controlBonus: number,
+	steadiness: number,
+	isExclusive: boolean,
+	enchantId: string?,
+	sourceBaseRodName: string?,
+}
+
+export type EnchantDef = {
+	id: string,
+	name: string,
+	rarity: Rarity,
+	chance: number,
+	color: Color3,
+	lureBonus: number,
+	luckBonus: number,
+	controlBonus: number,
+	steadinessBonus: number,
+	mutationBonus: number,
+	titanWeightFactor: number,
+	midasSellBonus: number,
+	description: string,
+}
+
+export type BountyDef = {
+	id: string,
+	title: string,
+	islandReq: number,
+	rarityReq: Rarity,
+	minWeight: number,
+	mutationReq: MutationName?,
+	gemReward: number,
+	relicReward: number,
+	potionReward: string?,
 	description: string,
 }
 
@@ -173,6 +234,9 @@ export type PlayerStats = {
 
 export type PlayerProfile = {
 	dataVersion: number,
+	activeSessionId: string?,
+	lockTimestamp: number,
+	saveSeq: number,
 	gold: number,
 	gems: number,
 	strength: number,
@@ -180,6 +244,10 @@ export type PlayerProfile = {
 	rebirths: number,
 	rodId: string,
 	ownedRods: { [string]: boolean },
+	rodEnchants: { [string]: string },
+	enchantRelics: number,
+	equippedHotbarSlot: number,
+	pinnedFishUids: { [string]: string },
 	unlockedIslands: { [string]: boolean },
 	currentIsland: number,
 	fishBag: { CaughtFish },
@@ -198,6 +266,13 @@ export type PlayerProfile = {
 	lastDailyClaimDay: number,
 	questDay: number,
 	dailyQuests: { [string]: QuestEntry },
+	playtimeDay: number,
+	playtimeTodaySec: number,
+	playtimeClaimedToday: { [string]: boolean },
+	autoLockRare: boolean,
+	autoLockMutated: boolean,
+	lowGfx: boolean,
+	muteSfx: boolean,
 	stats: PlayerStats,
 }
 
@@ -209,6 +284,9 @@ export type AggregatedMultipliers = {
 	mutationMult: number,
 	biteSpeedMult: number,
 	minigameWidthBonus: number,
+	minigameSpeedDivisor: number,
+	titanWeightFactor: number,
+	midasSellBonus: number,
 	maxEquippedPets: number,
 }
 

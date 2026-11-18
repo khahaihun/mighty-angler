@@ -153,12 +153,12 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 ---
 
 ### 🎣 CHẶNG B: DỮ LIỆU AN TOÀN `V2`, HOTBAR CẦM ĐỒ/KHOE CÁ, VẬT LÝ NẢY ĐẤT, 5 CHỈ SỐ CẦN & EXCLUSIVE ROD
-- [ ] **B1 — Khóa Phiên `DataService` (`Session Lock`), Migration `v2` & Tách `FishingSessionManager`:**
+- [x] **B1 — Khóa Phiên `DataService` (`Session Lock`), Migration `v2` & Tách `FishingSessionManager`:**
   - Nâng cấp `DataService` (khóa độc quyền `activeSessionId == SERVER_JOB_ID`, gia hạn khóa định kỳ, chờ `saveInFlight` trước khi nhả khóa, khóa giao dịch nếu thử 3 lần không lấy được khóa + `MigrateProfileToV2`) và quy tắc `Soulbound Trophy` khi Rebirth.
   - *Nghiệm thu B1:* Nộp cá tại Bounty rồi chuyển máy chủ ngay → cá đã nộp mất đúng 1 lần, phần thưởng giữ nguyên đúng 1 lần; thử khóa tải lỗi chặn giao dịch an toàn.
-- [ ] **B2 — Custom Hotbar (`1..5`), Cầm Cá Khoe Hàng, Cụm Chọn Mồi Nhanh + Auto & Vật Lý Quăng Phao Nảy Đất:**
+- [x] **B2 — Custom Hotbar (`1..5`), Cầm Cá Khoe Hàng, Cụm Chọn Mồi Nhanh + Auto & Vật Lý Quăng Phao Nảy Đất:**
   - Ẩn Backpack mặc định; dựng `HotbarAndBaitUi.luau` + `HotbarAndCastController.luau`; giữ chuột nạp thanh lực *Cast Power* (4 chế độ Manual / Perfect / Auto Free / Auto Pro); Raycast điểm chạm đầu tiên (trúng cầu/đất nảy tưng bật về, trúng nước Terrain xét thưởng xoáy); dấu `!` cá đớp + cong cần + Camera zoom nhẹ; chấm điểm Minigame theo từng vòng `FishingMinigameStrike` đối chiếu đồng hồ Server (tách hạn bấm `7.5s / 9.5s / 11.5s` và hạn nhận gói `+0.40s` ân hạn mạng; nghiệm thu cả ở chế độ mô phỏng ping cao `200ms` trong Studio).
-- [ ] **B3 — Bộ 5 Chỉ Số Cần Câu, Cân Bằng Lại Kg 5 Đảo, 3 Cần Exclusive (`115–130%`) & Bệ Xoay Dòng `Enchant Altar`:**
+- [x] **B3 — Bộ 5 Chỉ Số Cần Câu, Cân Bằng Lại Kg 5 Đảo, 3 Cần Exclusive (`115–130%`) & Bệ Xoay Dòng `Enchant Altar`:**
   - Nâng cấp `RodsConfig.luau` + 5 file Đảo, tách 3 đường nhận Cần Exclusive, hoàn thiện `EnchantsConfig.luau` + `EnchantAndBountyService.luau` (xoay 6 dòng Enchant bằng Relic/Gems kèm bảng `%` công khai & kiểm tra `PolicyService`).
 
 ---

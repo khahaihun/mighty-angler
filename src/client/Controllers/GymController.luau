@@ -47,6 +47,10 @@ function GymController.SetCurrentIsland(islandId: number)
 	currentIslandId = islandId
 end
 
+function GymController.IsOnStation(): boolean
+	return currentStationName ~= nil
+end
+
 function GymController.SetAutoTrainPerkAvailable(unlocked: boolean)
 	canAutoTrainPerk = unlocked
 	if not unlocked and autoTrainEnabled then

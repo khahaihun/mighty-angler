@@ -65,6 +65,7 @@ function DevTestService.Init()
 		elseif rawAction == "AddStrength5M" then
 			CurrencyService.AddStrength(player, 5000000, false, true)
 		elseif rawAction == "AddGems500" then
+			profile.enchantRelics += 3
 			CurrencyService.AddGems(player, 500, true)
 			ShopAndItemsService.GrantPotion(player, "lucky_elixir_s", 1, false)
 			ShopAndItemsService.GrantPotion(player, "titan_brew_s", 1, false)

@@ -1,7 +1,7 @@
 --!strict
--- GamepassesConfig.luau: Cau hinh 4 goi Gamepass thuong mai (dien ID that cua Roblox truoc khi Publish)
+-- GamepassesConfig.luau: Cau hinh 5 goi Gamepass thuong mai (dien ID that cua Roblox truoc khi Publish)
 
-export type GamepassKey = "AutoFish" | "DoubleGold" | "DoubleStrength" | "ExtraPets"
+export type GamepassKey = "AutoFish" | "DoubleGold" | "DoubleStrength" | "ExtraPets" | "ExclusiveDragonRod"
 
 export type GamepassDef = {
 	key: GamepassKey,
@@ -17,11 +17,11 @@ local GamepassesConfig = {}
 GamepassesConfig.List = {
 	{
 		key = "AutoFish" :: GamepassKey,
-		id = 0, -- Thay bang Gamepass ID that khi dua len Roblox
-		name = "Auto-Fish",
-		robuxDisplay = 39,
+		id = 0, -- Thay bang Gamepass ID that khi dua len Roblox (anh xa Auto-Fish Pro)
+		name = "Auto-Fish Pro",
+		robuxDisplay = 79,
 		color = Color3.fromRGB(72, 212, 255),
-		description = "Automatically cast & reel fish hands-free!",
+		description = "100% Perfect Auto-Cast (+25% Luck, +15% Lure Speed) & 0.45s Fast Recast!",
 	},
 	{
 		key = "DoubleGold" :: GamepassKey,
@@ -46,6 +46,14 @@ GamepassesConfig.List = {
 		robuxDisplay = 149,
 		color = Color3.fromRGB(208, 108, 255),
 		description = "Equip up to 4 Pets at once instead of 2!",
+	},
+	{
+		key = "ExclusiveDragonRod" :: GamepassKey,
+		id = 0,
+		name = "Seraphim Dragon Rod",
+		robuxDisplay = 399,
+		color = Color3.fromRGB(255, 96, 198),
+		description = "130% Scaling Exclusive Rod (kept on Rebirth!) + Unlocks Ancient Enchant Slot!",
 	},
 } :: { GamepassDef }
 

@@ -12,10 +12,23 @@ local Net = {}
 Net.ClientToServer = {
 	RequestInitialState = "C2S_RequestInitialState",
 	FishingCast = "C2S_FishingCast",
+	FishingCastWithAim = "C2S_FishingCastWithAim",
 	FishingCancel = "C2S_FishingCancel",
 	FishingMinigameResult = "C2S_FishingMinigameResult",
+	FishingMinigameStrike = "C2S_FishingMinigameStrike",
+	SelectHotbarSlot = "C2S_SelectHotbarSlot",
+	PinFishToSlot = "C2S_PinFishToSlot",
+	ToggleLockFish = "C2S_ToggleLockFish",
 	SellAllFish = "C2S_SellAllFish",
 	SellSingleFish = "C2S_SellSingleFish",
+	SellSelectedFish = "C2S_SellSelectedFish",
+	SellHeldFish = "C2S_SellHeldFish",
+	AppraiseFish = "C2S_AppraiseFish",
+	TurnInBounty = "C2S_TurnInBounty",
+	RollEnchant = "C2S_RollEnchant",
+	UnlockExclusiveRod = "C2S_UnlockExclusiveRod",
+	ClaimPlaytimeGift = "C2S_ClaimPlaytimeGift",
+	UpdateSettings = "C2S_UpdateSettings",
 	GymRep = "C2S_GymRep",
 	SetAutoTrain = "C2S_SetAutoTrain",
 	SetAutoFish = "C2S_SetAutoFish",
@@ -44,11 +57,18 @@ Net.ServerToClient = {
 	CurrencyUpdated = "S2C_CurrencyUpdated",
 	BagUpdated = "S2C_BagUpdated",
 	InventoryUpdated = "S2C_InventoryUpdated",
+	HotbarUpdated = "S2C_HotbarUpdated",
+	EnchantAndRelicsUpdated = "S2C_EnchantAndRelicsUpdated",
+	PlaytimeUpdated = "S2C_PlaytimeUpdated",
+	SettingsUpdated = "S2C_SettingsUpdated",
+	AppraiseResult = "S2C_AppraiseResult",
 	PetsUpdated = "S2C_PetsUpdated",
 	ProgressionUpdated = "S2C_ProgressionUpdated",
 	PerksUpdated = "S2C_PerksUpdated",
 	FishingCastStarted = "S2C_FishingCastStarted",
+	FishingLandBounce = "S2C_FishingLandBounce",
 	FishingMinigamePrompt = "S2C_FishingMinigamePrompt",
+	FishingMinigameStep = "S2C_FishingMinigameStep",
 	FishingCatchResult = "S2C_FishingCatchResult",
 	FishingStateReset = "S2C_FishingStateReset",
 	GymRepFeedback = "S2C_GymRepFeedback",
@@ -120,7 +140,7 @@ function Net.FireAllClients(remoteName: string, ...: any)
 end
 
 local rateBuckets: { [Player]: { windowStart: number, count: number } } = {}
-local MAX_REMOTE_CALLS_PER_SEC = 32
+local MAX_REMOTE_CALLS_PER_SEC = 40
 
 if RunService:IsServer() then
 	Players.PlayerRemoving:Connect(function(player: Player)

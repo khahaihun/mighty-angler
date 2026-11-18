@@ -19,8 +19,28 @@ local SoundAndFxController = {}
 local fxRootGui: ScreenGui? = nil
 local toastStackFrame: Frame? = nil
 local cachedSounds: { [string]: Sound } = {}
+local mutedFlag = false
+local lowGfxFlag = false
+
+function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)
+	mutedFlag = muteSfx
+	lowGfxFlag = lowGfx
+	local lighting = game:GetService("Lighting")
+	lighting.GlobalShadows = not lowGfx
+	local bloom = lighting:FindFirstChild("MightyBloom")
+	if bloom and bloom:IsA("PostEffect") then
+		bloom.Enabled = not lowGfx
+	end
+end
+
+function SoundAndFxController.IsLowGfx(): boolean
+	return lowGfxFlag
+end
 
 function SoundAndFxController.PlaySfx(effectKey: string)
+	if mutedFlag then
+		return
+	end
 	local spec = (SoundConfig.Effects :: any)[effectKey]
 	if not spec then
 		return

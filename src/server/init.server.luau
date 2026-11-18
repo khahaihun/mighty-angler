@@ -19,6 +19,7 @@ local GymService = require(script.Services.GymService)
 local IslandService = require(script.Services.IslandService)
 local PetsService = require(script.Services.PetsService)
 local ProgressionService = require(script.Services.ProgressionService)
+local EnchantAndBountyService = require(script.Services.EnchantAndBountyService)
 local LiveOpsService = require(script.Services.LiveOpsService)
 local DevTestService = require(script.Services.DevTestService)
 
@@ -37,12 +38,12 @@ GymService.Init()
 IslandService.Init()
 PetsService.Init()
 ProgressionService.Init()
+EnchantAndBountyService.Init()
 LiveOpsService.Init()
 DevTestService.SetTriggerEventHook(LiveOpsService.TriggerNewServerEvent)
 DevTestService.Init()
 
--- 3. Noi hook tieu hao Bait & roi thuoc Potion / Pet hiem khi cau dinh Rare / Boss
-FishingService.SetConsumeBaitHook(ShopAndItemsService.ConsumeActiveBaitOnCatch)
+-- 3. Noi hook roi thuoc Potion / Pet hiem khi cau dinh Rare / Boss
 FishingService.OnFishCaught(function(player: Player, fishDef, _mutation)
 	if fishDef.rarity == "Boss" then
 		if math.random() <= 0.35 then

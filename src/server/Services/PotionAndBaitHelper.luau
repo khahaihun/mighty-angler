@@ -1,12 +1,16 @@
 --!strict
--- PotionAndBaitHelper.luau: Tinh he so buff cho Bait + GymGear + Potions va quet thuoc het han
+-- PotionAndBaitHelper.luau: Tinh buff Bait + GymGear + Potions, quet thuoc het han & dong bo Hotbar cam Can / cam Ca
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local Net = require(Shared:WaitForChild("Net"))
 local BaitConfig = require(Shared:WaitForChild("Config"):WaitForChild("BaitConfig"))
 local GymGearConfig = require(Shared:WaitForChild("Config"):WaitForChild("GymGearConfig"))
 local PotionsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PotionsConfig"))
+
+local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
+local PetAndFishVisuals = require(script.Parent.Parent.World.PetAndFishVisuals)
 
 local PotionAndBaitHelper = {}
 
@@ -73,6 +77,42 @@ function PotionAndBaitHelper.PruneExpiredPotions(profile: Types.PlayerProfile, n
 		end
 	end
 	return expiredAny
+end
+
+function PotionAndBaitHelper.FindFishByUid(profile: Types.PlayerProfile, uid: string): Types.CaughtFish?
+	for _, f in ipairs(profile.fishBag) do
+		if f.uid == uid then
+			return f
+		end
+	end
+	return nil
+end
+
+function PotionAndBaitHelper.SyncCharacterHandVisuals(player: Player, profile: Types.PlayerProfile?)
+	if not profile then
+		return
+	end
+	local slot = profile.equippedHotbarSlot
+	if slot == 1 then
+		PetAndFishVisuals.EquipHeldFishOnCharacter(player, nil)
+		RodVisuals.EquipRodOnCharacter(player, profile.rodId)
+	elseif slot >= 2 and slot <= 5 then
+		RodVisuals.UnequipRodFromCharacter(player)
+		local uid = profile.pinnedFishUids[tostring(slot)]
+		local entry = if uid then PotionAndBaitHelper.FindFishByUid(profile, uid) else nil
+		PetAndFishVisuals.EquipHeldFishOnCharacter(player, entry)
+	else
+		RodVisuals.UnequipRodFromCharacter(player)
+		PetAndFishVisuals.EquipHeldFishOnCharacter(player, nil)
+	end
+end
+
+function PotionAndBaitHelper.PushHotbar(player: Player, profile: Types.PlayerProfile)
+	Net.FireClient(player, Net.ServerToClient.HotbarUpdated, {
+		equippedSlot = profile.equippedHotbarSlot,
+		pinnedFishUids = profile.pinnedFishUids,
+		rodId = profile.rodId,
+	})
 end
 
 return PotionAndBaitHelper

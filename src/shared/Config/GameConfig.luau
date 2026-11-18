@@ -1,39 +1,73 @@
 --!strict
--- GameConfig.luau: Hang so gameplay chung, quyen loi Group/Studio va Profile mau
+-- GameConfig.luau: Hang so gameplay chung, SizeTier, Playtime Gifts UTC va Profile v2 mau
 
 local Types = require(script.Parent.Parent.Types)
+local Util = require(script.Parent.Parent.Util)
+
+export type PlaytimeGiftDef = {
+	slot: number,
+	reqSec: number,
+	label: string,
+	rewardKind: "Gold" | "Gems" | "Potion" | "Bait" | "Relic",
+	amount: number,
+	itemId: string?,
+}
 
 local GameConfig = {}
 
 GameConfig.DATASTORE_NAME = "MightyAngler_Profile_v2"
-GameConfig.AUTOSAVE_INTERVAL_SEC = 90
+GameConfig.AUTOSAVE_INTERVAL_SEC = 60
+GameConfig.SESSION_LOCK_EXPIRE_SEC = 120
 GameConfig.BAG_CAPACITY = 60
+GameConfig.MAX_SOULBOUND_TROPHIES = 12
 GameConfig.MAX_PET_INVENTORY = 80
 GameConfig.BASE_PET_EQUIP_SLOTS = 2
 GameConfig.BONUS_PET_EQUIP_SLOTS = 2
 
 -- Cau hinh Group Roblox cho Auto-Train mien phi (dien Group ID that truoc khi Publish)
 GameConfig.ROBLOX_GROUP_ID = 0
--- Trong Roblox Studio, bat san quyen Auto-Train va Auto-Fish de chu du an test nhanh
 GameConfig.DEV_UNLOCK_PERKS_IN_STUDIO = true
 
--- Thong so cau ca & Minigame
+-- Thong so cau ca, Perfect Cast & Minigame
 GameConfig.BASE_BITE_MIN_SEC = 1.8
 GameConfig.BASE_BITE_MAX_SEC = 4.0
-GameConfig.FISHING_MAX_WATER_DIST = 68
-GameConfig.STRENGTH_MAX_SPEED_BONUS = 0.20 -- Toi da +20% toc do can cau nho Strength
-GameConfig.STRENGTH_MAX_BAR_BONUS = 0.25   -- Toi da +25% do rong thanh Minigame nho Strength
+GameConfig.MIN_BITE_FLOOR_SEC = 0.55
+GameConfig.FISHING_MAX_WATER_DIST = 82
+GameConfig.PERFECT_HOLD_MIN = 0.78
+GameConfig.PERFECT_HOLD_MAX = 0.95
+GameConfig.PERFECT_CAST_LUCK_ADD = 0.25
+GameConfig.PERFECT_CAST_LURE_ADD = 0.15
+GameConfig.AUTO_FISH_FREE_RECAST_SEC = 1.10
+GameConfig.AUTO_FISH_PRO_RECAST_SEC = 0.45
+GameConfig.STRENGTH_MAX_SPEED_BONUS = 0.20
+GameConfig.STRENGTH_MAX_BAR_BONUS = 0.25
+GameConfig.MINIGAME_MAX_WIDTH = 0.68
 
 -- Thong so tap Gym
 GameConfig.GYM_MANUAL_COOLDOWN_SEC = 0.42
 GameConfig.GYM_AUTO_INTERVAL_SEC = 0.62
 GameConfig.GYM_STATION_RADIUS = 11.5
 
+-- Bang 4 bac kich thuoc ca (SizeTiers) de cam tren tay khoe & dinh gia
+GameConfig.SizeTiers = {
+	{ name = "Titanic", chance = 0.015, weightMult = 2.60, valueMult = 3.00, scaleMult = 2.15, color = Color3.fromRGB(255, 82, 168) },
+	{ name = "Giant", chance = 0.065, weightMult = 1.85, valueMult = 1.90, scaleMult = 1.62, color = Color3.fromRGB(255, 196, 56) },
+	{ name = "Big", chance = 0.170, weightMult = 1.35, valueMult = 1.35, scaleMult = 1.28, color = Color3.fromRGB(88, 226, 255) },
+	{ name = "Normal", chance = 0.750, weightMult = 1.00, valueMult = 1.00, scaleMult = 1.00, color = Color3.fromRGB(196, 206, 222) },
+}
+
 -- Bang dot bien ca (Mutations)
 GameConfig.Mutations = {
-	Cosmic = { name = "Cosmic" :: Types.MutationName, chance = 0.005, multiplier = 12, color = Color3.fromRGB(235, 90, 255) },
-	Golden = { name = "Golden" :: Types.MutationName, chance = 0.020, multiplier = 5, color = Color3.fromRGB(255, 208, 60) },
-	Shiny = { name = "Shiny" :: Types.MutationName, chance = 0.050, multiplier = 2, color = Color3.fromRGB(110, 245, 255) },
+	Cosmic = { name = "Cosmic" :: Types.MutationName, rank = 4, chance = 0.005, multiplier = 12, color = Color3.fromRGB(235, 90, 255) },
+	Golden = { name = "Golden" :: Types.MutationName, rank = 3, chance = 0.020, multiplier = 5, color = Color3.fromRGB(255, 208, 60) },
+	Shiny = { name = "Shiny" :: Types.MutationName, rank = 2, chance = 0.050, multiplier = 2, color = Color3.fromRGB(110, 245, 255) },
+}
+
+GameConfig.MutationRank = {
+	None = 1,
+	Shiny = 2,
+	Golden = 3,
+	Cosmic = 4,
 }
 
 GameConfig.RarityOrder = {
@@ -56,9 +90,25 @@ GameConfig.RarityColors = {
 	Boss = Color3.fromRGB(255, 76, 76),
 }
 
+-- 9 moc Qua Online cong don theo ngay UTC
+GameConfig.PlaytimeGifts = {
+	{ slot = 1, reqSec = 120, label = "+350 Gold", rewardKind = "Gold", amount = 350 },
+	{ slot = 2, reqSec = 300, label = "+15 Glow Worms", rewardKind = "Bait", amount = 15, itemId = "glow_worm" },
+	{ slot = 3, reqSec = 600, label = "+25 Gems", rewardKind = "Gems", amount = 25 },
+	{ slot = 4, reqSec = 900, label = "1x Lucky Elixir", rewardKind = "Potion", amount = 1, itemId = "lucky_elixir_s" },
+	{ slot = 5, reqSec = 1200, label = "+45 Gems", rewardKind = "Gems", amount = 45 },
+	{ slot = 6, reqSec = 1800, label = "+15 Coral Shrimp", rewardKind = "Bait", amount = 15, itemId = "coral_shrimp" },
+	{ slot = 7, reqSec = 2700, label = "1x Titan Brew", rewardKind = "Potion", amount = 1, itemId = "titan_brew_l" },
+	{ slot = 8, reqSec = 3600, label = "+90 Gems", rewardKind = "Gems", amount = 90 },
+	{ slot = 9, reqSec = 5400, label = "1x Enchant Relic", rewardKind = "Relic", amount = 1 },
+} :: { PlaytimeGiftDef }
+
 function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 	return {
-		dataVersion = 1,
+		dataVersion = 2,
+		activeSessionId = nil,
+		lockTimestamp = 0,
+		saveSeq = 0,
 		gold = 0,
 		gems = 0,
 		strength = 0,
@@ -66,6 +116,10 @@ function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 		rebirths = 0,
 		rodId = "Twig",
 		ownedRods = { Twig = true },
+		rodEnchants = {},
+		enchantRelics = 1, -- Tang san 1 vien Relic khoi dau de nguoi choi trai nghiem som khi co Exclusive Rod
+		equippedHotbarSlot = 1,
+		pinnedFishUids = {},
 		unlockedIslands = { ["1"] = true },
 		currentIsland = 1,
 		fishBag = {},
@@ -84,6 +138,13 @@ function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 		lastDailyClaimDay = 0,
 		questDay = 0,
 		dailyQuests = {},
+		playtimeDay = Util.GetUtcDayIndex(),
+		playtimeTodaySec = 0,
+		playtimeClaimedToday = {},
+		autoLockRare = true,
+		autoLockMutated = true,
+		lowGfx = false,
+		muteSfx = false,
 		stats = {
 			fishCaught = 0,
 			rareCaught = 0,

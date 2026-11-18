@@ -1,5 +1,5 @@
 --!strict
--- ClientStateController.luau: Lang nghe dong bo toan bo Remote S2C cap nhat HUD va cac Panel UI
+-- ClientStateController.luau: Lang nghe dong bo toan bo Remote S2C cap nhat HUD, Hotbar, Enchant, Playtime & Panels
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -12,10 +12,13 @@ local FishingController = require(script.Parent.FishingController)
 local GymController = require(script.Parent.GymController)
 local SoundAndFxController = require(script.Parent.SoundAndFxController)
 
+local HotbarAndBaitUi = require(script.Parent.Parent.UI.Components.HotbarAndBaitUi)
 local HudPanel = require(script.Parent.Parent.UI.Panels.HudPanel)
 local BagPanel = require(script.Parent.Parent.UI.Panels.BagPanel)
 local ShopPanel = require(script.Parent.Parent.UI.Panels.ShopPanel)
 local PetsPanel = require(script.Parent.Parent.UI.Panels.PetsPanel)
+local EnchantAndBountyModal = require(script.Parent.Parent.UI.Panels.EnchantAndBountyModal)
+local PlaytimeAndSettingsModal = require(script.Parent.Parent.UI.Panels.PlaytimeAndSettingsModal)
 
 local ClientStateController = {}
 
@@ -25,7 +28,12 @@ local strengthCache = 0
 local rodIdCache = "Twig"
 local islandCache = 1
 local ownedRodsCache: { [string]: boolean } = { Twig = true }
+local rodEnchantsCache: { [string]: string } = {}
+local relicsCache = 0
+local unlockedIslandsCache: { [string]: boolean } = { ["1"] = true }
+local fishBagCache: { any } = {}
 local gearLvCache = 0
+
 local activeEventTextCache = ""
 local activeBuffTextCache = ""
 local activePotionsCache: any = {}
@@ -67,6 +75,18 @@ local function computeActiveItemBuffSummary(activePotions: any, activeBait: any,
 	return table.concat(parts, " | ")
 end
 
+local function syncEnchantModal()
+	EnchantAndBountyModal.SyncState(
+		gemsCache,
+		rodIdCache,
+		ownedRodsCache,
+		rodEnchantsCache,
+		relicsCache,
+		unlockedIslandsCache,
+		fishBagCache
+	)
+end
+
 function ClientStateController.Init(progressModRef: any)
 	Net.OnClientEvent(Net.ServerToClient.StateSnapshot, function(snap: any)
 		if type(snap) ~= "table" or type(snap.profile) ~= "table" then
@@ -79,18 +99,34 @@ function ClientStateController.Init(progressModRef: any)
 		rodIdCache = tostring(p.rodId or "Twig")
 		islandCache = tonumber(p.currentIsland) or 1
 		ownedRodsCache = if type(p.ownedRods) == "table" then p.ownedRods else { Twig = true }
+		rodEnchantsCache = if type(p.rodEnchants) == "table" then p.rodEnchants else {}
+		relicsCache = tonumber(p.enchantRelics) or 0
+		unlockedIslandsCache = if type(p.unlockedIslands) == "table" then p.unlockedIslands else { ["1"] = true }
 		gearLvCache = tonumber(p.gymGearLevel) or 0
 
 		HudPanel.UpdateCurrencies(goldCache, gemsCache, strengthCache)
-		HudPanel.UpdateRodAndIsland(rodIdCache, islandCache)
+		HudPanel.UpdateRodAndIsland(rodIdCache, islandCache, ownedRodsCache, rodEnchantsCache)
 		GymController.SetCurrentIsland(islandCache)
 
-		local bagList = if type(p.fishBag) == "table" then p.fishBag else {}
-		HudPanel.UpdateBagCount(#bagList)
-		BagPanel.UpdateFishBag(bagList)
+		fishBagCache = if type(p.fishBag) == "table" then p.fishBag else {}
+		HudPanel.UpdateBagCount(#fishBagCache)
+		BagPanel.UpdateFishBag(fishBagCache)
 		BagPanel.UpdateItems(p.potions or {}, p.bait or {}, p.activeBait)
+		HotbarAndBaitUi.SyncBag(fishBagCache)
+		HotbarAndBaitUi.SyncHotbar(tonumber(p.equippedHotbarSlot) or 1, p.pinnedFishUids or {}, rodIdCache)
+		HotbarAndBaitUi.SyncBait(p.bait or {}, p.activeBait)
+
 		ShopPanel.SyncState(goldCache, strengthCache, rodIdCache, ownedRodsCache, gearLvCache)
 		PetsPanel.SyncFromProfile(p)
+		syncEnchantModal()
+
+		PlaytimeAndSettingsModal.SyncPlaytime(tonumber(p.playtimeTodaySec) or 0, p.playtimeClaimedToday or {})
+		local lockRare = (p.autoLockRare ~= false)
+		local lockMut = (p.autoLockMutated ~= false)
+		local low = (p.lowGfx == true)
+		local mute = (p.muteSfx == true)
+		PlaytimeAndSettingsModal.SyncSettings(lockRare, lockMut, low, mute)
+		SoundAndFxController.SetClientPrefs(mute, low)
 
 		activePotionsCache = p.activePotions or {}
 		activeBaitCache = p.activeBait
@@ -115,6 +151,7 @@ function ClientStateController.Init(progressModRef: any)
 		strengthCache = tonumber(payload.strength) or strengthCache
 		HudPanel.UpdateCurrencies(goldCache, gemsCache, strengthCache)
 		ShopPanel.SyncState(goldCache, strengthCache, rodIdCache, ownedRodsCache, gearLvCache)
+		syncEnchantModal()
 		if progressModRef then
 			progressModRef.SyncCurrencies(goldCache, gemsCache, strengthCache, tonumber(payload.rebirths) or 0)
 		end
@@ -122,8 +159,26 @@ function ClientStateController.Init(progressModRef: any)
 
 	Net.OnClientEvent(Net.ServerToClient.BagUpdated, function(payload: any)
 		if type(payload) == "table" and type(payload.fishBag) == "table" then
-			HudPanel.UpdateBagCount(#payload.fishBag)
-			BagPanel.UpdateFishBag(payload.fishBag)
+			fishBagCache = payload.fishBag
+			HudPanel.UpdateBagCount(#fishBagCache)
+			BagPanel.UpdateFishBag(fishBagCache)
+			HotbarAndBaitUi.SyncBag(fishBagCache)
+			syncEnchantModal()
+			if progressModRef then
+				progressModRef.SyncBagAndHotbar(fishBagCache, nil)
+			end
+		end
+	end)
+
+	Net.OnClientEvent(Net.ServerToClient.HotbarUpdated, function(payload: any)
+		if type(payload) == "table" then
+			local slot = tonumber(payload.equippedSlot) or 1
+			local pinned = if type(payload.pinnedFishUids) == "table" then payload.pinnedFishUids else {}
+			rodIdCache = tostring(payload.rodId or rodIdCache)
+			HotbarAndBaitUi.SyncHotbar(slot, pinned, rodIdCache)
+			if progressModRef then
+				progressModRef.SyncBagAndHotbar(nil, pinned)
+			end
 		end
 	end)
 
@@ -133,10 +188,16 @@ function ClientStateController.Init(progressModRef: any)
 		end
 		rodIdCache = tostring(payload.rodId or rodIdCache)
 		ownedRodsCache = if type(payload.ownedRods) == "table" then payload.ownedRods else ownedRodsCache
+		rodEnchantsCache = if type(payload.rodEnchants) == "table" then payload.rodEnchants else rodEnchantsCache
+		relicsCache = tonumber(payload.enchantRelics) or relicsCache
 		gearLvCache = tonumber(payload.gymGearLevel) or gearLvCache
-		HudPanel.UpdateRodAndIsland(rodIdCache, islandCache)
+
+		HudPanel.UpdateRodAndIsland(rodIdCache, islandCache, ownedRodsCache, rodEnchantsCache)
 		BagPanel.UpdateItems(payload.potions or {}, payload.bait or {}, payload.activeBait)
+		HotbarAndBaitUi.SyncBait(payload.bait or {}, payload.activeBait)
 		ShopPanel.SyncState(goldCache, strengthCache, rodIdCache, ownedRodsCache, gearLvCache)
+		syncEnchantModal()
+
 		activePotionsCache = payload.activePotions or {}
 		activeBaitCache = payload.activeBait
 		baitMapCache = payload.bait or {}
@@ -147,22 +208,45 @@ function ClientStateController.Init(progressModRef: any)
 		refreshTopBuffLine()
 	end)
 
+	Net.OnClientEvent(Net.ServerToClient.EnchantAndRelicsUpdated, function(payload: any)
+		if type(payload) == "table" then
+			rodEnchantsCache = if type(payload.rodEnchants) == "table" then payload.rodEnchants else rodEnchantsCache
+			relicsCache = tonumber(payload.enchantRelics) or relicsCache
+			HudPanel.UpdateRodAndIsland(rodIdCache, islandCache, ownedRodsCache, rodEnchantsCache)
+			syncEnchantModal()
+		end
+	end)
+
+	Net.OnClientEvent(Net.ServerToClient.PlaytimeUpdated, function(payload: any)
+		if type(payload) == "table" then
+			PlaytimeAndSettingsModal.SyncPlaytime(tonumber(payload.playtimeTodaySec) or 0, payload.playtimeClaimedToday)
+		end
+	end)
+
+	Net.OnClientEvent(Net.ServerToClient.SettingsUpdated, function(payload: any)
+		if type(payload) == "table" then
+			local lockRare = (payload.autoLockRare ~= false)
+			local lockMut = (payload.autoLockMutated ~= false)
+			local low = (payload.lowGfx == true)
+			local mute = (payload.muteSfx == true)
+			PlaytimeAndSettingsModal.SyncSettings(lockRare, lockMut, low, mute)
+			SoundAndFxController.SetClientPrefs(mute, low)
+		end
+	end)
+
 	Net.OnClientEvent(Net.ServerToClient.PerksUpdated, function(payload: any)
 		if type(payload) ~= "table" then
 			return
 		end
 		local canTrain = payload.canAutoTrain == true
-		local canFish = payload.autoFish == true
+		local canFishPro = payload.autoFish == true
 		GymController.SetAutoTrainPerkAvailable(canTrain)
-		FishingController.SetAutoFishPerkAvailable(canFish)
-		HudPanel.UpdatePerks(canTrain, canFish)
+		FishingController.SetAutoFishPerkAvailable(canFishPro)
+		HudPanel.UpdatePerks(canTrain, canFishPro)
 		ShopPanel.SyncPasses(payload)
 	end)
 
-	Net.OnClientEvent(Net.ServerToClient.PetsUpdated, function(payload: any)
-		PetsPanel.SyncPayload(payload)
-	end)
-
+	Net.OnClientEvent(Net.ServerToClient.PetsUpdated, PetsPanel.SyncPayload)
 	Net.OnClientEvent(Net.ServerToClient.EggHatched, function(payload: any)
 		if type(payload) == "table" then
 			SoundAndFxController.PlaySfx("CatchRare")
@@ -179,8 +263,12 @@ function ClientStateController.Init(progressModRef: any)
 	Net.OnClientEvent(Net.ServerToClient.IslandChanged, function(payload: any)
 		if type(payload) == "table" then
 			islandCache = tonumber(payload.islandId) or islandCache
-			HudPanel.UpdateRodAndIsland(rodIdCache, islandCache)
+			if type(payload.unlockedIslands) == "table" then
+				unlockedIslandsCache = payload.unlockedIslands
+			end
+			HudPanel.UpdateRodAndIsland(rodIdCache, islandCache, ownedRodsCache, rodEnchantsCache)
 			GymController.SetCurrentIsland(islandCache)
+			syncEnchantModal()
 			if progressModRef and type(payload.unlockedIslands) == "table" then
 				progressModRef.SyncIslands(islandCache, payload.unlockedIslands)
 			end
@@ -194,7 +282,6 @@ function ClientStateController.Init(progressModRef: any)
 		end
 	end)
 
-	-- Cap nhat dem nguoc thoi gian thuoc Potion moi giay tren HUD
 	task.spawn(function()
 		while true do
 			task.wait(1)
