@@ -85,3 +85,14 @@ UnequipPet rồi EquipPet mới thành công; Unequip All và Equip Best vẫn h
 vẫn có nút Unequip All/Equip Best. VM PASS; hình ảnh/cảm ứng thật chờ nghiệm thu.
 Verify6/6 và suite scoreboard cách ly/quyền ghi/giữ max PASS; dữ liệu baseline vẫn 1.3/1.4 đỏ.
 Sau tip dữ liệu cuối còn phải kiểm Live Odds cùng HUD safeReadOnly và chạy sạch lại toàn bộ.
+
+## Bản dữ liệu 99216b5 đã hợp nhất (chờ 1.5)
+
+Merge lịch sử `053a393` nhập validation/slot0/Reset lease. Kiểm lại mọi test script
+liệt kê bằng `rg --files tools`: 12 runner cũ đều exit0; dữ liệu nay schema29/29,
+reset12/12, persistence7/7 (hết hai lỗi baseline trên ứng viên này), acquisition19/19,
+lifecycle12/12. Verify6/6 exit0. Thêm runner `test_place_sources.ps1` đạt100/100 Source,
+class/path khớp sourcemap và nguồn đĩa; hash và checklist23 mã có ở
+[V3_BAN_GIAO_NGHIEM_THU](V3_BAN_GIAO_NGHIEM_THU.md).
+**1.5 vẫn chờ tip; Studio chưa chạy vì quyền ứng dụng.** Mọi kết quả Engine của bảng21
+vẫn chờ; không ghi kết luận đã sạch lỗi hoặc phát hành. Hash hiện tại cần tính lại sau1.5.

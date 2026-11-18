@@ -110,3 +110,8 @@ Kiểm Auto qua đổi đảo/Rebirth/hồi sinh, hủy tay trong cửa sổ ch�
 trùng gói đóng/reset, thoại chồng minigame và trọng số roll bằng xác suất UI.
 Biên UI widget/tween/nhân vật/mạng được giả lập; Engine/mobile vẫn chờ nghiệm thu.
 Bổ sung review HUD: `test_live_odds.ps1` còn chạy controller bảng thật với UI giả lập để kiểm tài khoản có cả hai pass mở xem, đổi cast/buff và đóng không phát prompt mua. Nó cũng đăng ký handler EquipPet thật và kiểm slot 2→4, từ chối con thứ 3/5 mà không thay pet cũ. Không thay phép thử bấm/chạm trên Engine.
+
+`powershell -ExecutionPolicy Bypass -File tools/test_place_sources.ps1` so toàn bộ
+Script/LocalScript/ModuleScript trong build với sourcemap và file nguồn: class, path,
+Source (chuẩn hóa xuống dòng XML), số thừa/thiếu và SHA256. Chạy verify trước để tạo
+build mới; đây là kiểm đóng gói, không thực thi Roblox Engine.
