@@ -1,7 +1,64 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 17:30 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Đã thi công bản vá mở đầu Đợt 1: cách ly hai bảng điểm Studio, giữ kho hồ sơ thử sẵn có. Mô phỏng đạt, bộ kiểm định tự động PASS 6/6, exit 0. **Chờ Kỹ sư trưởng review; chưa duyệt phát hành.** Chưa chuyển sang khóa phiên/lưu cuối. [Kế hoạch chỉ đạo V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 17:49 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Kỹ sư trưởng đã duyệt code `45dd21a` và giao mục **1.1 — Codex P0-01/P1-01**. Bản vá 1.1 đã qua **19/19 ca mô phỏng**, test cách ly Studio và **PASS 6/6, exit 0**; đang chờ review commit riêng. **Chưa làm mục 1.2, chưa duyệt phát hành; Studio/hai server thật chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Bản vá mục 1.1 — Xác nhận quyền ghi và nhả phiên rời lúc tải
+
+### Đã hoàn thành [x]
+
+- [x] Nhận chỉ đạo tiếp tục trên `codex/studio-data-isolation`, nền `45dd21a`, cây làm việc sạch lúc nhận ca; đọc lại AGENTS/PROGRESS/blueprint và DataService/LockHelper. Trong lúc thi công phát hiện tài liệu AGENTS/PLAN và `docs/SPEC_CODE_MATRIX.md` được ca khác sửa/tạo; đã đọc phần quy định mới, giữ nguyên và không đưa các thay đổi đó vào commit của mục 1.1.
+- [x] **Codex P0-01 — lỗi trước vá, đọc mã + mô phỏng:** ngoại lệ tạo nonce trong callback hàng chờ bị `WithUserLock` bắt/cảnh báo nhưng `lockFailed` vẫn false; hồ sơ mặc định được cấp quyền ghi mà chưa xác nhận claim. Ngoài ra, kiểm giao dịch trong lúc tải có thể đặt cờ chỉ đọc rồi không gỡ dù claim sau đó thành công. Nay khóa mặc định từ đầu tải, chặn khi chưa có hồ sơ, chỉ mở lại khi claim xác nhận đúng token/nonce hoặc ở chế độ RAM-only hiện có; không cấp token và thời điểm xác nhận cho phiên chưa xác nhận claim.
+- [x] **Codex P1-01 — lỗi trước vá, đọc mã + mô phỏng:** nhả khóa chỉ gọi một lần và bỏ kết quả; lỗi tạm để token cũ nằm lại tới TTL. `ReleaseToken` nay trả `Released`, `NotOwner` hoặc `TransientError`, thử tối đa **3 lần**, nghỉ **0,5 giây** giữa lần lỗi, kiểm giá trị trả về và cảnh báo khóa hồ sơ/token nếu hết lượt chưa xác nhận. Callback chỉ sửa tài liệu có đúng token; gặp chủ khác thì hủy cập nhật.
+- [x] **Hai tình huống từ review sớm:** (1) claim đã ghi nhưng mất phản hồi, A rời lúc chờ thử lại; nay DataService nhả đúng token lượt vào ngay cả khi chưa nhận xác nhận claim. Việc dọn token rời lúc tải được tập trung tại DataService và chạy qua hàng chờ UserId, không dọn lặp ở Helper. (2) nhả hồ sơ bị cách ly có thể yield; nay kiểm lại người chơi/cờ đóng sau bước đó trước khi cài hồ sơ vào RAM hoặc phát callback.
+- [x] **Ca biên từ review tiếp:** A vẫn online sau cả 3 claim đã ghi nhưng mất phản hồi, tải kết thúc chỉ đọc rồi A rời. Đã tái hiện token A còn giữ kho và sửa bằng kết quả thứ ba `claimMayBeOwned` của Helper: DataService dọn đúng token chưa chắc chắn ngay trong hàng chờ trước khi kết thúc tải thất bại, không đợi PlayerRemoving. Kết quả từ chối đã biết/chưa từng gửi claim không phát sinh yêu cầu nhả. Lỗi tạo nonce sau một claim chưa chắc chắn cũng giữ thông tin cần dọn thay vì để ngoại lệ làm mất dấu token. Không thay lịch gia hạn/lưu cuối của 1.2.
+- [x] **File thay đổi của mục này:** `src/server/Services/DataService.luau`, `src/server/Services/DataStoreLockHelper.luau`, `tools/test_session_acquisition.ps1`, `tests/session_fixture.luau`, `tests/session_acquisition.luau`, `tests/README.md`, `PROGRESS.md`.
+- [x] **RED → GREEN:** nền trước sửa có 4/8 ca lỗi (mở quyền sau ngoại lệ, không mở lại sau pending, không retry nhả, không báo hết lượt). Sau sửa đầu tiên 8/8 đạt; bổ sung đối chiếu token/nonce/quyền chủ và trạng thái nhả đạt 13/13. Hai lỗi review sớm tái hiện trong `logs/session-acquisition-review-red.log`, sửa đạt 16/16. Ca rời sau tải thất bại và nonce lỗi sau claim chưa chắc chắn tái hiện trong `logs/session-acquisition-rejoin-red.log`, sửa và bổ sung kiểm ngoại lệ hàng chờ đạt **19/19, exit 0**. Test API lỗi liên tục nay đếm riêng tối đa 3 lần nhận và 3 lần dọn token chưa chắc chắn; không nới trần mỗi thao tác. Không còn lỗi chưa giải quyết vượt giới hạn hai vòng.
+
+| Ca | Bằng chứng | Kết quả thực tế |
+|---|---|---|
+| Ngoại lệ nonce trong hàng chờ nhận khóa | Mô phỏng đường thật DataService/LockHelper | Cảnh báo được ghi, giao dịch khóa, `CanWritePersistent=false`, `SaveProfile=Skipped`; lượt vào tiếp cùng UserId vẫn tải được. |
+| Đang chờ claim và hồ sơ xác nhận hợp lệ | Mô phỏng | Đang chờ không có quyền ghi; khi xác nhận mở đúng quyền, lưu Gold 321 và `saveSeq=2`. |
+| Lỗi API nhận khóa / phản hồi sai token / sai nonce | Mô phỏng | Nhận khóa dừng sau 3 lượt; hồ sơ giữ chỉ đọc, không lưu đè. |
+| A đang giữ khóa, B xin cùng hồ sơ | Hai máy chủ độc lập mô phỏng, chung kho RAM | A còn quyền và lưu Gold 999; B bị chặn, không đổi token A. |
+| Hai lượt vào cùng UserId trong một máy chủ, A rời lúc tải | Mô phỏng | B chờ hàng đợi; lần nhả đầu lỗi, lần hai thành công rồi B nhận token khác và lưu Gold 456. |
+| Nhả A chậm trước commit hoặc sau commit/đang chờ phản hồi | Hai máy chủ mô phỏng | Sau B nhận khóa và lưu, nhả muộn giữ nguyên token B, `saveSeq=2`, Gold 789; không có commit ghi đè B. Ca trước commit kiểm callback chạy lại trên phiên B. |
+| Nhả hết lỗi tạm / đã nhả nhưng mất phản hồi | Mô phỏng | Hết 3 lần trả `TransientError` và cảnh báo có key/token; nếu đã ghi nhưng mất phản hồi, retry xác nhận `NotOwner`, không ghi lần hai. |
+| Claim đã ghi nhưng mất phản hồi rồi A rời | Mô phỏng, hai nhánh có/không chủ B | Dọn đúng token A thay vì đợi TTL; nếu B đã giữ khóa, vẫn gọi kiểm token và hủy ghi, giữ token/seq/Gold 975 của B. |
+| A còn online khi cả 3 claim mất phản hồi, sau đó rời/vào ngay | Mô phỏng | Giữ chỉ đọc, dọn token trước khi kết thúc tải thất bại (3 claim + 1 nhả); lượt vào lại có quyền ghi và lưu Gold 642 mà không đợi TTL. |
+| Ngoại lệ trước gửi claim / ngoại lệ nonce sau claim chưa chắc chắn | Mô phỏng | Chưa gửi claim: 0 yêu cầu kho/nhả, hàng chờ dùng lại được. Đã có claim chưa chắc chắn: chỉ đọc và dọn đúng token (1 claim + 1 nhả). Chủ khác đã được xác định: 3 lần xin khóa, 0 lần nhả thừa. |
+| Rời trong lúc retry nhả hồ sơ bị cách ly | Mô phỏng DataService + ProfileMigrator thật | Nhả lần hai thành công; người đã rời không được cài lại vào `profiles`, callback tải xong phát 0 lần. |
+| Studio chưa publish | Mô phỏng | RAM vẫn chơi/lưu RAM theo chế độ cũ, mở kho 0 lần, gọi DataStore 0 lần. |
+| Studio/hai server Roblox thật | Chưa chạy | **Chờ nghiệm thu**; không bật API sản xuất và không ghi dữ liệu thật. |
+
+**Lệnh tái chạy và kết quả cuối:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_session_acquisition.ps1
+# SESSION_SUITE passed=19 failed=0; exit 0
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
+# PASS; exit 0; Studio yêu cầu tên kho sản xuất = 0
+powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
+# PASS 6/6; exit 0 — chỉ là bộ kiểm định tự động
+```
+
+- [x] Log cục bộ: `logs/session-acquisition-red.log`, `logs/session-acquisition-review-red.log`, `logs/session-acquisition.log`, `logs/studio-data-isolation.log`, `logs/app.log`. Lần verify đầu phát hiện cách gán biểu thức `number?` vào map thời điểm; sửa một lần thành nhánh `if confirmedLock`, lần verify sau và lần cuối đều đạt. Log lỗi kiểu được giữ ở `logs/session-acquisition-verify-first.log`.
+- [x] Đếm độc lập: **88/88** file mã game ≤350; lớn nhất CurrencyService **342**. DataService **327**, DataStoreLockHelper **182**. HudPanel **268**, PetsService **298**, ProgressPanel **268**, BagPanel **307**, FishingService **282**, đều <310. `git diff --check` đạt.
+- [x] Build `build/mighty-angler-dev.rbxlx` đối chiếu Source hai module dữ liệu **2/2 khớp**. SHA-256: **`4E4494E36988A6A453A8942D3E0DF732A22858AD63652FA3F18D1D9EB53AF25A`**. Chưa Play bản này trong Studio.
+
+### Đang làm dở [~]
+
+- [~] Chờ Kỹ sư trưởng review commit riêng chứa mục bàn giao này (`git log` trên nhánh hiện tại); chưa coi hai mã V3 đã được nghiệm thu Engine.
+
+### Bước tiếp theo [ ]
+
+- [ ] Nghiệm thu các ca trên trong Studio và hai server Roblox trên experience thử/kho thử theo blueprint; ghi đủ trace và kiểm không yêu cầu kho sản xuất.
+- [ ] Dừng tại đây để review. **Chưa chuyển sang 1.2**: thời hạn quyền ghi từ dấu giờ kho, gia hạn rải nhịp, gộp hai đường đóng và bảo đảm lần lưu cuối vẫn chờ bản vá sau.
+
+### Quyết định kỹ thuật & Lưu ý cho AI ca sau
+
+- Bộ mới chạy nguồn thật DataService/Helper/Migrator, không mock `Get`, `CanWritePersistent`, `IsTransactionLocked` hoặc logic khóa. Chỉ giả lập biên Engine (dịch vụ, tín hiệu, đồng hồ, Instance leaderstats, kho RAM); hai server có bộ module/hàng chờ độc lập. Không suy ra đây là kết quả mạng/Roblox Engine thật.
+- Giữ `_StudioDev` và chế độ RAM-only của `45dd21a`; không sửa LiveOps ở mục này. Không đổi quy tắc gia hạn/lưu cuối, schema, Reset hay HUD. Cảnh báo `Release unconfirmed` có nghĩa chưa chứng minh nhả xong sau 3 lần, không được báo thành công; token khi đó vẫn phải chờ hết hạn hoặc một lần dọn có xác nhận sau này.
 
 ## Bản vá mở đầu Đợt 1 — Cách ly dữ liệu Studio (2026-11-18)
 

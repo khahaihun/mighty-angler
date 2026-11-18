@@ -68,26 +68,42 @@ function DataStoreLockHelper.WithUserLock(userId: number, fn: () -> ())
 	end
 end
 
-function DataStoreLockHelper.ReleaseToken(store: DataStore, key: string, token: string)
-	pcall(function()
-		store:UpdateAsync(key, function(oldData: any)
-			if type(oldData) == "table" and oldData.activeSessionId == token then
-				oldData.activeSessionId = nil
-				oldData.lockTimestamp = 0
-				return oldData
-			end
-			return nil
+-- Nil thanh cong la callback da huy vi token khong con so huu; khong ghi len chu moi.
+function DataStoreLockHelper.ReleaseToken(store: DataStore, key: string, token: string): string
+	for attempt = 1, 3 do
+		local ok, updated = pcall(function()
+			return store:UpdateAsync(key, function(oldData: any)
+				if type(oldData) == "table" and oldData.activeSessionId == token then
+					oldData.activeSessionId = nil
+					oldData.lockTimestamp = 0
+					return oldData
+				end
+				return nil
+			end)
 		end)
-	end)
+		if ok and type(updated) == "table" and updated.activeSessionId == nil then
+			return "Released"
+		elseif ok and updated == nil then
+			return "NotOwner"
+		end
+		if attempt < 3 then task.wait(0.5) end
+	end
+	warn("[DataStoreLockHelper] Release unconfirmed after 3 attempts:", key, token)
+	return "TransientError"
 end
 
--- Tra ve: (confirmedLock: boolean, loadedRawData: any)
-function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string): (boolean, any)
+-- Tra ve (confirmedLock, loadedRawData, claimMayBeOwned): loi phan hoi co the da ghi claim.
+function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string): (boolean, any, boolean)
+	local claimMayBeOwned = false
 	for attempt = 1, 3 do
 		if not player:IsDescendantOf(Players) then
-			return false, nil
+			return false, nil, claimMayBeOwned
 		end
-		local claimNonce = Util.NewUid()
+		local nonceOk, claimNonce = pcall(Util.NewUid)
+		if not nonceOk then
+			warn("[DataStoreLockHelper] Claim setup error:", tostring(claimNonce))
+			break
+		end
 		local ok, updated = pcall(function()
 			return store:UpdateAsync(key, function(oldData: any)
 				local now = os.time()
@@ -114,18 +130,15 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 				return nil
 			end)
 		end)
+		claimMayBeOwned = not ok or (type(updated) == "table" and updated.activeSessionId == myToken)
 		if ok and type(updated) == "table" and updated.activeSessionId == myToken and updated.lastWriteNonce == claimNonce then
-			if not player:IsDescendantOf(Players) then
-				DataStoreLockHelper.ReleaseToken(store, key, myToken)
-				return false, nil
-			end
-			return true, updated
+			return true, updated, true
 		end
 		if attempt < 3 then
 			task.wait(1.5)
 		end
 	end
-	return false, nil
+	return false, nil, claimMayBeOwned
 end
 
 -- Tra ve: "Saved" | "LostLock" | "TransientError"

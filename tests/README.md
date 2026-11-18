@@ -15,3 +15,17 @@ Các ca gồm Studio chưa publish, Studio đã publish, máy chủ thật mô p
 `DataService.Get/CanWritePersistent` là đầu vào điều khiển của phép thử để kiểm **LiveOps có tuân thủ quyền ghi hay không**. Bộ thử chưa xác nhận tính đúng của khóa phiên, tải/lưu cuối, DataStore Roblox thật, giao diện hoặc lịch chạy của Roblox Engine. Những ca đó cần nghiệm thu riêng trong Studio/máy chủ thử.
 
 Kết quả `verify_project.ps1` là bộ kiểm định tĩnh/build riêng, không thay thế bộ mô phỏng này hoặc nghiệm thu Studio.
+
+## Nhận khóa và nhả khóa khi rời lúc tải — mục 1.1
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_session_acquisition.ps1
+```
+
+Dùng cùng Luau CLI, chạy nguyên văn `DataService`, `DataStoreLockHelper`, `ProfileMigrator`, `GameConfig`, `Types`, `Util`. `tests/session_fixture.luau` giả lập dịch vụ Roblox, tín hiệu người chơi, đồng hồ và kho RAM chung cho hai máy chủ độc lập. `DataService.Init()` đăng ký các đường load/save thật; không thay `Get`, `CanWritePersistent`, `IsTransactionLocked` hoặc các hàm khóa phiên bằng mock.
+
+`tests/session_acquisition.luau` có 19 ca: ngoại lệ nonce và hàng chờ trước yêu cầu nhận khóa, tải đang chờ, phản hồi sai token/nonce, API nhận khóa lỗi, chủ A đang giữ khóa, hai lượt vào cùng UserId, rời lúc tải với nhả lỗi tạm/hết lượt thử, nhả đã ghi nhưng mất phản hồi, nhả A bị chậm trước/sau commit trong lúc B đã giữ khóa, claim đã ghi nhưng mất phản hồi rồi A rời (có/không B), rời ngay sau tải thất bại với cả ba phản hồi claim bị mất, nonce lỗi sau một claim chưa chắc chắn, rời trong lúc nhả hồ sơ bị cách ly, và RAM-only. Các ca thành công còn kiểm lưu số dư và tăng `saveSeq` qua `SaveProfile` thật. Kiểm ngân sách riêng: không gửi nhả khi chưa từng gửi claim hoặc đã biết kho từ chối do chủ khác; lỗi phản hồi chưa chắc chắn có tối đa 3 lần dọn token, tách khỏi 3 lần xin khóa.
+
+Kho giả sao chép giá trị qua biên API và chạy lại callback nếu máy chủ khác ghi trong lúc yêu cầu bị treo, theo [quy tắc UpdateAsync của Roblox](https://github.com/Roblox/creator-docs/blob/main/content/en-us/reference/engine/classes/GlobalDataStore.yaml#L351). Việc tạm dừng nằm ở biên API, không nằm trong callback. Đồng hồ và lịch coroutine do phép thử điều khiển; đây là mô phỏng, không phải hành vi mạng/Engine đã được chứng nhận.
+
+Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉnh hạn quyền ghi, gia hạn, gộp đóng/lưu cuối của mục 1.2, dữ liệu hỏng của 1.3, Reset 1.4 hoặc HUD 1.5. Không dùng kết quả bộ này để ký các mục đó.

@@ -35,7 +35,7 @@ function DataService.SyncLeaderstats(player: Player)
 end
 
 function DataService.IsTransactionLocked(player: Player, notifyToast: boolean?): boolean
-	local locked = serverShuttingDown or closingPlayers[player] == true or readOnlyPlayers[player] == true
+	local locked = profiles[player] == nil or serverShuttingDown or closingPlayers[player] == true or readOnlyPlayers[player] == true
 	if not locked and not DataStoreLockHelper.IsStudioOfflineFallback() then
 		local lastRenew = lastConfirmedRenewAt[player] or 0
 		if (os.time() - lastRenew) > GameConfig.SESSION_LOCK_EXPIRE_SEC then
@@ -56,56 +56,66 @@ function DataService.CanWritePersistent(player: Player): boolean
 	return profiles[player] ~= nil and not DataService.IsTransactionLocked(player, false)
 end
 
+local function releaseLoadedToken(userId: number, key: string, token: string)
+	DataStoreLockHelper.WithUserLock(userId, function()
+		local store = DataStoreLockHelper.TryGetStore()
+		if store then DataStoreLockHelper.ReleaseToken(store, key, token) end
+	end)
+end
+
 local function acquireSessionAndLoad(player: Player)
+	readOnlyPlayers[player] = true
 	local userId = player.UserId
 	local key = "Player_" .. tostring(userId)
 	local myToken = SERVER_JOB_ID .. "_" .. Util.NewUid()
 	local loadedData: any = nil
 	local confirmedLock = false
-	local lockFailed = false
+	local lockFailed = true -- Chi mo quyen khi nhan xac nhan, hoac Studio RAM-only.
 
 	DataStoreLockHelper.WithUserLock(userId, function()
 		local store = DataStoreLockHelper.TryGetStore()
 		if store then
-			local okLock, data = DataStoreLockHelper.AcquireLockWithRetries(player, store, key, myToken)
+			local okLock, data, claimMayBeOwned = DataStoreLockHelper.AcquireLockWithRetries(player, store, key, myToken)
 			confirmedLock = okLock
 			loadedData = data
-			if not okLock then
-				lockFailed = true
+			lockFailed = not okLock
+			if not okLock and claimMayBeOwned then
+				-- Don claim chua chac ket qua ngay ca khi nguoi choi con online.
+				DataStoreLockHelper.ReleaseToken(store, key, myToken)
 			end
-		elseif not DataStoreLockHelper.IsStudioOfflineFallback() then
-			lockFailed = true
+		elseif DataStoreLockHelper.IsStudioOfflineFallback() then
+			lockFailed = false
 		end
 	end)
 
 	if not player:IsDescendantOf(Players) or closingPlayers[player] then
-		if confirmedLock then
-			local store = DataStoreLockHelper.TryGetStore()
-			if store then DataStoreLockHelper.ReleaseToken(store, key, myToken) end
-		end
+		if confirmedLock then releaseLoadedToken(userId, key, myToken) end
 		return
 	end
 
 	local profile, quarantineReason = ProfileMigrator.SanitizeLoadedProfile(loadedData)
 	if quarantineReason ~= nil then
 		if confirmedLock then
-			local store = DataStoreLockHelper.TryGetStore()
-			if store then DataStoreLockHelper.ReleaseToken(store, key, myToken) end
+			releaseLoadedToken(userId, key, myToken)
 		end
 		lockFailed = true
 	end
+	-- Nhay lai sau khi nha kho (co the yield/retry), tranh nap lai nguoi da roi.
+	if not player:IsDescendantOf(Players) or closingPlayers[player] then return end
 
-	profile.activeSessionId = myToken
-	profile.lockTimestamp = os.time()
+	profile.activeSessionId = if lockFailed then nil else myToken
+	profile.lockTimestamp = if confirmedLock then os.time() else 0
 
 	profiles[player] = profile
-	sessionTokens[player] = myToken
-	lastConfirmedRenewAt[player] = os.time()
+	sessionTokens[player] = if lockFailed then nil else myToken
+	if confirmedLock then
+		lastConfirmedRenewAt[player] = os.time()
+	end
 	dirtyRevision[player] = 0
 	savedRevision[player] = 0
 
+	readOnlyPlayers[player] = lockFailed
 	if lockFailed then
-		readOnlyPlayers[player] = true
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error",
 			text = "DataStore session busy or offline! Safe Read-Only Mode active to protect your main save.",
