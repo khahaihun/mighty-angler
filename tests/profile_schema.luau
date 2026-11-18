@@ -32,6 +32,7 @@ return function(sources)
 		local _, f, migrator = setup()
 		local raw = f.config.CreateDefaultProfile()
 		raw.dataVersion = 1
+		raw.equippedHotbarSlot = 0
 		raw.playtimeDay, raw.playtimeTodaySec, raw.playtimeClaimedToday = nil, nil, nil
 		raw.fishBag = { { uid = "legacy-fish", fishId = "fixture_fish", weight = 10.4, sellValue = 99, mutation = "None", locked = false } }
 		raw.pets = { { uid = "pet-1", petId = "fixture_pet" } }
@@ -48,6 +49,7 @@ return function(sources)
 		equal(first.fishBag[1].locked, false, "explicit unlock preserved")
 		equal(first.pets[1].uid, "pet-1", "pet UID preserved")
 		equal(first.pinnedFishUids["2"], "legacy-fish", "pin preserved")
+		equal(first.equippedHotbarSlot, 0, "legacy unequip sentinel retained")
 	end)
 	test("valid v2 and release receipt survive load and save", function()
 		local b, f = setup()
@@ -60,8 +62,33 @@ return function(sources)
 		equal(b.document.lastReleaseReceipt.nonce, "receipt", "receipt preserved")
 		equal(b.document.fishBag[1].uid, "fish-1", "valid fish preserved")
 	end)
+	test("real hotbar unequip sentinel zero survives trade save leave and rejoin", function()
+		local function ignore() end
+		local b = Fixture.backend()
+		local f = Fixture.server(sources, b, "A", nil, { dependencies = {
+			PerkService = {}, BuffAggregator = {},
+			RodVisuals = { UnequipRodFromCharacter = ignore }, PetAndFishVisuals = { EquipHeldFishOnCharacter = ignore },
+		} })
+		local p = f.add(101)
+		f.data.Get(p).gold = 100
+		f.data.Get(p).fishBag = { fish() }
+		f.loadModule("ShopAndItemsService").SetHotbarSlot(p, 1)
+		equal(f.data.Get(p).equippedHotbarSlot, 0, "pressing active slot unequips")
+		equal(f.data.CanWritePersistent(p), true, "unequipped profile remains writable")
+		equal(f.loadModule("CurrencyService").SpendGold(p, 25), true, "valid transaction after unequip")
+		equal(f.data.SaveProfile(p), "Saved", "unequipped profile saves")
+		f.finish(f.remove(p))
+		local other = Fixture.server(sources, b, "B")
+		local rejoin = other.add(101)
+		equal(other.data.CanWritePersistent(rejoin), true, "unequipped profile accepted on rejoin")
+		equal(other.data.Get(rejoin).equippedHotbarSlot, 0, "sentinel zero retained")
+		equal(other.data.Get(rejoin).gold, 75, "transaction balance retained")
+		equal(other.data.Get(rejoin).fishBag[1].uid, "fish-1", "bag retained")
+	end)
 
 	local cases = {
+		{ "negative hotbar slot", function(p) p.equippedHotbarSlot = -1 end },
+		{ "hotbar slot above five", function(p) p.equippedHotbarSlot = 6 end },
 		{ "nested false stat", function(p) p.stats.playTimeSec = false end },
 		{ "bag wrong type", function(p) p.fishBag = "invalid" end },
 		{ "fish missing id", function(p) p.fishBag = { fish() }; p.fishBag[1].fishId = nil end },

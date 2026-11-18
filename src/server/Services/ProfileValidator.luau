@@ -65,7 +65,7 @@ function ProfileValidator.Validate(raw: any): string?
 		if raw[key] ~= nil and not integer(raw[key]) then return key .. ":Integer" end
 	end
 	if raw.currentIsland ~= nil and (not integer(raw.currentIsland) or raw.currentIsland < 1) then return "currentIsland:Range" end
-	if raw.equippedHotbarSlot ~= nil and (not integer(raw.equippedHotbarSlot) or raw.equippedHotbarSlot < 1 or raw.equippedHotbarSlot > 5) then return "equippedHotbarSlot:Range" end
+	if raw.equippedHotbarSlot ~= nil and (not integer(raw.equippedHotbarSlot) or raw.equippedHotbarSlot < 0 or raw.equippedHotbarSlot > 5) then return "equippedHotbarSlot:Range" end
 	for _, key in ipairs({ "activeSessionId", "activeBait", "lastWriteNonce" }) do
 		if raw[key] ~= nil and not text(raw[key]) then return key .. ":String" end
 	end

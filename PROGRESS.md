@@ -5,6 +5,8 @@
 
 ## Mục 1.3 — Xác thực hồ sơ và cô lập scheduler
 
+- [x] **Vá review sentinel slot 0:** ShopAndItemsService.SetHotbarSlot thực tế dùng 0 để cất cần. Đã tái hiện validator từ chối lưu hồ sơ hợp lệ, sửa miền 0..5; ca nguồn thật SetHotbarSlot → SpendGold → Save/Close → server B giữ slot 0, Gold 75 và UID túi. V1 slot 0 cũng giữ nguyên; -1/6 vẫn bị cách ly. Schema **29/29**, verify **6/6 exit 0** (`logs/schema-slot0-final.log`, `logs/schema-slot0-verify.log`). Đối chiếu các giá trị ghi thực cho activeBait=nil, gymGear=0, sellValue≥1/Trophy=0, midas≥1 và cấu trúc v1 tại 118e101; không phát hiện sentinel cần sửa thêm. Commit vá chỉ chứa Validator/test schema/PROGRESS. Phép thử Reset 1.4 đang đỏ được giữ ngoài commit vá, tiếp tục ngay theo chỉ đạo.
+
 - [x] Tiếp nhận chỉ đạo Kỹ sư trưởng đã chấp nhận code `0ded6d4` và cho thi công liên tục 1.3–1.5. Nền sạch tại `0ded6d4`; không sửa bản copy trong build. Mỗi mục vẫn commit riêng, nghiệm thu Engine chưa thực hiện.
 - [x] Lỗi gốc: reconcile/migration giữ giá trị sai kiểu, dùng ipairs bỏ mục sau lỗ hoặc làm rỗng túi hỏng rồi cho ghi; lỗi một profile dừng vòng scheduler. Đã tái hiện 21 ca đỏ trong `logs/phase13-red.log` trước bản sửa.
 - [x] Thêm `ProfileValidator`: kiểm root/version, scalar hữu hạn/không âm, trường hiện diện sai kiểu kể cả v1, map string đúng kiểu, stats/potions/quests/receipt lồng, UID và mảng đặc qua pairs (không bỏ dữ liệu sau lỗ). v1 được thiếu trường mới có mặc định hợp lệ; v2 phải đủ trường; version tương lai cách ly. Không sửa input, không loại vật phẩm lỗi.
