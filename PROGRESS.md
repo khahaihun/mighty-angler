@@ -1,7 +1,13 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 09:43 bởi Antigravity
-- **Trạng thái hiện tại:** **ĐÃ HOÀN THÀNH 100% CẢ 3 CHẶNG (M1.1 → M3.4) + ĐÃ FIX DỨT ĐIỂM LỖI TREO ĐƠ KHI CÂU CÁ / TRAIN** — Đã xuất mới `build\mighty-angler-dev.rbxlx` (PASS 6/6).
+- **Cập nhật lần cuối:** 2026-11-18 10:38 bởi Antigravity
+- **Trạng thái hiện tại:** Đã hoàn thành bản khung v1.0 (`commit 118e101`) VÀ vừa lập xong **Đại Kế Hoạch Đại Tu 2.0 trong `PLAN.md`** *(Đang chờ người dùng đưa `PLAN.md` sang GPT/Codex review chéo rồi mới bắt đầu code Chặng A → Chặng D)*.
+
+---
+
+## Đang chờ duyệt trước khi code Phase 2 [~]
+- [~] Đưa bản **Đại Kế Hoạch Đại Tu 2.0 (`PLAN.md`)** cho GPT / Codex kiểm tra chéo (công thức 5 chỉ số Cần câu + Cần Exclusive scaling + Enchant, cơ chế Hotbar cầm cần/khoe cá + Raycast nảy đất + AFK timeout `6.5s`, UI Lưới 3D `ViewportFrame` + Khóa cá/Bán lẻ/Đổi đồ, Nước `Terrain Water` + NPC R15 + Đập trứng/Aura).
+- [ ] Sau khi người dùng & GPT chốt nhận xét (nếu có chỉnh sửa bổ sung vào `PLAN.md`), bắt đầu thi công tuần tự **Chặng A → Chặng B → Chặng C → Chặng D**.
 
 ---
 
