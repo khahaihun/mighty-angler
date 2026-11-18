@@ -22,6 +22,7 @@ return function(sources)
  BuffAggregator={GetMultipliers=function() return f.mults end},
  PerkService={HasGamepass=function() return false end,ArePaidRandomItemsRestricted=function() return false end},
  ShopAndItemsService={PushInventory=noop,SyncCharacterHandVisuals=noop,HandleEquipRod=noop,GrantPotion=noop,ConsumeGivenBaitOnCatch=noop,OnHotbarSlotChanged=noop},
+ WorldPromptAccess={IsNear=function() return f.nearPrompt ~= false end},
  ProfileMigrator={GetFishDef=function(id) return f.fishDefs[id] end},
  Islands={ById={[3]={centerPosition=vec(0,0,0)}}},
  RodVisuals={ClearBobber=noop},PetAndFishVisuals={SpawnCaughtFishLeap=noop},WhirlpoolManager={},

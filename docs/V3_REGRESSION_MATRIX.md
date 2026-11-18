@@ -53,3 +53,17 @@ Các probe chỉ sửa chuỗi được nhúng vào runner trong `build/`, khôn
 4. Chạy bốn probe; mỗi probe phải exit 1 vì assertion tương ứng. Nếu target source đã đổi, lỗi `Probe target changed` chỉ cho biết probe cần cập nhật sau review; không phải bằng chứng chốt hồi quy bắt được. Chạy không probe lần cuối phải exit 0.
 5. Chạy các ca Studio F5, Server & Clients, ping 200ms và điện thoại theo bảng trên; ghi phiên bản place/SHA, thiết bị, ảnh/video hoặc Output, kết quả và lỗi còn lại. Tất cả ca Engine trong bản này hiện **chờ nghiệm thu**, không có ảnh/video chạy game.
 6. Kỹ sư trưởng quyết định sign-off theo blueprint: 23/23 VM mới + bảng mã 21 dòng chưa đủ cho phát hành. Suite này không kiểm phân phối random thống kê, network thật, xác suất Gems, vòng đời pet Engine hay ổn định DataStore thật.
+
+## Cập nhật hợp nhất sơ bộ (18/11/2026)
+
+Bản ứng viên `codex/v3-combined` đã merge giữ lịch sử dữ liệu `0ded6d4`,
+regression `3132629`, fishing `db2387a`, UI `a7bcfc7`. Nội dung bảng nền ở trên
+là lịch sử lần chạy độc lập, không ghi đè bằng kết quả bản hợp nhất.
+
+- Regression **23/23 PASS** sau cập nhật mock biên `WorldPromptAccess.IsNear` (đứng hợp lệ tại prompt); không đổi/nới assertion. Phạm vi prompt thật kiểm ở suite fishing riêng.
+- Chạy sơ bộ chín `tools/test*.ps1`: tám exit 0; runner dữ liệu chung exit 1,
+  persistence **5/7**, còn đúng 1.3 và 1.4 đỏ trên nền `0ded6d4`;
+  acquisition **19/19**, lifecycle **12/12**. Verify **PASS 6/6 exit 0**.
+- **1.5 chưa xong**; còn chờ các tip cuối đã review, sau đó phải chạy lại mọi runner
+  từ checkout sạch và đối chiếu toàn bộ Source place. Kết quả sơ bộ này không
+  thay thế việc kiểm bản ứng viên cuối hoặc nghiệm thu hai server/Studio/mobile.

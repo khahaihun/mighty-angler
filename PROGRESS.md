@@ -3,6 +3,13 @@
 - **Cập nhật lần cuối:** 2026-11-18 18:33 bởi Codex (thi công)
 - **Trạng thái hiện tại:** Thi công riêng **1.2 — Codex P0-02 / phần lưu cuối Argon P0-3** theo giao việc tiếp sau `0a90644`: 12/12 ca lifecycle, giữ 19/19 nhận khóa và cách ly Studio; **verify PASS 6/6, exit 0**. Bộ hồi quy chung **exit 1**, còn đúng hai ca đã biết thuộc 1.3/1.4. Dừng để Kỹ sư trưởng review commit mục 1.2; **chưa phát hành, Studio/hai server/điện thoại chờ nghiệm thu**. [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
 
+## Bản ứng viên hợp nhất sơ bộ — Codex, 18/11/2026
+
+- [x] Trong clone `build/v3-regression-sol`, nhánh `codex/v3-combined` từ dữ liệu `0ded6d4`; merge lịch sử `3132629`, fishing `db2387a`, UI `a7bcfc7`. Không sửa checkout gốc, không push. Giữ toàn bộ bàn giao các nhóm; trạng thái đầu file tiếp tục thuộc công nhân dữ liệu tới hết 1.5.
+- [x] Chỉnh duy nhất fixture regression thêm `WorldPromptAccess.IsNear` làm biên vị trí hợp lệ thay kiểm tọa độ thiết kế cũ; assertion tiền/UID/Trophy/Appraise/Rebirth/Strength không nới. Logic prompt thật do `test_fishing_wave.ps1` kiểm riêng.
+- [x] Chạy sơ bộ cả chín `tools/test*.ps1`: tám runner exit 0; runner dữ liệu chung exit 1, persistence 5/7 với đúng `malformed_profile_is_quarantined` (1.3) và `dev_reset_during_autosave` (1.4). Acquisition 19/19, lifecycle 12/12, regression 23/23. Verify PASS 6/6 exit 0.
+- [~] **1.3/1.4 còn đỏ trên `0ded6d4`; 1.5 chưa xong**. Chờ tip cuối Đợt 1, fishing và UI để hợp nhất và chạy lại từ checkout sạch; chưa gọi hoàn thành.
+- [ ] Kiểm Source toàn bộ place trên SHA cuối; F5/hai server/hai client/ping/điện thoại còn chờ. Đây chỉ là ứng viên để Kỹ sư trưởng review, chưa duyệt phát hành.
 ## Bàn giao kiểm thử hồi quy V3 — clone riêng ngày 18/11/2026, Codex
 
 - **Trạng thái:** bản kiểm thử nền `9282aa6` trong `build/v3-regression-sol`, nhánh `codex/v3-regression`; không sửa mã game hoặc checkout chính; chưa ký nghiệm thu 21/21 Engine/phát hành.
