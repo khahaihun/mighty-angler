@@ -102,6 +102,8 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 	local existingAura = root:FindFirstChild("RankAuraEmitter") :: ParticleEmitter?
 	if totalRate <= 0 then
 		if existingAura then
+			existingAura.Rate = 0
+			existingAura:SetAttribute("ClientBudgetEnabled", false)
 			existingAura.Enabled = false
 		end
 		return
@@ -109,6 +111,7 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 
 	if not existingAura then
 		local em = Instance.new("ParticleEmitter")
+	em:SetAttribute("ClientBudgetManaged", true)
 		em.Name = "RankAuraEmitter"
 		em.LightEmission = 1
 		em.Size = NumberSequence.new({
@@ -127,6 +130,7 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 		existingAura = em
 	end
 	if existingAura then
+		existingAura:SetAttribute("ClientBudgetEnabled", true)
 		existingAura.Enabled = true
 		existingAura.Color = ColorSequence.new(rank.color)
 		existingAura.Rate = totalRate
@@ -140,6 +144,8 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 		return
 	end
 
+	char:SetAttribute("VisualAction", stationType)
+	char:SetAttribute("VisualActionAt", workspace:GetServerTimeNow())
 	local nextTicket = (gymWeightClearTicket[player] or 0) + 1
 	gymWeightClearTicket[player] = nextTicket
 

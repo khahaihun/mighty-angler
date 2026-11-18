@@ -154,6 +154,7 @@ function FishModelBuilder.BuildFish(fishDef: Types.FishDef, mutation: string?, s
 
 	if not isSil and mut ~= "None" and m.PrimaryPart then
 		local sp = Instance.new("ParticleEmitter")
+	sp:SetAttribute("ClientBudgetManaged", true)
 		sp.Color = ColorSequence.new(c1)
 		sp.LightEmission = 1
 		sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(1, 0) })

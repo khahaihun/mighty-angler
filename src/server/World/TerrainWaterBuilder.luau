@@ -79,6 +79,7 @@ local function buildCampfire(parent: Instance, pos: Vector3)
 	light.Parent = flame
 
 	local sparks = Instance.new("ParticleEmitter")
+	sparks:SetAttribute("ClientBudgetManaged", true)
 	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 196, 78), Color3.fromRGB(255, 82, 36))
 	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
 	sparks.Lifetime = NumberRange.new(1.0, 1.8)
@@ -176,6 +177,7 @@ function TerrainWaterBuilder.BuildMultiTierReliefAndProps(islandFolder: Folder, 
 	local emitterHost = PartFactory.Block(relief, "AmbientFireflies", Vector3.new(110, 14, 96), CFrame.new(c + Vector3.new(0, 8, 4)), theme.accentColor, Enum.Material.SmoothPlastic, false, 1)
 	emitterHost.CanQuery = false
 	local fireflies = Instance.new("ParticleEmitter")
+	fireflies:SetAttribute("ClientBudgetManaged", true)
 	fireflies.Color = ColorSequence.new(theme.accentColor)
 	fireflies.LightEmission = 1
 	fireflies.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(0.5, 0.38), NumberSequenceKeypoint.new(1, 0) })

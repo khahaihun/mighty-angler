@@ -3,14 +3,13 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local AnimationController = require(script.Parent.AnimationController)
+local CameraFocusController = require(script.Parent.CameraFocusController)
 local MinigameBar = require(script.Parent.Parent.UI.Panels.MinigameBar)
 
 local FishingController = {}
@@ -125,14 +124,7 @@ function FishingController.ToggleAutoFish()
 end
 
 local function setMinigameCameraZoom(inMinigame: boolean)
-	local cam = Workspace.CurrentCamera
-	if not cam then
-		return
-	end
-	local targetFov = if inMinigame then 64 else 70
-	TweenService:Create(cam, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		FieldOfView = targetFov,
-	}):Play()
+	CameraFocusController.SetMinigame(inMinigame)
 end
 
 function FishingController.Init(rootGui: ScreenGui)

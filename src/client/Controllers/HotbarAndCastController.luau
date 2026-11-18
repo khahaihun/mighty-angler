@@ -163,6 +163,12 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 		Net.FireServer(Net.ClientToServer.FishingChargeStart)
 	end)
 
+	UserInputService.InputChanged:Connect(function(input: InputObject)
+		if holdingCast and holdIsTouch and input == activeCastInput then
+			holdPointerPos = Vector2.new(input.Position.X, input.Position.Y)
+		end
+	end)
+
 	UserInputService.InputEnded:Connect(function(input: InputObject, _gameProcessed: boolean)
 		if not holdingCast or input ~= activeCastInput then
 			return

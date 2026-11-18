@@ -2,14 +2,12 @@
 -- NpcDialogueModal.luau: Khung hoi thoai NPC da lua chon kieu Fisch + hieu ung thu nhe FOV Camera
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 
 local Theme = require(script.Parent.Parent.Theme)
-local MinigameBar = require(script.Parent.Parent.Panels.MinigameBar)
+local CameraFocusController = require(script.Parent.Parent.Parent.Controllers.CameraFocusController)
 
 export type DialogueHandlers = {
 	OpenPanel: (panelKey: string) -> (),
@@ -34,12 +32,7 @@ local choicesHolder: Frame? = nil
 local handlersRef: DialogueHandlers? = nil
 
 local function setCameraTalkZoom(talking: boolean)
-	local cam = Workspace.CurrentCamera
-	if not cam then
-		return
-	end
-	local targetFov = if talking then 62 elseif MinigameBar.IsOpen() then 64 else 70
-	TweenService:Create(cam, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = targetFov }):Play()
+	CameraFocusController.SetTalking(talking)
 end
 
 function NpcDialogueModal.Close()

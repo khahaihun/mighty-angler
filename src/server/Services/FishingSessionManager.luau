@@ -6,9 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local CatchControl = require(Shared:WaitForChild("CatchControl"))
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
-local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 
@@ -134,8 +134,7 @@ function FishingSessionManager.BeginMinigame(
 		then 3
 		elseif fishDef.rarity == "Legendary" or fishDef.rarity == "Epic" then 2
 		else 1
-	local baseZone = if fishDef.rarity == "Boss" then 0.22 else 0.28
-	local zoneWidth = math.clamp(baseZone + sess.snapMults.minigameWidthBonus, 0.20, GameConfig.MINIGAME_MAX_WIDTH)
+	local zoneWidth = CatchControl.ComputeWidth(fishDef.rarity == "Boss", sess.snapMults.minigameWidthBonus)
 	local baseSpeed = if fishDef.rarity == "Boss" then 1.42 elseif fishDef.rarity == "Legendary" then 1.24 else 1.05
 	local speed = math.max(0.48, baseSpeed / math.max(1.0, sess.snapMults.minigameSpeedDivisor))
 

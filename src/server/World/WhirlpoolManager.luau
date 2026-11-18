@@ -104,6 +104,7 @@ local function buildWhirlpoolModel(parent: Instance, centerPos: Vector3, accentC
 	end
 
 	local splash = Instance.new("ParticleEmitter")
+	splash:SetAttribute("ClientBudgetManaged", true)
 	splash.Color = ColorSequence.new(Color3.fromRGB(196, 250, 255))
 	splash.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1.8) })
 	splash.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 1) })

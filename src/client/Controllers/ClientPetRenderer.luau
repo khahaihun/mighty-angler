@@ -61,7 +61,7 @@ local function clearPetsForPlayer(player: Player)
 	local list = playerPetModels[player]
 	if list then
 		for _, m in ipairs(list) do
-			if m.Parent then m:Destroy() end
+			m:Destroy()
 		end
 	end
 	playerPetModels[player] = nil
@@ -256,14 +256,20 @@ function ClientPetRenderer.Init()
 		end
 
 		for player, models in pairs(playerPetModels) do
-			if player ~= localPlayer and lowGfx and frameStep ~= 0 then
-				continue
-			end
 			local char = player.Character
 			local hrp = if char then char:FindFirstChild("HumanoidRootPart") else nil
 			if hrp and hrp:IsA("BasePart") then
 				local dist = if myPos and player ~= localPlayer then (hrp.Position - myPos).Magnitude else 0
-				if dist <= 160 and not (dist > 85 and frameStep ~= 0) then
+				local visible = dist <= 160
+				for _, model in ipairs(models) do
+					if not visible then
+						model.Parent = nil
+					elseif not model.Parent then
+						model:PivotTo(hrp.CFrame)
+						model.Parent = ensureRootFolder()
+					end
+				end
+				if visible and not (player ~= localPlayer and (lowGfx or dist > 85) and frameStep ~= 0) then
 					local lerpAlpha = math.clamp(dt * 10.5, 0.08, 0.45)
 					for idx, m in ipairs(models) do
 						if m.Parent then
@@ -276,6 +282,8 @@ function ClientPetRenderer.Init()
 						end
 					end
 				end
+			else
+				for _, model in ipairs(models) do model.Parent = nil end
 			end
 		end
 	end)

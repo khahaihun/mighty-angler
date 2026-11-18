@@ -3,7 +3,6 @@
 
 local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -15,10 +14,10 @@ local Util = require(Shared:WaitForChild("Util"))
 local SoundConfig = require(Shared:WaitForChild("Config"):WaitForChild("SoundConfig"))
 
 local Theme = require(script.Parent.Parent.UI.Theme)
+local ParticleBudgetController = require(script.Parent.ParticleBudgetController)
 
 local SoundAndFxController = {}
 
-local localPlayer = Players.LocalPlayer
 local fxRootGui: ScreenGui? = nil
 local toastStackFrame: Frame? = nil
 local cachedSounds: { [string]: Sound } = {}
@@ -27,59 +26,7 @@ local mutedFlag = false
 local lowGfxFlag = false
 
 local function applyClientParticleBudget()
-	local myChar = localPlayer.Character
-	local myHrp = if myChar then myChar:FindFirstChild("HumanoidRootPart") else nil
-	local myPos = if myHrp and myHrp:IsA("BasePart") then myHrp.Position else nil
-
-	local function updateEmitter(em: ParticleEmitter, parentPart: BasePart, allowOnSelfInLowGfx: boolean)
-		if em:GetAttribute("OrigRate") == nil then
-			em:SetAttribute("OrigRate", em.Rate)
-		end
-		local origRate = tonumber(em:GetAttribute("OrigRate")) or em.Rate
-		if origRate <= 0 then
-			return
-		end
-		local dist = if myPos then (parentPart.Position - myPos).Magnitude else 0
-		if lowGfxFlag then
-			em.Enabled = allowOnSelfInLowGfx and dist <= 45
-		else
-			em.Enabled = (dist <= 210)
-		end
-	end
-
-	local world = Workspace:FindFirstChild("MightyWorld")
-	if world then
-		for _, d in ipairs(world:GetDescendants()) do
-			if d:IsA("ParticleEmitter") and d.Parent and d.Parent:IsA("BasePart") then
-				updateEmitter(d, d.Parent, false)
-			end
-		end
-	end
-	local wp = Workspace:FindFirstChild("OceanWhirlpools")
-	if wp then
-		for _, d in ipairs(wp:GetDescendants()) do
-			if d:IsA("ParticleEmitter") and d.Parent and d.Parent:IsA("BasePart") then
-				updateEmitter(d, d.Parent, false)
-			end
-		end
-	end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Character then
-			for _, d in ipairs(p.Character:GetDescendants()) do
-				if d:IsA("ParticleEmitter") and d.Name == "RankAuraEmitter" and d.Parent and d.Parent:IsA("BasePart") then
-					if d.Rate > 0 then
-						if lowGfxFlag and p ~= localPlayer then
-							d.Enabled = false
-						elseif myPos then
-							d.Enabled = ((d.Parent.Position - myPos).Magnitude <= 145)
-						else
-							d.Enabled = true
-						end
-					end
-				end
-			end
-		end
-	end
+	ParticleBudgetController.Update(lowGfxFlag)
 end
 
 function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)

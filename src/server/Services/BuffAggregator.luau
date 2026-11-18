@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local CatchControl = require(Shared:WaitForChild("CatchControl"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
 local EnchantsConfig = require(Shared:WaitForChild("Config"):WaitForChild("EnchantsConfig"))
@@ -35,12 +36,7 @@ function BuffAggregator.GetMaxEquippedPets(player: Player): number
 end
 
 function BuffAggregator.ComputeStrengthMastery(strength: number, masteryBaseline: number): number
-	local baseline = math.max(masteryBaseline, 300)
-	local ratio = strength / baseline
-	if ratio <= 0 then
-		return 0
-	end
-	return math.clamp(math.log10(1 + ratio) / 2.0, 0, 1)
+	return CatchControl.ComputeMastery(strength, masteryBaseline)
 end
 
 function BuffAggregator.GetMultipliers(
