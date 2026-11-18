@@ -1,4 +1,8 @@
-param([string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'))
+param(
+    [string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'),
+    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence')]
+    [string]$Suite = 'all'
+)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -18,6 +22,8 @@ $modulePaths = @{
     DataStoreLockHelper = 'src/server/Services/DataStoreLockHelper.luau'
     LiveOpsService = 'src/server/Services/LiveOpsService.luau'
     DataService = 'src/server/Services/DataService.luau'
+    ProfileWriteHelper = 'src/server/Services/ProfileWriteHelper.luau'
+    ProfilePersistenceService = 'src/server/Services/ProfilePersistenceService.luau'
     ProfileMigrator = 'src/server/Services/ProfileMigrator.luau'
     EnchantAndBountyService = 'src/server/Services/EnchantAndBountyService.luau'
     CurrencyService = 'src/server/Services/CurrencyService.luau'
@@ -44,9 +50,11 @@ foreach ($name in ($modulePaths.Keys | Sort-Object)) {
     if ($source.Contains(']====]')) { throw 'Unsupported long-string delimiter in source' }
     [void]$runner.AppendLine(('sources["{0}"] = [====[{1}]====]' -f $name, $source))
 }
+[void]$runner.AppendLine(('local requestedSuite = "{0}"' -f $Suite))
 [void]$runner.AppendLine(@'
 local failures = 0
 local function run(name, suite)
+    if requestedSuite ~= "all" and requestedSuite ~= name then return end
     local ok, err = pcall(suite, sources)
     print(string.format("%s suite %s%s", if ok then "PASS" else "FAIL", name,
         if ok then "" else ": " .. tostring(err)))
@@ -54,6 +62,7 @@ local function run(name, suite)
 end
 run("studio_data_isolation", function(src) require("../tests/studio_data_isolation")(src) end)
 run("session_acquisition", function(src) require("../tests/session_acquisition")(src) end)
+run("session_lifecycle", function(src) require("../tests/session_lifecycle")(src) end)
 run("data_persistence", function(src) require("../tests/data_persistence")(src) end)
 assert(failures == 0, string.format("%d suite(s) failed; see PASS/FAIL above", failures))
 '@)

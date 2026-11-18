@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Types = require(Shared:WaitForChild("Types"))
 local Util = require(Shared:WaitForChild("Util"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
@@ -139,44 +138,6 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 		end
 	end
 	return false, nil, claimMayBeOwned
-end
-
--- Tra ve: "Saved" | "LostLock" | "TransientError"
-function DataStoreLockHelper.WriteSnapshotVerified(
-	store: DataStore,
-	key: string,
-	profile: Types.PlayerProfile,
-	myToken: string,
-	releaseLock: boolean
-): (string, number)
-	local expectedSeq = profile.saveSeq
-	local nextSeq = expectedSeq + 1
-	local writeNonce = Util.NewUid()
-
-	local snapshot: any = Util.DeepCopy(profile)
-	snapshot.saveSeq = nextSeq
-	snapshot.activeSessionId = if releaseLock then nil else myToken
-	snapshot.lockTimestamp = if releaseLock then 0 else os.time()
-	snapshot.lastWriteNonce = writeNonce
-
-	local ok, savedDoc = pcall(function()
-		return store:UpdateAsync(key, function(oldData: any)
-			if type(oldData) ~= "table" or oldData.activeSessionId ~= myToken then
-				return nil
-			end
-			if (tonumber(oldData.saveSeq) or 0) > expectedSeq then
-				return nil
-			end
-			return snapshot
-		end)
-	end)
-
-	if ok and type(savedDoc) == "table" and savedDoc.lastWriteNonce == writeNonce then
-		return "Saved", nextSeq
-	elseif ok and savedDoc == nil then
-		return "LostLock", expectedSeq
-	end
-	return "TransientError", expectedSeq
 end
 
 return DataStoreLockHelper

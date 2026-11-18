@@ -8,7 +8,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy cả ba bộ `studio_data_isolation`, `session_acquisition` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL.
+Lệnh trên chạy bốn bộ `studio_data_isolation`, `session_acquisition`, `session_lifecycle` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
 
 ## Cách ly dữ liệu Studio
 
@@ -32,10 +32,22 @@ Dùng cùng Luau CLI, chạy nguyên văn `DataService`, `DataStoreLockHelper`, 
 
 Kho giả sao chép giá trị qua biên API và chạy lại callback nếu máy chủ khác ghi trong lúc yêu cầu bị treo, theo [quy tắc UpdateAsync của Roblox](https://github.com/Roblox/creator-docs/blob/main/content/en-us/reference/engine/classes/GlobalDataStore.yaml#L351). Việc tạm dừng nằm ở biên API, không nằm trong callback. Đồng hồ và lịch coroutine do phép thử điều khiển; đây là mô phỏng, không phải hành vi mạng/Engine đã được chứng nhận.
 
-Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉnh hạn quyền ghi, gia hạn, gộp đóng/lưu cuối của mục 1.2, dữ liệu hỏng của 1.3, Reset 1.4 hoặc HUD 1.5. Không dùng kết quả bộ này để ký các mục đó.
+Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Bộ nhận khóa không thay phép kiểm đóng/lưu cuối ở bộ bên dưới, dữ liệu hỏng của 1.3, Reset 1.4 hoặc HUD 1.5.
+
+## Quyền ghi, gia hạn và đóng phiên — mục 1.2
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite session_lifecycle
+```
+
+`session_lifecycle.luau` có 12 ca: dấu giờ claim và lưu muộn; khóa giao dịch trước snapshot cuối; hai đường đóng cùng nhận một kết quả; mất phản hồi ghi lẫn đọc xác nhận; bảo toàn chủ B khi xác nhận lần nhả A; hết hạn đóng có kết quả Unconfirmed; retry cùng nonce rồi lưu tiến độ mới; mất quyền khi chờ API/hàng đợi; gia hạn hồ sơ đứng yên theo các pha khác nhau; đóng song song khi một hồ sơ treo; đường SaveProfile(release=true); và 30 lượt rời/vào không tích lũy phiên trong registry.
+
+Nguồn thật bổ sung `ProfileWriteHelper` và `ProfilePersistenceService`; bộ nhận khóa riêng cũng tải hai module này. Fixture chạy lịch coroutine có hạn, nhiều khóa UserId trong cùng kho RAM, GetAsync không cache và retry callback khi xung đột. Get/Save/Close/BindToClose vẫn đi qua module và điểm vào thật; không giả kết quả quyền ghi hoặc kết quả đóng.
+
+Kết quả cuối mục 1.2: 12/12 và 19/19 đạt; `data_persistence` đạt 5/7, còn đỏ **malformed_profile_is_quarantined (1.3)** và **dev_reset_during_autosave (1.4)**. Bộ chung vẫn trả **exit 1**, các assertion lỗi được giữ nguyên. Đây không phải CI xanh hay nghiệm thu Engine; xem PROGRESS cho SHA và kết quả của bản cụ thể.
 
 ## Lưu hồ sơ và giao dịch đổi cá
 
 `data_persistence.luau` dùng lại kho RAM và lịch coroutine của `session_fixture.luau`. Bảy ca kiểm hai phiên tranh khóa, thử lại lưu cuối khi lỗi tạm, phản hồi lưu muộn, hai đường đóng đồng thời, hồ sơ sai kiểu, nút Reset DEV trong lúc autosave và nộp lại cùng UID cá trước/sau đổi máy chủ.
 
-Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.
+Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim; chồng autosave trước giao dịch với cả hai đường đóng, làm mất phản hồi cuối và giữ lần đọc xác nhận trước khi vào máy chủ B. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.

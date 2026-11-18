@@ -109,15 +109,17 @@ return function(sources)
 		local a = Fixture.server(sources, b, "A")
 		local p = a.add(101)
 		a.data.Get(p).gold = 404
+		local held
 		a.beforeUpdate = function(kind)
-			if kind == "release" then coroutine.yield("final write held") end
+			if kind == "release" then held = coroutine.running(); coroutine.yield("final write held") end
 		end
 		local removal = a.remove(p)
 		equal(coroutine.status(removal), "suspended", "PlayerRemoving awaits final save")
 		equal(b.document.gold, 0, "final balance is not persisted yet")
 		local shutdown = a.spawn(a.bindToClose)
 		local shutdownWhilePending = coroutine.status(shutdown)
-		a.resume(removal)
+		a.resume(held)
+		a.finish(removal)
 		a.finish(shutdown)
 		equal(b.document.gold, 404, "final balance persisted")
 		equal(b.document.activeSessionId, nil, "final write released ownership")
@@ -193,6 +195,11 @@ return function(sources)
 		}
 		profile.pinnedFishUids["2"] = "fish-to-turn-in"
 		profile.equippedHotbarSlot = 2
+		local heldAutosave
+		a.afterUpdate = function(kind)
+			if kind == "save" then heldAutosave = coroutine.running(); coroutine.yield("pre-bounty autosave held") end
+		end
+		local autosave = a.spawn(function() return a.data.SaveProfile(p) end)
 		local function claim(server, player)
 			server.finish(server.fireRemote("TurnInBounty", player, "bounty_sunny_epic", "fish-to-turn-in"))
 		end
@@ -208,7 +215,20 @@ return function(sources)
 		checkReward(profile, "first request")
 		claim(a, p)
 		checkReward(profile, "duplicate request")
-		a.finish(a.remove(p))
+		local heldRead
+		a.afterUpdate = function(kind) if kind == "release" then error("bounty final acknowledgement lost") end end
+		a.beforeRead = function() heldRead = coroutine.running(); coroutine.yield("bounty verification held") end
+		local removal = a.remove(p)
+		local shutdown = a.spawn(a.bindToClose)
+		equal(coroutine.status(shutdown), "suspended", "shutdown waits for bounty close")
+		a.resume(heldAutosave); a.finish(autosave)
+		a.advance(0.1)
+		assert(heldRead, "final bounty write must reach confirmation read")
+		a.beforeRead = nil
+		a.resume(heldRead)
+		a.finish(removal); a.finish(shutdown)
+		equal(a.results[removal], "Saved", "bounty final write confirmed despite lost response")
+		equal(b.document.saveSeq, 3, "autosave then one final bounty snapshot")
 		checkReward(b.document, "saved at departure")
 		local other = Fixture.server(sources, b, "B", nil, gameplayOptions())
 		other.loadModule("EnchantAndBountyService").Init()

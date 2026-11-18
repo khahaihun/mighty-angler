@@ -1,7 +1,69 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 17:49 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Kỹ sư trưởng đã duyệt code `45dd21a` và giao mục **1.1 — Codex P0-01/P1-01**. Bản vá 1.1 đã qua **19/19 ca mô phỏng**, test cách ly Studio và **PASS 6/6, exit 0**; đang chờ review commit riêng. **Chưa làm mục 1.2, chưa duyệt phát hành; Studio/hai server thật chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 18:33 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Thi công riêng **1.2 — Codex P0-02 / phần lưu cuối Argon P0-3** theo giao việc tiếp sau `0a90644`: 12/12 ca lifecycle, giữ 19/19 nhận khóa và cách ly Studio; **verify PASS 6/6, exit 0**. Bộ hồi quy chung **exit 1**, còn đúng hai ca đã biết thuộc 1.3/1.4. Dừng để Kỹ sư trưởng review commit mục 1.2; **chưa phát hành, Studio/hai server/điện thoại chờ nghiệm thu**. [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Bản vá mục 1.2 — Hạn quyền ghi, gia hạn và lần lưu cuối
+
+### Đã hoàn thành [x]
+
+- [x] Nhận ca trên `codex/studio-data-isolation` tại `0a90644`, cây làm việc sạch. Đọc AGENTS/PLAN/PROGRESS/matrix/blueprint và hai commit `916e5d9` (bộ persistence), `0a90644` (CI). Trong lúc thi công xuất hiện commit tài liệu **`9282aa6`** của ca khác, chỉ sửa AGENTS; đã đọc quy trình kiểm hai tầng/staging mới và giữ nguyên, không đưa vào bản vá này.
+- [x] **Lỗi gốc — đọc mã và mô phỏng nền:** thời điểm nhận phản hồi được dùng để kéo dài quyền ghi thay cho dấu giờ lưu trong kho; đóng trùng trả sớm, bỏ kết quả retry và giữ `closingPlayers`; chưa có mã thao tác cố định cho kết quả mơ hồ; autosave dồn cả server cùng nhịp. Bộ nền có 4 ca persistence lỗi: hai lỗi 1.2 và hai lỗi còn lại thuộc 1.3/1.4.
+- [x] **Tách module nội bộ, giữ điểm vào gameplay:** `DataService` tiếp tục cung cấp Get/Wait/Save/MarkDirty/Reset/snapshot; `ProfilePersistenceService` giữ trạng thái theo phiên, lease, hàng chờ ghi và đóng; `ProfileWriteHelper` giữ snapshot/nonce bất biến và xác nhận từ kho. Chuyển phần `WriteSnapshotVerified` cũ khỏi LockHelper sang helper mới, không còn caller dùng hàm cũ. Không đổi Remote, gamepass, luật thưởng hay schemaVersion.
+- [x] **Hạn quyền ghi:** lấy `lockTimestamp` từ tài liệu claim/ghi được kho xác nhận, không lấy thời điểm trả phản hồi. Giao dịch bị khóa khi tới hạn 120 giây theo dấu giờ đó, kể cả phản hồi chậm. Ghi vẫn kiểm đúng token và saveSeq hiện hành tại UpdateAsync; queued writer kiểm lại trạng thái chỉ đọc sau khi đợi UserId.
+- [x] **Kết quả mơ hồ:** mỗi thao tác giữ nguyên snapshot, token, nonce và nextSeq qua các lần retry. UpdateAsync không ghi lại thao tác đã áp dụng. GetAsync với `UseCache=false` đối chiếu token/seq/nonce; không đủ bằng chứng thì TransientError hoặc LostLock, không báo Saved giả. Receipt nhả cuối được giữ để xác nhận A kể cả B đã claim/lưu; không ghi đè B để xác nhận A.
+- [x] **Lần lưu cuối:** đặt cờ đóng trước khi chụp snapshot; PlayerRemoving và BindToClose cùng chờ tác vụ theo phiên, kể cả người đã rời Players. Kết quả Saved/Skipped/RAMOnly/Unconfirmed là chung và bất biến; báo cáo shutdown theo token chứa cùng kết quả, không chứa Player. Hạn 25 giây dùng chung, retry lỗi tạm trong hạn; hết hạn ghi cảnh báo gồm UserId/token/seq/nonce/lý do. API trả muộn không cài lại RAM.
+- [x] **Đóng nhiều hồ sơ và dọn tham chiếu:** shutdown khóa mọi giao dịch trước khi khởi chạy các tác vụ song song. Một hồ sơ treo không chặn hồ sơ khác. Hoàn tất/hết hạn xóa phiên khỏi registry và nhả player/profile/pending; 30 lượt rời/vào đưa Count về 0 sau mỗi lượt. BindToClose chờ các phiên đang đóng thay vì chỉ đếm người hiện diện.
+- [x] **Gia hạn:** chia pha theo UserId trên chu kỳ 60 giây, kể cả hồ sơ không có giao dịch; không tạo nhiều lượt chờ tự lưu cho cùng phiên. Lỗi tạm lên lịch đối chiếu/thử lại sớm, quyền giao dịch vẫn chịu dấu giờ đã xác nhận. Giữ RAM-only chưa publish và `_StudioDev` của mục trước.
+
+| Ca nghiệm thu | Loại bằng chứng | Kết quả thực tế |
+|---|---|---|
+| Claim/lưu đã ghi, phản hồi chậm 100 giây; kiểm sau giây 120 | Mô phỏng nguồn thật | Không được kéo dài lease từ lúc nhận phản hồi; A không còn quyền ghi sau hạn lưu trong kho. |
+| PlayerRemoving đang lưu thì BindToClose chạy | Mô phỏng điểm vào thật | Cả hai chờ; cùng nhận Saved theo token; đúng một snapshot cuối và một lần tăng seq. |
+| Lưu cuối lỗi tạm trước ghi rồi thành công | Mô phỏng persistence | Retry snapshot cố định, lưu Gold 731, nhả chủ và seq=2. |
+| Đã ghi nhưng mất phản hồi, lần đọc xác nhận đầu cũng lỗi | Mô phỏng lifecycle | Retry cùng thao tác; chỉ đọc để chứng minh, không ghi snapshot lần hai; seq=2, tổng commit=2 kể cả claim. |
+| A mất phản hồi nhả, B vào và lưu trước khi A đối chiếu | Hai máy chủ mô phỏng, chung kho RAM | Receipt xác nhận A đã lưu, Gold/owner B giữ nguyên; A không ghi đè B. |
+| Autosave trước Bounty đang đợi; tiêu UID, rồi chồng cả hai đường đóng/mất phản hồi cuối | Handler Bounty + DataService thật trong mô phỏng | Autosave rồi đúng một snapshot cuối (seq=3); vào B thấy Gems 45, Relic từ 3→4, một Lucky Elixir; UID tiêu biến mất, UID khác giữ, ô ghim dọn; nộp lại không nhận thêm thưởng. |
+| Lỗi đến hết hạn đóng / API treo | Mô phỏng | Trong 25 giây trả Unconfirmed chung cho các đường chờ; có cảnh báo, không báo đã lưu số dư chưa ghi; registry về 0. |
+| Hai hồ sơ đóng, một API treo; sau hạn API trả | Mô phỏng nhiều khóa RAM | Hồ sơ kia vẫn lưu song song; hết hạn dọn registry, phản hồi muộn không cài lại profile. |
+| Hồ sơ đứng yên / ba UserId vào cùng lúc | Mô phỏng lịch coroutine thật tại biên Engine | Cả ba gia hạn ở pha khác nhau, sau 125 giây vẫn giữ quyền và đã tăng seq ít nhất hai lần. |
+| Save cũ chờ API, B nhận khóa; queued writer chạy sau | Mô phỏng | A nhận LostLock, queued writer không gọi kho thêm; B giữ token và quyền ghi. |
+| Studio chưa publish / ba đích dữ liệu Studio đã publish | Mô phỏng hồi quy | RAM-only giữ hành vi cũ, 0 lần mở/ghi kho; Studio đã publish không yêu cầu tên sản xuất. |
+| Play Solo / Server & Clients / hai server Roblox / điện thoại / staging | Chưa chạy | **Chờ nghiệm thu**, không có phiên experience thử kết nối để thực thi và ghi bằng chứng; không bật API sản xuất, không publish. |
+
+**Lệnh và kết quả cuối:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite session_lifecycle
+# LIFECYCLE_SUITE passed=12 failed=0; exit 0
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
+# Studio PASS; session_acquisition 19/19; session_lifecycle 12/12;
+# data_persistence 5/7; exit 1 do hai ca 1.3/1.4 ben duoi
+powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
+# PASS 6/6, exit 0; chi xac nhan bo kiem dinh tu dong
+```
+
+- [x] **Hai ca vẫn FAIL, không bỏ qua:** `malformed_profile_is_quarantined` (1.3: hồ sơ sai kiểu vẫn mở ghi, túi sai kiểu bị thay bảng); `dev_reset_during_autosave` (1.4: Gold vẫn 505 thay vì 0). Các assertion giữ nguyên. CI gọi bộ chung mặc định nên hiện vẫn đỏ vì hai ca này; không coi kết quả chọn riêng lifecycle là toàn bộ CI xanh. Argon P0-3 còn cần ca Reset 1.4 trước khi ký toàn mã.
+- [x] **Bằng chứng RED→GREEN:** `logs/phase12-baseline.log`, `logs/phase12-red.log`; mở rộng kiểm hàng đợi và kết quả hai đường đóng có red riêng `logs/phase12-queued-red.log`, `logs/phase12-outcome-red.log`, sau sửa đều đạt. Lỗi khai báo kiểu đã lưu ở `logs/phase12-verify-first.log`/`phase12-verify-second.log`: weak table sửa một lần; arity của pcall worker cần hai lượt chỉnh, lượt hai đạt bằng return boolean ở mọi nhánh. Không còn lỗi cùng loại chưa giải quyết sau hai vòng.
+- [x] Log cuối: `logs/phase12-lifecycle-final.log`, `logs/phase12-regressions-final.log`, `logs/phase12-verify-final.log`, `logs/app.log`. Fixture mở rộng lịch coroutine/đa khóa/GetAsync, không thay kết quả của các dịch vụ gameplay cần kiểm.
+- [x] **90/90 file mã game ≤350 dòng**, lớn nhất CurrencyService 342. DataService 191, LockHelper 143, Persistence 186, WriteHelper 62. HudPanel 268 / PetsService 298 / ProgressPanel 268 / BagPanel 307 / FishingService 282, đều <310. `git diff --check` đạt.
+- [x] Build `build/mighty-angler-dev.rbxlx`, SHA-256 **`563AE53ABDB1181330E7324453DE604537AA2C865088B2D64E849FD8CA91D9B1`**. Đối chiếu Source bốn module dữ liệu **4/4 khớp** sau chuẩn hóa xuống dòng; chưa Play build này trong Studio.
+
+### Đang làm dở [~]
+
+- [~] Chờ Kỹ sư trưởng review commit riêng chứa mục bàn giao này. Chưa đóng nghiệm thu Engine của Codex P0-02; Argon P0-3 còn phụ thuộc mục 1.4. Không tự chuyển sang 1.3 trước review theo giao việc hiện hành.
+
+### Bước tiếp theo [ ]
+
+- [ ] Review bản vá và tái chạy lệnh; nghiệm thu Studio/Server & Clients/hai server trên experience thử có sẵn và staging theo AGENTS. Không mở API sản xuất để kiểm.
+- [ ] Sau giao việc tiếp: sửa schema/cách ly ở 1.3 và Reset theo hàng chờ ở 1.4 để đóng hai test còn đỏ; xử lý HUD/snapshot 1.5 ở mục riêng.
+
+### Quyết định kỹ thuật & Lưu ý cho AI ca sau
+
+- Thêm duy nhất trường tùy chọn `lastReleaseReceipt = {token, nonce, saveSeq}` vào tài liệu khi lưu cuối; không tăng dataVersion. Claim mới bảo toàn receipt, ghi thường giữ receipt mới nhất từ kho thay vì snapshot cũ; receipt chỉ một mục nên không tăng dần theo lượt vào. Writer giữ UserIds/metadata khi keyInfo có sẵn. Khi làm schema 1.3 cần bảo toàn receipt này và các dữ liệu nghiệp vụ, không coi thiếu receipt ở hồ sơ cũ là lỗi.
+- Nếu receipt cũ đã bị một lần đóng mới thay thế và không còn bằng chứng đủ cho thao tác đang chờ, báo Unconfirmed/LostLock một cách bảo thủ; không suy ra Saved chỉ từ số seq lớn hơn. Hết deadline chỉ báo chưa xác nhận tại hạn đó, không cam kết API đang treo đã bị Engine hủy.
+- `SaveProfile(player, true)` đi qua tác vụ đóng chung để không còn cửa giao dịch sau nhả khóa. Reset vẫn giữ điểm vào cũ và còn lỗi 1.4 có test; không đổi tiền/thưởng hay tự sửa các mục ngoài phạm vi.
+- Bản vá gồm DataService/LockHelper, hai helper mới, fixture/lifecycle/persistence tests, hai runner, README test và PROGRESS. Không sửa AGENTS/PLAN/matrix/CI của ca khác; commit `9282aa6` được giữ riêng. Tất cả ghi thử ở kho RAM giả lập, không có thao tác DataStore thật hoặc phát hành.
 
 ## Bản vá mục 1.1 — Xác nhận quyền ghi và nhả phiên rời lúc tải
 
