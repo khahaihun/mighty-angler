@@ -74,3 +74,14 @@ là lịch sử lần chạy độc lập, không ghi đè bằng kết quả b�
 - `test_combined_integration.ps1` chạy **FishingCastState + FishingController + CameraFocusController thật** trong cùng VM: đồng hồ server khác os.clock, đổi đảo/Rebirth/hồi sinh giữ ON và quăng lại đúng một lần, trùng reset không nhân lịch, hủy tay chặn timer chuyển trạng thái, camera thoại/minigame trả đúng 62/64/70. Cùng runner so trọng số RollFishSpecies thật và % UI ComputeFishOdds thật ở nước thường/xoáy.
 - Minigame widget, tween/nhân vật và mạng vẫn là biên giả. Phép thử mới không phải kết quả Engine, ping thật hoặc ảnh mobile; bài odds đầy đủ vẫn do suite 19.200 rổ kiểm riêng.
 - Sơ bộ **12 runner**: 11 exit 0; data chung exit 1, đúng 1.3/1.4 (persistence 5/7), 1.5 chưa xong. Verify PASS 6/6. Chờ tip dữ liệu rồi kiểm lại mọi runner trên SHA ứng viên sạch và so toàn bộ Source place.
+
+### Kiểm bổ sung UI Live Odds và thao tác pet
+
+Đã merge `9c93901`. Suite live odds chạy 19.200 rổ và controller bảng thật với tài khoản
+sở hữu AutoPro/Dragon: vẫn xem được Base/Live từng loài, cập nhật mode/buff, đóng không phát
+prompt mua. Các handler thật của PetsService được kiểm: đủ 2/4 slot không tự thay pet cũ;
+UnequipPet rồi EquipPet mới thành công; Unequip All và Equip Best vẫn hoạt động, pet mạnh nhất
+được giữ và không trùng UID. Đọc PetsPanel xác nhận card đang đeo gửi UnequipPet,
+vẫn có nút Unequip All/Equip Best. VM PASS; hình ảnh/cảm ứng thật chờ nghiệm thu.
+Verify6/6 và suite scoreboard cách ly/quyền ghi/giữ max PASS; dữ liệu baseline vẫn 1.3/1.4 đỏ.
+Sau tip dữ liệu cuối còn phải kiểm Live Odds cùng HUD safeReadOnly và chạy sạch lại toàn bộ.

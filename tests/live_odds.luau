@@ -137,7 +137,20 @@ assert(#profile.equippedPetUids == 2 and profile.equippedPetUids[1] == "1" and p
 extraPets = true
 handlers.EquipPet(equipPlayer, "3"); handlers.EquipPet(equipPlayer, "4"); handlers.EquipPet(equipPlayer, "5")
 assert(#profile.equippedPetUids == 4 and profile.equippedPetUids[1] == "1" and profile.equippedPetUids[4] == "4", "fifth pet must be rejected without replacing existing pets")
-print("PASS pet equip: server 2 -> 4, third/fifth reject without replacement")
+handlers.UnequipPet(equipPlayer, "1"); handlers.EquipPet(equipPlayer, "5")
+assert(#profile.equippedPetUids == 4 and not table.find(profile.equippedPetUids, "1") and table.find(profile.equippedPetUids, "5"), "explicit unequip must free a slot for a new pet")
+handlers.UnequipPet(equipPlayer, "ALL")
+assert(#profile.equippedPetUids == 0, "Unequip All remains available")
+local strongest, bestScore = nil, -math.huge
+for id, def in pairs(pets.PetsById) do
+ local score = pets.GetPowerScore(def)
+ if score > bestScore then strongest, bestScore = id, score end
+end
+profile.pets[5].petId = strongest
+handlers.EquipBestPets(equipPlayer)
+assert(#profile.equippedPetUids == 4 and table.find(profile.equippedPetUids, "5"), "Equip Best must still fill four slots with strongest pet")
+local unique = {}; for _, uid in ipairs(profile.equippedPetUids) do assert(not unique[uid], "Equip Best duplicates"); unique[uid] = true end
+print("PASS pet equip: 2 -> 4, full slots preserve old pets, explicit unequip/new equip, Unequip All and Equip Best")
 
 local view = loadModule("PurchaseOddsController")
 local ownedBoth = { islandId = 1, rodId = "SeraphimDragon", ownedRods = { Twig = true, SeraphimDragon = true }, rodEnchants = {}, activeBait = nil, baitMap = {}, activePotions = {}, pets = {}, equippedPets = {}, nowSec = 10000, hasAutoPro = true }
