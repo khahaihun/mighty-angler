@@ -3,6 +3,18 @@
 - **Cập nhật lần cuối:** 2026-11-18 18:33 bởi Codex (thi công)
 - **Trạng thái hiện tại:** Thi công riêng **1.2 — Codex P0-02 / phần lưu cuối Argon P0-3** theo giao việc tiếp sau `0a90644`: 12/12 ca lifecycle, giữ 19/19 nhận khóa và cách ly Studio; **verify PASS 6/6, exit 0**. Bộ hồi quy chung **exit 1**, còn đúng hai ca đã biết thuộc 1.3/1.4. Dừng để Kỹ sư trưởng review commit mục 1.2; **chưa phát hành, Studio/hai server/điện thoại chờ nghiệm thu**. [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
 
+## Bàn giao kiểm thử hồi quy V3 — clone riêng ngày 18/11/2026, Codex
+
+- **Trạng thái:** bản kiểm thử nền `9282aa6` trong `build/v3-regression-sol`, nhánh `codex/v3-regression`; không sửa mã game hoặc checkout chính; chưa ký nghiệm thu 21/21 Engine/phát hành.
+- [x] Tạo `tests/v3_regression.luau`, `tests/v3_regression_fixture.luau`, `tools/test_v3_regression.ps1`: **23/23 VM PASS, exit 0**; bốn probe âm trong bộ nhớ đều bắt đúng hồi quy và exit 1; chạy sạch lại 23/23.
+- [x] `verify_project.ps1`: **PASS 6/6, exit 0**. Lần đầu thiếu cache Selene, đã copy `roblox.yml` sẵn có từ nguồn rồi chạy lại; không đổi lint/mã game.
+- [x] Runner dữ liệu chung: isolation PASS, acquisition 19/19; persistence **3 PASS/4 FAIL**, exit 1, đúng baseline Đợt 1 (`late_save_response_cannot_extend_ownership`, `both_close_paths_wait_for_final_save`, `malformed_profile_is_quarantined`, `dev_reset_during_autosave`). Không nới assertion hoặc sửa suite đó.
+- [x] `docs/V3_REGRESSION_MATRIX.md` đủ 21 ID (12 Argon +9 Codex), tách VM/đọc mã/Studio, cách tái chạy bản tích hợp; cập nhật `tests/README.md`.
+- [~] Chờ kỹ sư trưởng review/cherry-pick; kiểm lại trên SHA tích hợp khi được giao.
+- [ ] Toàn bộ F5, hai client, ping 200ms, hai server thật và điện thoại còn **chờ nghiệm thu**. Trạng thái bàn giao lịch sử phía dưới thuộc checkout nguồn trước ca clone.
+- **Lưu ý:** lỗi fixture thiếu tên hook Gym đúng đã sửa một lần và suite đạt; không có lỗi game được sửa quá hai vòng. Không đổi kiến trúc hay quy tắc gameplay.
+
+
 ## Bản vá mục 1.2 — Hạn quyền ghi, gia hạn và lần lưu cuối
 
 ### Đã hoàn thành [x]
