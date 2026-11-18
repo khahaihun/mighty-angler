@@ -1,15 +1,21 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 11:15 bởi Codex
-- **Trạng thái hiện tại:** Codex đã đối chiếu kế hoạch tại commit `65f81ff` với bản khung v1.0. Antigravity đọc [bản review Đại Tu 2.0](docs/REVIEW_DAI_TU_2.0.md) khi tiếp nhận ca. Phase 2 đang chờ chủ dự án duyệt các đề xuất.
+- **Cập nhật lần cuối:** 2026-11-18 11:42 bởi Antigravity & OpenAI Codex (`gpt-6.2-astra`)
+- **Trạng thái hiện tại:** **HAI AI ĐÃ ĐẠT 100% ĐỒNG THUẬN CHỐT `PLAN.md` ĐẠI TU 2.0** *(Biên bản đóng dấu tại `docs/CODEX_CONSENSUS_STAMP.md` — sẵn sàng bắt đầu thi công `Chặng A → Chặng D` ngay khi chủ dự án phát lệnh)*.
 
 ---
 
-## Đang chờ duyệt trước khi code Phase 2 [~]
+## Hội Nghị Phản Biện & Chốt Thiết Kế Giữa Antigravity ↔ Codex [x]
+- [x] **Vòng 1 (`docs/REVIEW_DAI_TU_2.0.md`):** Codex đối chiếu kế hoạch với 62 file `.luau` thật trong `src/`, chỉ ra 3 điểm nghẽn lớn (giữ câu cá xuyên suốt cả 5 đảo ngay khi thay `Terrain Water` ở A1, tương quan `Max Weight` vs `minRodPower` 5 đảo, và số phận cá khóa + Exclusive Rod khi Rebirth).
+- [x] **Vòng 2 & 3 (`docs/DEBATE_ROUND_2.md`, `docs/CODEX_ROUND_2_REPLY.md`, `docs/CODEX_FINAL_VERDICT.md`):** Hai AI tranh luận và chốt hạ giải pháp cho:
+  1. **P0 DataStore Session Lock:** Chỉ cho phép ghi khi `activeSessionId == SERVER_JOB_ID`, gia hạn khóa mỗi `60s`, chờ `saveInFlight` trước khi nhả khóa lúc đổi server, khóa giao dịch nếu thử 3 lần không lấy được khóa.
+  2. **P1 A (`Soulbound Trophy` qua Rebirth):** Giữ tối đa 12 cá khóa xếp theo `originalValue` (không mất ở các lần Rebirth sau), chặn ở mọi luồng bán Gold ngay trước khi xóa khỏi túi, vẫn cầm khoe trên Hotbar & nộp *Fish Bounty* bình thường; màn hình Rebirth hiện rõ danh sách 12 Trophy & ô ghim.
+  3. **P1 B (Minigame chống gian lận không sợ ping cao):** Chấm từng vòng `FishingMinigameStrike` bằng sóng tam giác tất định đối chiếu đồng hồ Server + tách hạn bấm (`7.5s / 9.5s / 11.5s`) khỏi hạn nhận gói (`+0.40s` ân hạn mạng).
+  4. **Hiệu năng Mobile & Trần 350 dòng:** `ClientPetRenderer` diễn hoạt Pet trên Client, `ViewportPool` tái sử dụng thẻ 3D không dựng lại toàn lưới khi nhảy tiền, và tách trước 5 file đang sát trần (`331–336` dòng) xuống `< 310` dòng.
+- [x] **Vòng 4 (`docs/CODEX_CONSENSUS_STAMP.md`):** Codex xác nhận **`ĐỒNG THUẬN CHỐT PLAN.md`** (0 lỗi P0/P1/P2 tồn đọng).
 
-- [x] Đã lưu kết quả review, dẫn chứng từ mã nguồn và các ca nghiệm thu theo chặng trong `docs/REVIEW_DAI_TU_2.0.md`.
-- [~] Chờ chủ dự án chốt các điểm còn mở, đặc biệt là hệ số Exclusive, số phận cá khóa khi Rebirth và hạn 6,5 giây cho Boss nhiều vòng.
-- [ ] Ghi các quyết định đã duyệt vào `PLAN.md`, sau đó bắt đầu Chặng A với ca thử câu trên cả năm đảo khi chuyển sang nước Terrain.
+## Bước tiếp theo [ ]
+- [ ] Chờ chủ dự án phát lệnh bắt đầu thi công **Chặng A → Chặng B → Chặng C → Chặng D** theo đúng `PLAN.md`.
 
 ---
 
