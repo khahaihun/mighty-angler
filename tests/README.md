@@ -89,3 +89,11 @@ Các runner tự tạo `build/`, nhúng nguồn thật, giả lập các biên E
 
 Pose dùng đại số CFrame giản lược để kiểm vòng đời và thứ tự cập nhật, không kiểm hướng khớp hay hình học trên Engine. Camera/particle cũng là mô phỏng. Nghiệm thu hai client R6/R15, hai thứ tự đóng thoại, đa cảm ứng, ảnh/video và frame time median/p95 trên điện thoại vẫn cần chạy riêng; PASS không thay các ca đó.
 
+
+## Kiểm giao thoa các nhánh
+
+`powershell -ExecutionPolicy Bypass -File tools/test_combined_integration.ps1` nạp nguyên
+FishingCastState/FishingController/CameraFocusController và OddsCalculator/FishingRoller.
+Kiểm Auto qua đổi đảo/Rebirth/hồi sinh, hủy tay trong cửa sổ chờ, đồng hồ server,
+trùng gói đóng/reset, thoại chồng minigame và trọng số roll bằng xác suất UI.
+Biên UI widget/tween/nhân vật/mạng được giả lập; Engine/mobile vẫn chờ nghiệm thu.

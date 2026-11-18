@@ -29,7 +29,7 @@ return function(sources)
  local p={Character={FindFirstChild=function() return root end}}
  local services={Workspace=workspace,ReplicatedStorage=node("ReplicatedStorage"),Players={GetPlayers=function() return {p} end,PlayerRemoving={Connect=function() end}}}
  local uid=0
- local cache={Types={},Net=net,GameConfig=config,PerkService={HasGamepass=function() return pro end},
+ local cache={Types={},OddsCalculator={},Net=net,GameConfig=config,PerkService={HasGamepass=function() return pro end},
   Util={NewUid=function() uid+=1; return tostring(uid) end,TriangleBounce=function() return .5 end},RodVisuals={ClearBobber=function() end}}
  local testMath=table.clone(math); testMath.random=function() return .5 end
  local env=setmetatable({game={GetService=function(_,k) return services[k] end},Vector3={new=vec},typeof=function(v) return if type(v)=="table" and v.X then "Vector3" else type(v) end,

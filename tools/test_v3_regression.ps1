@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 $modulePaths = @{
+ OddsCalculator='src/shared/OddsCalculator.luau'; BaitConfig='src/shared/Config/BaitConfig.luau'; PetsConfig='src/shared/Config/PetsConfig.luau'; EventsConfig='src/shared/Config/EventsConfig.luau'
  FishingRayFilter='src/shared/FishingRayFilter.luau'; FishingCastState='src/server/Services/FishingCastState.luau'
  GameConfig='src/shared/Config/GameConfig.luau'; Util='src/shared/Util.luau'
  RodsConfig='src/shared/Config/RodsConfig.luau'; EnchantsConfig='src/shared/Config/EnchantsConfig.luau'

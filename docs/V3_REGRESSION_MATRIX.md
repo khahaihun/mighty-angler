@@ -67,3 +67,10 @@ là lịch sử lần chạy độc lập, không ghi đè bằng kết quả b�
 - **1.5 chưa xong**; còn chờ các tip cuối đã review, sau đó phải chạy lại mọi runner
   từ checkout sạch và đối chiếu toàn bộ Source place. Kết quả sơ bộ này không
   thay thế việc kiểm bản ứng viên cuối hoặc nghiệm thu hai server/Studio/mobile.
+
+## Tích hợp gameplay + UI odds (18/11/2026, chưa có tip Đợt 1 cuối)
+
+- Đã merge lịch sử fishing `3f43d35`, UI `0ca67fe` và odds `ad013c4`; FishingRoller giữ đủ first-hit ray/Auto validator, chấm thời gian giữ server và OddsCalculator chung, kèm cap/rounding thường–Titan đúng từng nhánh.
+- `test_combined_integration.ps1` chạy **FishingCastState + FishingController + CameraFocusController thật** trong cùng VM: đồng hồ server khác os.clock, đổi đảo/Rebirth/hồi sinh giữ ON và quăng lại đúng một lần, trùng reset không nhân lịch, hủy tay chặn timer chuyển trạng thái, camera thoại/minigame trả đúng 62/64/70. Cùng runner so trọng số RollFishSpecies thật và % UI ComputeFishOdds thật ở nước thường/xoáy.
+- Minigame widget, tween/nhân vật và mạng vẫn là biên giả. Phép thử mới không phải kết quả Engine, ping thật hoặc ảnh mobile; bài odds đầy đủ vẫn do suite 19.200 rổ kiểm riêng.
+- Sơ bộ **12 runner**: 11 exit 0; data chung exit 1, đúng 1.3/1.4 (persistence 5/7), 1.5 chưa xong. Verify PASS 6/6. Chờ tip dữ liệu rồi kiểm lại mọi runner trên SHA ứng viên sạch và so toàn bộ Source place.
