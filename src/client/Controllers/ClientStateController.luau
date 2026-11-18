@@ -44,6 +44,7 @@ local activePotionsCache: any = {}
 local activeBaitCache: any = nil
 local baitMapCache: any = {}
 local serverClockOffset = 0
+local hasInitialSnapshot = false
 
 local function refreshTopBuffLine()
 	if activeEventTextCache ~= "" and activeBuffTextCache ~= "" then
@@ -99,6 +100,8 @@ function ClientStateController.Init(progressModRef: any)
 
 	Net.OnClientEvent(Net.ServerToClient.StateSnapshot, function(snap: any)
 		if type(snap) ~= "table" or type(snap.profile) ~= "table" then return end
+		hasInitialSnapshot = true
+		HudPanel.UpdateProfileAccess(snap.safeReadOnly ~= false, snap.loading == true, tonumber(snap.accessVersion) or 0)
 		local p = snap.profile
 		goldCache = tonumber(p.gold) or 0; gemsCache = tonumber(p.gems) or 0; strengthCache = tonumber(p.strength) or 0
 		rodIdCache = tostring(p.rodId or "Twig"); islandCache = tonumber(p.currentIsland) or 1
@@ -141,6 +144,11 @@ function ClientStateController.Init(progressModRef: any)
 		refreshHudLiveOdds()
 
 		if progressModRef then progressModRef.SyncFromProfile(p) end
+	end)
+	Net.OnClientEvent(Net.ServerToClient.ProfileAccessChanged, function(payload: any)
+		if type(payload) ~= "table" then return end
+		local loading = payload.loading == true or (not hasInitialSnapshot and payload.safeReadOnly == false)
+		HudPanel.UpdateProfileAccess(payload.safeReadOnly ~= false, loading, tonumber(payload.accessVersion) or 0)
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.CurrencyUpdated, function(payload: any)

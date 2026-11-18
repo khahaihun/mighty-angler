@@ -1,7 +1,34 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 18:55 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Mục 1.3 và vá slot 0 đã commit; mục **1.4** đạt 8/8 Reset, persistence 7/7. Toàn bộ bộ hồi quy và verify 6/6 đều **exit 0**. Đang tiếp ngay 1.5 theo chỉ đạo liên tục. Code 1.2 đã được chấp nhận; 1.3/1.4 chờ review. **Chưa phát hành; Studio/hai server/điện thoại chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 19:24 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Đã thi công tới hết **1.5**, chờ Kỹ sư trưởng review chuỗi commit 1.3–1.5 và các vá slot 0/lease Reset. Bộ chung **exit 0**: 19 acquisition, 12 lifecycle, 29 schema, 12 Reset, 13 init/HUD, 7 persistence và cách ly Studio. Verify **6/6 exit 0**, build **92/92 script khớp nguồn** qua sourcemap. Code 1.2 đã được chấp nhận. **Chưa phát hành; Play Solo/Server & Clients/hai server/điện thoại/staging chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Mục 1.5 — Một snapshot mỗi yêu cầu và cảnh báo quyền ghi
+
+- [x] Nền `99216b5` sạch, giữ các commit trước. Thực hiện riêng mục cuối Đợt 1 theo chỉ đạo; không sửa nguồn copy trong build hay chuyển sang Đợt 2. Bộ init trước sửa tái hiện 7/8 ca đỏ (`logs/phase15-red.log`).
+- [x] Bỏ hai nơi cạnh tranh chờ 8 giây/gửi snapshot. DataService giữ số yêu cầu khởi tạo đang chờ; một đường flush khi profile sẵn sàng, lấy/xóa pending trước khi gửi. Mỗi yêu cầu nhận đúng một snapshot đầy đủ; nhiều yêu cầu vẫn một phản hồi mỗi yêu cầu, người đã rời bị loại. Không dùng snapshot mặc định giữa chừng để thay tiến độ chưa tải.
+- [x] Thêm `ProfileAccessChanged` vào manifest Net chung, mang safeReadOnly/loading/accessVersion. Profile/lease/status đều do server quyết định; thông báo trạng thái nhỏ tách khỏi snapshot đầy đủ nên mất quyền không gửi lại init. Phiên có số phiên bản trạng thái tăng dần, chỉ phát khi state đổi; cache sau khi gửi thành công để lỗi gửi không mất cơ hội thử lại.
+- [x] **Ba ca review scheduler đều đạt qua điểm vào thật, không cần click/Save thủ công:** hết TTL khi đứng yên; background Persistence.Tick mất chủ; RuntimeTick lỗi rồi bị cách ly. Publish ở ngoài nhánh skip s.readOnly, có pcall riêng theo người; trạng thái không đổi không bị phát mỗi giây. Thêm ca lần gửi access lỗi rồi kỳ sau thử lại thành công.
+- [x] ClientStateController nhận cờ từ snapshot và remote trạng thái. HUD dùng component `ProfileAccessBanner` riêng: thông báo tiếng Anh Loading/READ-ONLY, không bị dòng buff/sự kiện ghi đè; phiên bản cũ không xóa cảnh báo mới hoặc đảo kết quả phục hồi. Ready tới trước snapshot đầu tiên vẫn giữ Loading tới khi nhận đủ profile. Component tự tăng chiều cao khi wrap; bố cục/đọc trên thiết bị thật còn chờ nghiệm thu.
+- [x] `initial_state` **13/13**: trước/sát/sau 8s (7,9/8/8,1), hai yêu cầu đang chờ, vào muộn bị read-only, đủ Gold/Gems/rod/bag/pin/quyền ghi, mất chủ, chặn SpendGold và ghi bảng điểm bằng DataService/LiveOps thật, rời lúc chờ, ba ca idle scheduler, thứ tự UI/phiên bản và lỗi gửi access. Toàn bộ bộ chung **exit 0**, các bộ cũ đều giữ xanh (`logs/phase15-final.log`).
+- [x] TDD bổ sung có log đỏ riêng cho idle TTL, ready trước dữ liệu và gửi access lỗi: `phase15-passive-red.log`, `phase15-ready-red.log`, `phase15-delivery-red.log`. Mỗi lỗi được sửa một vòng; không có lỗi chưa giải quyết quá hai vòng. Fixture giữ bản sao payload qua biên, hỗ trợ nhiều listener như RemoteEvent và ghi trace key/UserId/version/cảnh báo để review không suy từ PASS đơn thuần.
+- [x] `powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1` **PASS 6/6, exit 0** (`logs/phase15-verify.log`). Đây chỉ là kiểm định tự động, không thay quyết định nghiệm thu hay phát hành.
+- [x] **92/92** file mã game ≤350. HudPanel **274**, PetsService **298**, ProgressPanel **268**, BagPanel **307**, FishingService **282** đều <310; DataService **223**, Persistence **247**, banner **40**. `git diff --check` đạt.
+- [x] Dùng sourcemap và full instance path đối chiếu **92/92** Source trong `build/mighty-angler-dev.rbxlx` với nguồn, chuẩn hóa xuống dòng (`logs/phase15-place-source.log`). SHA-256 **`1364691FDB4B8FD30E00C09691BE48977BDE916D4AFE9BAD1A2C38A9A622EDA2`**. Không sửa Source trong place; chỉ build từ nguồn và đọc để đối chiếu.
+
+**Lệnh tái chạy cuối Đợt 1:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
+# all suites PASS, exit 0
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite initial_state
+# INITIAL_SUITE passed=13 failed=0
+powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
+# PASS 6/6, exit 0
+```
+
+- [~] Dừng tại cuối 1.5 để Kỹ sư trưởng tích hợp/review. Chuỗi đã lưu: **bbce374 (1.3)** → **d139bbf (vá slot 0)** → **aba687a (1.4)** → **99216b5 (vá lease Reset)** → commit chứa mục 1.5 này. Không có thay đổi gameplay Đợt 2/3 trong ca này.
+- [ ] Play Solo (F5), Server & Clients, hai server Roblox trên experience thử có sẵn, điện thoại và staging: **chờ nghiệm thu**. Không có phiên Studio/experience thử kết nối trong ca này, không bật API sản xuất hoặc publish. Cả Codex P1-03/P2-06/P1-04 và Argon P0-3 cần Kỹ sư trưởng review và bằng chứng Engine trước ký cuối.
 
 ## Mục 1.4 — Reset cùng hàng đợi, kết quả RAM và lưu bền
 

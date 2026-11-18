@@ -8,13 +8,19 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `profile_schema`, `dev_reset` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+
+## Snapshot và trạng thái quyền ghi — mục 1.5
+
+`-Suite initial_state` chạy 13 ca qua DataService, CurrencyService và LiveOps thật cùng HudPanel/ClientStateController/ProfileAccessBanner thật tại biên Engine giả lập. Kiểm một snapshot đầy đủ mỗi yêu cầu trước/sát/sau 8s, read-only khi tải muộn, rời lúc tải, mất lease/mất chủ và chặn tiền/bảng điểm. Người đứng yên cũng được báo khi TTL hết, Tick mất chủ hoặc RuntimeTick cách ly, không gửi lặp mỗi giây; lỗi gửi access được thử lại. Số phiên bản bảo vệ thứ tự event/snapshot; Ready chưa đủ để ẩn Loading nếu profile đầu chưa tới.
+
+Kết quả cuối Đợt 1: **19 acquisition / 12 lifecycle / 29 schema / 12 Reset / 13 init / 7 persistence**, cùng cách ly Studio đều đạt, lệnh chung exit 0. `client_fixture` chỉ chứng minh các handler/thuộc tính UI, không chứng minh layout, render, input hay hành vi Roblox Engine. Play Solo, Server & Clients, hai server, điện thoại và staging vẫn chờ nghiệm thu. Xem PROGRESS để lấy commit và SHA của place.
 
 ## Reset DEV — mục 1.4
 
 `-Suite dev_reset` chạy 12 ca qua handler thật, gồm giữ đối tượng cũ đến khi pending write được xác nhận, báo riêng RAM/lưu bền, lỗi API, RAM-only, Reset đồng thời, rời lúc chờ và bốn ca hết lease trước/trong hàng đợi có/không chủ B. `client_fixture` giả lập các biên Instance/Theme/Net để kiểm module DevTestPanel nhận kết quả và đổi Text; không chứng minh bố cục/render hay input của Roblox Engine.
 
-Sau 1.4, toàn bộ bộ hồi quy mặc định đạt exit 0: 19 acquisition, 12 lifecycle, 29 schema, 8 Reset, 7 persistence và cách ly Studio. Các kết quả đỏ ở mục lịch sử bên dưới được giữ để truy vết.
+Sau 1.4 và vá lease, toàn bộ bộ hồi quy mặc định đạt exit 0: 19 acquisition, 12 lifecycle, 29 schema, 12 Reset, 7 persistence và cách ly Studio. Các kết quả đỏ ở mục lịch sử bên dưới được giữ để truy vết.
 
 ## Xác thực hồ sơ — mục 1.3
 

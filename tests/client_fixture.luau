@@ -7,13 +7,15 @@ local function node(name)
 	return result
 end
 function ClientFixture.new(sources, studio, extra)
-	local f = { instances = {}, buttons = {}, handlers = {}, requests = {} }
+	local f = { instances = {}, buttons = {}, handlers = {}, requests = {}, threads = {} }
 	local function blank() return {} end
 	local colors = setmetatable({}, { __index = blank })
 	local names = setmetatable({}, { __index = function(_, key) return key end })
 	local deps = {
 		Net = { ServerToClient = names, ClientToServer = names,
-			OnClientEvent = function(event, fn) f.handlers[event] = fn end,
+			OnClientEvent = function(event, fn)
+				f.handlers[event] = f.handlers[event] or {}; table.insert(f.handlers[event], fn)
+			end,
 			FireServer = function(...) table.insert(f.requests, table.pack(...)) end },
 		Theme = { Colors = colors, FontTitle = "Title", FontBody = "Body",
 			AddCorner = blank, AddStroke = blank, AddTextStroke = blank,
@@ -34,6 +36,10 @@ function ClientFixture.new(sources, studio, extra)
 			local item = { ClassName = class, Text = "", Visible = true }
 			table.insert(f.instances, item); return item
 		end },
+		task = { spawn = function(fn)
+			local thread = coroutine.create(fn); table.insert(f.threads, thread)
+			local ok, err = coroutine.resume(thread); assert(ok, tostring(err)); return thread
+		end, wait = function() coroutine.yield() end },
 	}, { __index = getfenv() })
 	function globals.require(module)
 		local name = module.Name
@@ -43,7 +49,9 @@ function ClientFixture.new(sources, studio, extra)
 		deps[name] = run(); return deps[name]
 	end
 	f.load = function(name) return globals.require(node(name)) end
-	f.emit = function(event, payload) assert(f.handlers[event], event)(payload) end
+	f.emit = function(event, payload)
+		for _, handler in ipairs(assert(f.handlers[event], event)) do handler(payload) end
+	end
 	return f
 end
 return ClientFixture
