@@ -1,5 +1,5 @@
 --!strict
--- PetsPanel.luau: Kho Pet & Ap Trung O Luoi 3D (ViewportPool) kem ty le % minh bach
+-- PetsPanel.luau: Kho Pet & Ap Trung O Luoi 3D (ViewportPool) + Bang Chi Tiet Ten/Bac/% Pet & PolicyService
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -17,11 +17,15 @@ local ViewportPool = require(script.Parent.Parent.Components.ViewportPool)
 local PetsPanel = {}
 
 local win: WindowFrame.BuiltWindow? = nil
+local tabRefs: { [string]: TextButton } = {}
 local topBarFrame: Frame? = nil
+local eggOddsBanner: Frame? = nil
 local emptyLbl: TextLabel? = nil
 local gridHandle: ViewportPool.GridHandle? = nil
 local currentTab = "MyPets"
 local focusedKey: string? = nil
+local selectedEggId = if PetsConfig.Eggs[1] then PetsConfig.Eggs[1].id else ""
+local policyStateCache = "Loading"
 
 local petsList: { Types.PetInstance } = {}
 local equippedUids: { string } = {}
@@ -36,24 +40,72 @@ end
 
 local function rebuildTopToolbar()
 	local tb = topBarFrame
-	if not tb then return end
+	local ob = eggOddsBanner
+	if not tb or not ob then return end
 	for _, ch in ipairs(tb:GetChildren()) do
+		if ch:IsA("GuiObject") then ch:Destroy() end
+	end
+	for _, ch in ipairs(ob:GetChildren()) do
 		if ch:IsA("GuiObject") then ch:Destroy() end
 	end
 
 	if currentTab ~= "MyPets" then
-		local lbl = Instance.new("TextLabel")
-		lbl.Size = UDim2.fromScale(1, 1)
-		lbl.BackgroundTransparency = 1
-		lbl.Font = Theme.FontBody
-		lbl.TextSize = 13
-		lbl.TextXAlignment = Enum.TextXAlignment.Left
-		lbl.TextColor3 = Theme.Colors.TextMuted
-		lbl.Text = "🥚 Hatch 3D Companion Eggs (Exact % drop chances shown per egg!)"
-		lbl.ZIndex = 23
-		lbl.Parent = tb
+		tb.Visible = false
+		ob.Visible = true
+		local egg = PetsConfig.EggsById[selectedEggId] or PetsConfig.Eggs[1]
+		if not egg then return end
+
+		local lines: { string } = {}
+		local weightSum = 0
+		for _, p in ipairs(egg.pets) do weightSum += p.weightChance end
+		for _, p in ipairs(egg.pets) do
+			local pct = (p.weightChance / math.max(0.01, weightSum)) * 100
+			table.insert(lines, string.format("• [%s] %s: Base %.1f%% → Effective %.1f%% (+%d%%G/+%d%%Str/+%d%%Lk)", p.rarity, p.name, pct, pct, math.floor(p.sellBonus * 100), math.floor(p.strengthBonus * 100), math.floor(p.luckBonus * 100)))
+		end
+
+		local title = Instance.new("TextLabel")
+		title.Size = UDim2.new(1, -162, 0, 22)
+		title.Position = UDim2.fromOffset(10, 6)
+		title.BackgroundTransparency = 1
+		title.Font = Theme.FontTitle
+		title.TextSize = 15
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.TextColor3 = egg.eggColor
+		title.Text = string.format("🥚 %s (%s %s • Isl.%d)", egg.name, Util.FormatNumber(egg.cost), egg.currency, egg.islandId)
+		title.ZIndex = 23
+		title.Parent = ob
+		Theme.AddTextStroke(title, 1.4)
+
+		local desc = Instance.new("TextLabel")
+		desc.Size = UDim2.new(1, -162, 0, 56)
+		desc.Position = UDim2.fromOffset(10, 28)
+		desc.BackgroundTransparency = 1
+		desc.Font = Theme.FontBody
+		desc.TextSize = 11
+		desc.TextWrapped = true
+		desc.TextXAlignment = Enum.TextXAlignment.Left
+		desc.TextColor3 = Theme.Colors.TextPrimary
+		desc.Text = table.concat(lines, "\n")
+		desc.ZIndex = 23
+		desc.Parent = ob
+
+		local isGemEgg = (egg.currency == "Gems")
+		local canHatch = (not isGemEgg) or (policyStateCache == "Allowed")
+		local btnLabel = if not isGemEgg then ("HATCH (" .. Util.FormatNumber(egg.cost) .. "G)")
+			elseif policyStateCache == "Loading" then "⏳ POLICY..."
+			elseif policyStateCache == "Restricted" then "🚫 RESTRICTED"
+			else ("HATCH (" .. Util.FormatNumber(egg.cost) .. "💎)")
+		local btnCol = if not canHatch then Color3.fromRGB(78, 84, 104) elseif isGemEgg then Theme.Colors.Gems else Theme.Colors.Success
+
+		local hBtn = Theme.CreateButton(ob, "HatchSelectedBtn", btnLabel, UDim2.fromOffset(140, 42), UDim2.new(1, -150, 0.5, -21), btnCol, function()
+			if canHatch then Net.FireServer(Net.ClientToServer.HatchEgg, egg.id) end
+		end)
+		hBtn.TextSize = 13; hBtn.ZIndex = 24
 		return
 	end
+
+	tb.Visible = true
+	ob.Visible = false
 
 	local info = Instance.new("TextLabel")
 	info.Size = UDim2.new(0.48, 0, 1, 0)
@@ -101,18 +153,13 @@ function PetsPanel.Render()
 				local equipped = isUidEquipped(inst.uid)
 				local rCol = Theme.RarityColors[def.rarity] or Theme.Colors.TextPrimary
 				table.insert(specs, {
-					key = inst.uid,
-					order = idx,
-					title = def.name,
+					key = inst.uid, order = idx, title = def.name,
 					subtitle = string.format("+%d%%G • +%d%%Str • +%d%%Lk", math.floor(def.sellBonus * 100), math.floor(def.strengthBonus * 100), math.floor(def.luckBonus * 100)),
 					footerText = if equipped then "UNEQUIP ★" else "EQUIP",
 					footerColor = if equipped then Theme.Colors.Warning else Theme.Colors.Primary,
-					strokeColor = rCol,
-					bgColor = if equipped then Theme.Colors.CardOwned else Theme.Colors.CardBg,
-					topLeftBadge = if equipped then "★ EQUIPPED" else def.rarity,
-					topLeftColor = rCol,
-					cornerIcon = "🗑️",
-					cornerColor = Theme.Colors.Danger,
+					strokeColor = rCol, bgColor = if equipped then Theme.Colors.CardOwned else Theme.Colors.CardBg,
+					topLeftBadge = if equipped then "★ EQUIPPED" else def.rarity, topLeftColor = rCol,
+					cornerIcon = "🗑️", cornerColor = Theme.Colors.Danger,
 					modelSignature = "Pet_" .. def.id,
 					modelSpec = { kind = "Pet", primaryColor = def.primaryColor, secondaryColor = def.secondaryColor, modelRefData = def },
 					onActivate = function()
@@ -120,50 +167,66 @@ function PetsPanel.Render()
 						if equipped then Net.FireServer(Net.ClientToServer.UnequipPet, inst.uid)
 						else Net.FireServer(Net.ClientToServer.EquipPet, inst.uid) end
 					end,
-					onCornerActivate = function()
-						Net.FireServer(Net.ClientToServer.DeletePet, inst.uid)
-					end,
+					onCornerActivate = function() Net.FireServer(Net.ClientToServer.DeletePet, inst.uid) end,
 				})
 			end
 		end
 	else
 		for idx, egg in ipairs(PetsConfig.Eggs) do
-			local oddsParts: { string } = {}
+			local isSel = (selectedEggId == egg.id)
+			local isGem = (egg.currency == "Gems")
+			local allowed = (not isGem) or (policyStateCache == "Allowed")
+			local shortPets: { string } = {}
 			for _, p in ipairs(egg.pets) do
-				table.insert(oddsParts, string.format("%d%%", p.weightChance))
+				table.insert(shortPets, string.format("%s %d%%", string.match(p.name, "%S+$") or p.name, p.weightChance))
 			end
-			local curIcon = if egg.currency == "Gold" then "🪙 " else "💎 "
-			local curCol = if egg.currency == "Gold" then Theme.Colors.Gold else Theme.Colors.Gems
+			local curIcon = if isGem then "💎 " else "🪙 "
+			local fTxt = if not allowed then (if policyStateCache == "Loading" then "⏳ POLICY" else "🚫 RESTRICTED")
+				elseif isSel then ("HATCH " .. curIcon .. Util.FormatNumber(egg.cost))
+				else ("VIEW • " .. curIcon .. Util.FormatNumber(egg.cost))
+			local fCol = if not allowed then Color3.fromRGB(78, 84, 104) elseif isSel then Theme.Colors.Success elseif isGem then Theme.Colors.Gems else Theme.Colors.Gold
+
 			table.insert(specs, {
-				key = "egg_" .. egg.id,
-				order = idx,
-				title = egg.name,
-				subtitle = "Odds: " .. table.concat(oddsParts, " / "),
-				footerText = curIcon .. Util.FormatNumber(egg.cost),
-				footerColor = curCol,
-				strokeColor = egg.eggColor,
-				bgColor = Theme.Colors.CardBg,
-				topLeftBadge = "Isl." .. tostring(egg.islandId),
-				topLeftColor = egg.accentColor,
+				key = "egg_" .. egg.id, order = idx, title = egg.name,
+				subtitle = table.concat(shortPets, " • "),
+				footerText = fTxt, footerColor = fCol,
+				strokeColor = if isSel then Theme.Colors.Gold else egg.eggColor,
+				bgColor = if isSel then Theme.Colors.CardOwned else Theme.Colors.CardBg,
+				topLeftBadge = "Isl." .. tostring(egg.islandId), topLeftColor = egg.accentColor,
 				modelSignature = "Egg_" .. egg.id,
 				modelSpec = { kind = "Egg", primaryColor = egg.eggColor, secondaryColor = egg.accentColor },
 				onActivate = function()
 					focusedKey = "egg_" .. egg.id
-					Net.FireServer(Net.ClientToServer.HatchEgg, egg.id)
+					if selectedEggId ~= egg.id then
+						selectedEggId = egg.id
+						PetsPanel.Render()
+					elseif allowed then
+						Net.FireServer(Net.ClientToServer.HatchEgg, egg.id)
+					end
 				end,
 			})
 		end
 	end
 
 	if emptyLbl then
-		emptyLbl.Visible = (#specs == 0)
-		emptyLbl.Text = "No Pets hatched yet! Open the 'Hatch Eggs' tab to hatch your first 3D Companion!"
+		emptyLbl.Visible = (currentTab == "MyPets" and #specs == 0)
+		emptyLbl.Text = "No Pets hatched yet! Open the 'Hatch Eggs' tab to inspect drop rates & hatch 3D Companions!"
 	end
 	gh.SyncItems(specs, focusedKey)
 end
 
+function PetsPanel.OpenEggPreview(eggId: string)
+	if PetsConfig.EggsById[eggId] then
+		selectedEggId = eggId
+		focusedKey = "egg_" .. eggId
+	end
+	currentTab = "Eggs"
+	if win and tabRefs["Eggs"] then win.SetActiveTab(tabRefs["Eggs"]) end
+	PetsPanel.Render()
+end
+
 function PetsPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
-	local built = WindowFrame.Create(rootGui, "PetsWindow", "🐾 3D PET COMPANIONS", UDim2.fromOffset(610, 455), Color3.fromRGB(192, 98, 255))
+	local built = WindowFrame.Create(rootGui, "PetsWindow", "🐾 3D PET COMPANIONS & EGG ODDS", UDim2.fromOffset(620, 465), Color3.fromRGB(192, 98, 255))
 	win = built
 
 	local tb = Instance.new("Frame")
@@ -174,11 +237,22 @@ function PetsPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	tb.Parent = built.body
 	topBarFrame = tb
 
+	local ob = Instance.new("Frame")
+	ob.Size = UDim2.new(1, 0, 0, 88)
+	ob.BackgroundColor3 = Theme.Colors.CardOwned
+	ob.Visible = false
+	ob.LayoutOrder = 1
+	ob.ZIndex = 22
+	ob.Parent = built.body
+	Theme.AddCorner(ob, 10)
+	Theme.AddStroke(ob, Theme.Colors.Gold, 2)
+	eggOddsBanner = ob
+
 	local emp = Instance.new("TextLabel")
-	emp.Size = UDim2.new(1, 0, 0, 54)
+	emp.Size = UDim2.new(1, 0, 0, 50)
 	emp.BackgroundTransparency = 1
 	emp.Font = Theme.FontBody
-	emp.TextSize = 15
+	emp.TextSize = 14
 	emp.TextColor3 = Theme.Colors.TextMuted
 	emp.LayoutOrder = 2
 	emp.ZIndex = 22
@@ -187,13 +261,18 @@ function PetsPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 
 	gridHandle = ViewportPool.CreateGrid(built.body, 3, UDim2.fromOffset(136, 154))
 	built.OnVisibilityChanged(function(vis: boolean)
-		if not vis then ViewportPool.ClearFocus() end
+		if not vis then ViewportPool.ClearFocus() else PetsPanel.Render() end
 	end)
 
-	local myTab = built.AddTab("My Pets", function() currentTab = "MyPets"; PetsPanel.Render() end)
-	built.AddTab("Hatch Eggs", function() currentTab = "Eggs"; PetsPanel.Render() end)
-	built.SetActiveTab(myTab)
+	tabRefs["MyPets"] = built.AddTab("My Pets", function() currentTab = "MyPets"; PetsPanel.Render() end)
+	tabRefs["Eggs"] = built.AddTab("Hatch Eggs", function() currentTab = "Eggs"; PetsPanel.Render() end)
+	built.SetActiveTab(tabRefs["MyPets"])
 	return built
+end
+
+function PetsPanel.SyncPolicyState(policyState: string)
+	policyStateCache = policyState
+	if win and win.IsVisible() and currentTab == "Eggs" then PetsPanel.Render() end
 end
 
 function PetsPanel.SyncFromProfile(p: any)

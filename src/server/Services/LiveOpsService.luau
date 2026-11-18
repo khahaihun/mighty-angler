@@ -158,16 +158,26 @@ local function refreshLeaderboards()
 		end
 	end
 
-	-- Co gang cap nhat OrderedDataStore neu Place da publish (PlaceId > 0)
+	-- Chi cap nhat OrderedDataStore khi ho so da tai thanh cong va giu Session Lock hop le (khong bao gio ghi diem 0 cua che do Read-Only!)
 	if game.PlaceId > 0 then
 		pcall(function()
 			local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2")
 			local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2")
 			for _, p in ipairs(Players:GetPlayers()) do
 				local prof = DataService.Get(p)
-				if prof then
-					strStore:SetAsync(tostring(p.UserId), math.floor(prof.strength))
-					goldStore:SetAsync(tostring(p.UserId), math.floor(prof.stats.goldEarned))
+				if prof and DataService.CanWritePersistent(p) then
+					local newStr = math.floor(prof.totalStrength > 0 and math.max(prof.strength, 0) or prof.strength)
+					local newGold = math.floor(prof.stats.goldEarned)
+					if newStr > 0 then
+						strStore:UpdateAsync(tostring(p.UserId), function(oldVal: any)
+							return math.max(tonumber(oldVal) or 0, newStr)
+						end)
+					end
+					if newGold > 0 then
+						goldStore:UpdateAsync(tostring(p.UserId), function(oldVal: any)
+							return math.max(tonumber(oldVal) or 0, newGold)
+						end)
+					end
 				end
 			end
 		end)

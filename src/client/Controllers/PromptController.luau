@@ -1,5 +1,5 @@
 --!strict
--- PromptController.luau: Xu ly tuong tac ProximityPrompt voi 4 NPC Hoi thoai, Bệ Enchant, Máy Gym, Trứng & Cổng Đảo
+-- PromptController.luau: Xu ly tuong tac ProximityPrompt voi 4 NPC Hoi thoai, Be Enchant, May Gym, Trung (Mo Bang %) & Cong Dao
 
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +11,7 @@ export type PromptCallbacks = {
 	OpenPanel: (panelKey: string) -> (),
 	OpenNpcDialogue: (role: string) -> (),
 	OpenEnchantAltar: () -> (),
+	OpenEggHatchPreview: (eggId: string) -> (),
 	TriggerGymRep: () -> (),
 }
 
@@ -38,7 +39,7 @@ function PromptController.Init(callbacks: PromptCallbacks)
 		elseif kind == "HatchEgg" then
 			local eggId = prompt:GetAttribute("EggId")
 			if type(eggId) == "string" then
-				Net.FireServer(Net.ClientToServer.HatchEgg, eggId)
+				callbacks.OpenEggHatchPreview(eggId)
 			else
 				callbacks.OpenPanel("Pets")
 			end

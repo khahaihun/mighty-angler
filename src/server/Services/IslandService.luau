@@ -51,7 +51,7 @@ function IslandService.HandleTravel(player: Player, targetIslandId: number)
 		return
 	end
 
-	FishingService.CancelSession(player, false)
+	FishingService.CancelSession(player, false, "IslandChange")
 	profile.currentIsland = targetIslandId
 	DataService.MarkDirty(player)
 	IslandService.TeleportCharacterToIsland(player, targetIslandId)
@@ -98,7 +98,7 @@ function IslandService.HandleUnlockOrTravel(player: Player, targetIslandId: numb
 	profile.currentIsland = targetIslandId
 	DataService.MarkDirty(player)
 
-	FishingService.CancelSession(player, false)
+	FishingService.CancelSession(player, false, "IslandChange")
 	IslandService.TeleportCharacterToIsland(player, targetIslandId)
 	syncClientIsland(player, profile)
 

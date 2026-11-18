@@ -11,6 +11,7 @@ local Net = {}
 
 Net.ClientToServer = {
 	RequestInitialState = "C2S_RequestInitialState",
+	FishingChargeStart = "C2S_FishingChargeStart",
 	FishingCast = "C2S_FishingCast",
 	FishingCastWithAim = "C2S_FishingCastWithAim",
 	FishingCancel = "C2S_FishingCancel",

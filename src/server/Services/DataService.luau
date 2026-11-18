@@ -1,7 +1,6 @@
 --!strict
--- DataService.luau: Quan ly PlayerProfile v2 voi Session Lock doc quyen, saveInFlight tuan tu & UTC Playtime
+-- DataService.luau: Quan ly PlayerProfile v2 voi Per-Join Session Token, Read-Only Quarantine & Parallel BindToClose
 
-local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,182 +12,187 @@ local Net = require(Shared:WaitForChild("Net"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local ProfileMigrator = require(script.Parent.ProfileMigrator)
+local DataStoreLockHelper = require(script.Parent.DataStoreLockHelper)
 
 local DataService = {}
 
 local SERVER_JOB_ID = if game.JobId ~= "" then game.JobId else ("Studio_" .. Util.NewUid())
 
 local profiles: { [Player]: Types.PlayerProfile } = {}
+local sessionTokens: { [Player]: string } = {}
+local lastConfirmedRenewAt: { [Player]: number } = {}
 local dirtyRevision: { [Player]: number } = {}
 local savedRevision: { [Player]: number } = {}
-local saveInFlight: { [Player]: boolean } = {}
-local loadFailedPlayers: { [Player]: boolean } = {}
+local readOnlyPlayers: { [Player]: boolean } = {}
+local closingPlayers: { [Player]: boolean } = {}
+local clientRequestedInit: { [Player]: boolean } = {}
 local profileLoadedCallbacks: { (Player, Types.PlayerProfile) -> () } = {}
 
-local dataStore: DataStore? = nil
-local studioMemoryFallback = false
-
-local function tryGetDataStore(): DataStore?
-	if studioMemoryFallback or game.PlaceId == 0 then
-		if game.PlaceId == 0 then
-			studioMemoryFallback = true
-		end
-		return nil
-	end
-	if dataStore then
-		return dataStore
-	end
-	local ok, result = pcall(function()
-		return DataStoreService:GetDataStore(GameConfig.DATASTORE_NAME)
-	end)
-	if ok and result then
-		dataStore = result
-		return dataStore
-	end
-	if RunService:IsStudio() then
-		studioMemoryFallback = true
-	end
-	return nil
-end
+local serverShuttingDown = false
 
 function DataService.SyncLeaderstats(player: Player)
 	ProfileMigrator.SyncLeaderstats(player, profiles[player])
 end
 
 function DataService.IsTransactionLocked(player: Player, notifyToast: boolean?): boolean
-	if loadFailedPlayers[player] then
-		if notifyToast then
-			Net.FireClient(player, Net.ServerToClient.Toast, {
-				kind = "Error",
-				text = "Profile is in Safe Read-Only Mode (session lock busy). Rejoin shortly to trade/rebirth!",
-			})
+	local locked = serverShuttingDown or closingPlayers[player] == true or readOnlyPlayers[player] == true
+	if not locked and not DataStoreLockHelper.IsStudioOfflineFallback() then
+		local lastRenew = lastConfirmedRenewAt[player] or 0
+		if (os.time() - lastRenew) > GameConfig.SESSION_LOCK_EXPIRE_SEC then
+			readOnlyPlayers[player] = true
+			locked = true
 		end
-		return true
 	end
-	return false
+	if locked and notifyToast then
+		Net.FireClient(player, Net.ServerToClient.Toast, {
+			kind = "Error",
+			text = "Profile is in Safe Read-Only Mode (session lock busy or closing). Rejoin shortly to trade/rebirth!",
+		})
+	end
+	return locked
+end
+
+function DataService.CanWritePersistent(player: Player): boolean
+	return profiles[player] ~= nil and not DataService.IsTransactionLocked(player, false)
 end
 
 local function acquireSessionAndLoad(player: Player)
-	local key = "Player_" .. tostring(player.UserId)
-	local store = tryGetDataStore()
+	local userId = player.UserId
+	local key = "Player_" .. tostring(userId)
+	local myToken = SERVER_JOB_ID .. "_" .. Util.NewUid()
 	local loadedData: any = nil
+	local confirmedLock = false
 	local lockFailed = false
 
-	if store then
-		local acquired = false
-		for attempt = 1, 3 do
-			local ok, updated = pcall(function()
-				return store:UpdateAsync(key, function(oldData: any)
-					local now = os.time()
-					if type(oldData) ~= "table" then
-						acquired = true
-						local fresh = GameConfig.CreateDefaultProfile() :: any
-						fresh.activeSessionId = SERVER_JOB_ID
-						fresh.lockTimestamp = now
-						fresh.saveSeq = 1
-						return fresh
-					end
-					local holder = oldData.activeSessionId
-					local lockAge = now - (tonumber(oldData.lockTimestamp) or 0)
-					if holder == nil or holder == SERVER_JOB_ID or lockAge > GameConfig.SESSION_LOCK_EXPIRE_SEC then
-						acquired = true
-						oldData.activeSessionId = SERVER_JOB_ID
-						oldData.lockTimestamp = now
-						oldData.saveSeq = (tonumber(oldData.saveSeq) or 0)
-						return oldData
-					end
-					acquired = false
-					return nil
-				end)
-			end)
-			if ok and acquired then
-				loadedData = updated
-				break
+	DataStoreLockHelper.WithUserLock(userId, function()
+		local store = DataStoreLockHelper.TryGetStore()
+		if store then
+			local okLock, data = DataStoreLockHelper.AcquireLockWithRetries(player, store, key, myToken)
+			confirmedLock = okLock
+			loadedData = data
+			if not okLock then
+				lockFailed = true
 			end
-			if attempt < 3 then
-				task.wait(1.5)
-			end
-		end
-		if not acquired then
+		elseif not DataStoreLockHelper.IsStudioOfflineFallback() then
 			lockFailed = true
 		end
-	elseif game.PlaceId > 0 and not studioMemoryFallback then
-		lockFailed = true
-	end
+	end)
 
-	if not player:IsDescendantOf(Players) then
+	if not player:IsDescendantOf(Players) or closingPlayers[player] then
+		if confirmedLock then
+			local store = DataStoreLockHelper.TryGetStore()
+			if store then DataStoreLockHelper.ReleaseToken(store, key, myToken) end
+		end
 		return
 	end
 
-	local profile = ProfileMigrator.SanitizeLoadedProfile(loadedData)
-	profile.activeSessionId = SERVER_JOB_ID
+	local profile, quarantineReason = ProfileMigrator.SanitizeLoadedProfile(loadedData)
+	if quarantineReason ~= nil then
+		if confirmedLock then
+			local store = DataStoreLockHelper.TryGetStore()
+			if store then DataStoreLockHelper.ReleaseToken(store, key, myToken) end
+		end
+		lockFailed = true
+	end
+
+	profile.activeSessionId = myToken
 	profile.lockTimestamp = os.time()
 
 	profiles[player] = profile
+	sessionTokens[player] = myToken
+	lastConfirmedRenewAt[player] = os.time()
 	dirtyRevision[player] = 0
 	savedRevision[player] = 0
+
 	if lockFailed then
-		loadFailedPlayers[player] = true
+		readOnlyPlayers[player] = true
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error",
-			text = "DataStore session busy! Safe Temporary Mode enabled (progress won't overwrite your main save).",
+			text = "DataStore session busy or offline! Safe Read-Only Mode active to protect your main save.",
 		})
 	end
 
 	ProfileMigrator.SetupLeaderstats(player, profile)
+	if clientRequestedInit[player] then
+		DataService.PushFullSnapshot(player)
+	end
 	for _, cb in ipairs(profileLoadedCallbacks) do
 		task.spawn(cb, player, profile)
 	end
 end
 
-function DataService.SaveProfile(player: Player, releaseLock: boolean?)
-	if loadFailedPlayers[player] then
-		return
+function DataService.SaveProfile(player: Player, releaseLock: boolean?): string
+	if readOnlyPlayers[player] then
+		return "Skipped"
 	end
-	while saveInFlight[player] do
-		task.wait(0.05)
-	end
-	local profile = profiles[player]
-	local store = tryGetDataStore()
-	if not profile or not store then
-		return
-	end
+	local userId = player.UserId
+	local status = "Skipped"
 
-	saveInFlight[player] = true
-	local revBefore = dirtyRevision[player] or 0
-	local expectedSeq = profile.saveSeq
-	local nextSeq = expectedSeq + 1
-	local snapshot = Util.DeepCopy(profile)
-	snapshot.saveSeq = nextSeq
-	snapshot.activeSessionId = if releaseLock then nil else SERVER_JOB_ID
-	snapshot.lockTimestamp = if releaseLock then 0 else os.time()
-
-	local key = "Player_" .. tostring(player.UserId)
-	local wrote = false
-	local ok = pcall(function()
-		store:UpdateAsync(key, function(oldData: any)
-			if type(oldData) == "table" then
-				if oldData.activeSessionId ~= SERVER_JOB_ID then
-					return nil
-				end
-				if (tonumber(oldData.saveSeq) or 0) > expectedSeq then
-					return nil
-				end
+	DataStoreLockHelper.WithUserLock(userId, function()
+		local profile = profiles[player]
+		local myToken = sessionTokens[player]
+		local store = DataStoreLockHelper.TryGetStore()
+		if not profile or not myToken or readOnlyPlayers[player] then
+			return
+		end
+		if not store then
+			if DataStoreLockHelper.IsStudioOfflineFallback() then
+				lastConfirmedRenewAt[player] = os.time()
+				status = "Saved"
+			else
+				status = "TransientError"
 			end
-			wrote = true
-			return snapshot
-		end)
+			return
+		end
+
+		local revBefore = dirtyRevision[player] or 0
+		local key = "Player_" .. tostring(userId)
+		local res, nextSeq = DataStoreLockHelper.WriteSnapshotVerified(store, key, profile, myToken, releaseLock == true)
+		status = res
+
+		if res == "Saved" then
+			profile.saveSeq = nextSeq
+			profile.activeSessionId = if releaseLock then nil else myToken
+			profile.lockTimestamp = if releaseLock then 0 else os.time()
+			lastConfirmedRenewAt[player] = os.time()
+			if (dirtyRevision[player] or 0) == revBefore then
+				savedRevision[player] = revBefore
+			end
+		elseif res == "LostLock" then
+			readOnlyPlayers[player] = true
+			if player:IsDescendantOf(Players) then
+				Net.FireClient(player, Net.ServerToClient.Toast, {
+					kind = "Error",
+					text = "Session moved to another server — switched to Read-Only Mode!",
+				})
+			end
+		end
 	end)
 
-	if ok and wrote then
-		profile.saveSeq = nextSeq
-		profile.activeSessionId = snapshot.activeSessionId
-		profile.lockTimestamp = snapshot.lockTimestamp
-		if (dirtyRevision[player] or 0) == revBefore then
-			savedRevision[player] = revBefore
+	return status
+end
+
+local function closePlayerSessionOnce(player: Player)
+	if closingPlayers[player] then
+		return
+	end
+	closingPlayers[player] = true
+
+	if profiles[player] and not readOnlyPlayers[player] then
+		local res = DataService.SaveProfile(player, true)
+		if res == "TransientError" then
+			task.wait(0.8)
+			DataService.SaveProfile(player, true)
 		end
 	end
-	saveInFlight[player] = nil
+
+	profiles[player] = nil
+	sessionTokens[player] = nil
+	lastConfirmedRenewAt[player] = nil
+	dirtyRevision[player] = nil
+	savedRevision[player] = nil
+	readOnlyPlayers[player] = nil
+	clientRequestedInit[player] = nil
 end
 
 function DataService.Get(player: Player): Types.PlayerProfile?
@@ -198,9 +202,8 @@ end
 function DataService.WaitForProfile(player: Player, timeoutSec: number?): Types.PlayerProfile?
 	local deadline = os.clock() + (timeoutSec or 10)
 	while player:IsDescendantOf(Players) and os.clock() < deadline do
-		local p = profiles[player]
-		if p then
-			return p
+		if profiles[player] then
+			return profiles[player]
 		end
 		task.wait(0.05)
 	end
@@ -214,11 +217,14 @@ function DataService.MarkDirty(player: Player)
 end
 
 function DataService.ResetProfileForDev(player: Player): Types.PlayerProfile?
-	if not RunService:IsStudio() or not profiles[player] then
+	local cur = profiles[player]
+	if not RunService:IsStudio() or not cur then
 		return nil
 	end
 	local fresh = GameConfig.CreateDefaultProfile()
-	fresh.activeSessionId = SERVER_JOB_ID
+	fresh.saveSeq = cur.saveSeq
+	fresh.activeSessionId = sessionTokens[player]
+	fresh.lockTimestamp = os.time()
 	profiles[player] = fresh
 	DataService.MarkDirty(player)
 	DataService.SyncLeaderstats(player)
@@ -241,14 +247,15 @@ function DataService.PushFullSnapshot(player: Player)
 	Net.FireClient(player, Net.ServerToClient.StateSnapshot, {
 		profile = profile,
 		serverNow = os.time(),
-		studioFallback = studioMemoryFallback,
-		safeReadOnly = loadFailedPlayers[player] == true,
+		studioFallback = DataStoreLockHelper.IsStudioOfflineFallback(),
+		safeReadOnly = DataService.IsTransactionLocked(player, false),
 	})
 end
 
 function DataService.Init()
 	Net.OnServerEvent(Net.ClientToServer.RequestInitialState, function(player: Player)
-		if DataService.WaitForProfile(player, 8) then
+		clientRequestedInit[player] = true
+		if profiles[player] or DataService.WaitForProfile(player, 8) then
 			DataService.PushFullSnapshot(player)
 		end
 	end)
@@ -257,55 +264,52 @@ function DataService.Init()
 	for _, existingPlayer in ipairs(Players:GetPlayers()) do
 		task.spawn(acquireSessionAndLoad, existingPlayer)
 	end
-
-	Players.PlayerRemoving:Connect(function(player: Player)
-		DataService.SaveProfile(player, true)
-		profiles[player] = nil
-		dirtyRevision[player] = nil
-		savedRevision[player] = nil
-		loadFailedPlayers[player] = nil
-	end)
+	Players.PlayerRemoving:Connect(closePlayerSessionOnce)
 
 	game:BindToClose(function()
+		serverShuttingDown = true
+		local pending = 0
 		for player, _ in pairs(profiles) do
-			DataService.SaveProfile(player, true)
+			pending += 1
+			task.spawn(function()
+				closePlayerSessionOnce(player)
+				pending -= 1
+			end)
+		end
+		local deadline = os.clock() + 25
+		while pending > 0 and os.clock() < deadline do
+			task.wait(0.05)
 		end
 	end)
 
 	task.spawn(function()
-		local accSave = 0
-		local accPush = 0
-		while true do
+		local accSave, accPush = 0, 0
+		while not serverShuttingDown do
 			task.wait(1)
 			accSave += 1
 			accPush += 1
-			local today = Util.GetUtcDayIndex()
 			for player, profile in pairs(profiles) do
-				profile.stats.playTimeSec += 1
-				if profile.playtimeDay ~= today then
-					profile.playtimeDay = today
-					profile.playtimeTodaySec = 1
-					profile.playtimeClaimedToday = {}
-					DataService.MarkDirty(player)
-				else
-					profile.playtimeTodaySec += 1
-				end
-				if accPush >= 5 then
-					Net.FireClient(player, Net.ServerToClient.PlaytimeUpdated, {
-						playtimeTodaySec = profile.playtimeTodaySec,
-						playtimeClaimedToday = profile.playtimeClaimedToday,
-					})
-				end
-				if accSave >= GameConfig.AUTOSAVE_INTERVAL_SEC then
-					task.spawn(DataService.SaveProfile, player, false)
+				if not closingPlayers[player] then
+					profile.stats.playTimeSec += 1
+					if ProfileMigrator.RefreshUtcPlaytimeIfNewDay(profile) then
+						profile.playtimeTodaySec = 1
+						DataService.MarkDirty(player)
+					else
+						profile.playtimeTodaySec += 1
+					end
+					if accPush >= 5 then
+						Net.FireClient(player, Net.ServerToClient.PlaytimeUpdated, {
+							playtimeTodaySec = profile.playtimeTodaySec,
+							playtimeClaimedToday = profile.playtimeClaimedToday,
+						})
+					end
+					if accSave >= GameConfig.AUTOSAVE_INTERVAL_SEC then
+						task.spawn(DataService.SaveProfile, player, false)
+					end
 				end
 			end
-			if accPush >= 5 then
-				accPush = 0
-			end
-			if accSave >= GameConfig.AUTOSAVE_INTERVAL_SEC then
-				accSave = 0
-			end
+			if accPush >= 5 then accPush = 0 end
+			if accSave >= GameConfig.AUTOSAVE_INTERVAL_SEC then accSave = 0 end
 		end
 	end)
 end

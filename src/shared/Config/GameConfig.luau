@@ -50,10 +50,17 @@ GameConfig.GYM_STATION_RADIUS = 11.5
 
 -- Bang 4 bac kich thuoc ca (SizeTiers) de cam tren tay khoe & dinh gia
 GameConfig.SizeTiers = {
-	{ name = "Titanic", chance = 0.015, weightMult = 2.60, valueMult = 3.00, scaleMult = 2.15, color = Color3.fromRGB(255, 82, 168) },
-	{ name = "Giant", chance = 0.065, weightMult = 1.85, valueMult = 1.90, scaleMult = 1.62, color = Color3.fromRGB(255, 196, 56) },
-	{ name = "Big", chance = 0.170, weightMult = 1.35, valueMult = 1.35, scaleMult = 1.28, color = Color3.fromRGB(88, 226, 255) },
-	{ name = "Normal", chance = 0.750, weightMult = 1.00, valueMult = 1.00, scaleMult = 1.00, color = Color3.fromRGB(196, 206, 222) },
+	{ name = "Titanic", rank = 4, chance = 0.015, weightMult = 2.60, valueMult = 3.00, scaleMult = 2.15, color = Color3.fromRGB(255, 82, 168) },
+	{ name = "Giant", rank = 3, chance = 0.065, weightMult = 1.85, valueMult = 1.90, scaleMult = 1.62, color = Color3.fromRGB(255, 196, 56) },
+	{ name = "Big", rank = 2, chance = 0.170, weightMult = 1.35, valueMult = 1.35, scaleMult = 1.28, color = Color3.fromRGB(88, 226, 255) },
+	{ name = "Normal", rank = 1, chance = 0.750, weightMult = 1.00, valueMult = 1.00, scaleMult = 1.00, color = Color3.fromRGB(196, 206, 222) },
+}
+
+GameConfig.SizeTierRank = {
+	Normal = 1,
+	Big = 2,
+	Giant = 3,
+	Titanic = 4,
 }
 
 -- Bang dot bien ca (Mutations)

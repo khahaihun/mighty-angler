@@ -303,6 +303,14 @@ function CurrencyService.ToggleLockFish(player: Player, uid: string)
 	end
 	for _, entry in ipairs(profile.fishBag) do
 		if entry.uid == uid then
+			if entry.soulbound then
+				entry.locked = true
+				Net.FireClient(player, Net.ServerToClient.Toast, {
+					kind = "Info",
+					text = "🏆 Soulbound Trophies stay permanently locked & protected across Rebirths!",
+				})
+				return
+			end
 			entry.locked = not entry.locked
 			DataService.MarkDirty(player)
 			Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })

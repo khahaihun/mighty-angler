@@ -1,5 +1,5 @@
 --!strict
--- FishingSessionManager.luau: Quan ly phien cau ca nguyen tu (CloseSessionOnce) & cham diem Per-Strike Server Clock
+-- FishingSessionManager.luau: Quan ly phien cau ca nguyen tu (CloseSessionOnce) & Per-Strike Server Clock chinh xac
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,6 +31,8 @@ export type CastSession = {
 	speed: number,
 	promptSentClock: number,
 	timeoutSec: number,
+	serverDeadlineClock: number,
+	lastStrikeElapsed: number,
 }
 
 local FishingSessionManager = {}
@@ -70,12 +72,13 @@ function FishingSessionManager.CreateWaitingSession(
 		speed = 1.0,
 		promptSentClock = 0,
 		timeoutSec = 7.5,
+		serverDeadlineClock = 0,
+		lastStrikeElapsed = 0,
 	}
 	sessions[player] = sess
 	return sess
 end
 
--- Dong phien nguyen tu dung 1 lan duy nhat cho moi ly do (Win, Miss, Timeout, Cancel, Unequip, Island, Death, Rebirth)
 function FishingSessionManager.CloseSessionOnce(
 	player: Player,
 	expectedSessionId: string?,
@@ -137,22 +140,24 @@ function FishingSessionManager.BeginMinigame(
 	local speed = math.max(0.48, baseSpeed / math.max(1.0, sess.snapMults.minigameSpeedDivisor))
 
 	local centers: { number } = {}
-	local margin = math.min(0.36, zoneWidth * 0.5 + 0.08)
 	for _ = 1, rounds do
-		local c = math.clamp(margin + math.random() * math.max(0.10, 1.0 - margin * 2), 0.26, 0.82)
-		table.insert(centers, math.floor(c * 1000) / 1000)
+		local c = 0.30 + math.random() * 0.52 -- Dung mien [0.30, 0.82] cua PLAN.md
+		table.insert(centers, math.floor(c * 1000 + 0.5) / 1000)
 	end
 
+	local nowClock = os.clock()
 	local timeoutSec = 5.5 + rounds * 2.0
-	local serverCloseDelay = timeoutSec + 0.40 -- +0.40s an han mang cho cu bam sat giay cuoi
+	local serverCloseDelay = timeoutSec + 0.40
 
 	sess.rounds = rounds
 	sess.currentRound = 1
 	sess.zoneWidth = zoneWidth
 	sess.zoneCenters = centers
 	sess.speed = speed
-	sess.promptSentClock = os.clock()
+	sess.promptSentClock = nowClock
 	sess.timeoutSec = timeoutSec
+	sess.serverDeadlineClock = nowClock + serverCloseDelay
+	sess.lastStrikeElapsed = 0
 
 	Net.FireClient(player, Net.ServerToClient.FishingMinigamePrompt, {
 		sessionId = sess.sessionId,
@@ -186,32 +191,44 @@ function FishingSessionManager.HandleStrike(
 	if not sess or sess.state ~= "Minigame" or type(rawSessionId) ~= "string" or sess.sessionId ~= rawSessionId then
 		return
 	end
-	local roundIdx = tonumber(rawRound)
-	local clientElapsed = tonumber(rawClientElapsed)
-	if not roundIdx or not clientElapsed or math.floor(roundIdx) ~= sess.currentRound then
-		return
-	end
-	if clientElapsed <= 0 or clientElapsed > sess.timeoutSec then
+
+	local nowClock = os.clock()
+	if nowClock > sess.serverDeadlineClock then
 		FishingSessionManager.CloseSessionOnce(player, sess.sessionId, "Timeout", false)
 		return
 	end
 
-	-- Doi chieu dong ho that cua Server (chiu ping cao 200ms+ nhung chan dong bang/tua cham thoi gian)
-	local serverElapsed = os.clock() - sess.promptSentClock
-	if clientElapsed > (serverElapsed + 0.14) or (serverElapsed - clientElapsed) > 0.65 then
+	if type(rawRound) ~= "number" or type(rawClientElapsed) ~= "number" then
+		return
+	end
+	if rawRound ~= rawRound or rawClientElapsed ~= rawClientElapsed or math.abs(rawClientElapsed) == math.huge then
+		return
+	end
+	if rawRound ~= math.floor(rawRound) or rawRound ~= sess.currentRound then
+		return
+	end
+	if rawClientElapsed <= sess.lastStrikeElapsed or rawClientElapsed > sess.timeoutSec then
+		FishingSessionManager.CloseSessionOnce(player, sess.sessionId, "Timeout", false)
+		return
+	end
+
+	-- Hang so chuan PLAN.md 2.2(2): clientElapsed <= serverElapsed + 0.08 va (serverElapsed - clientElapsed) <= 0.45
+	local serverElapsed = nowClock - sess.promptSentClock
+	if rawClientElapsed > (serverElapsed + 0.08) or (serverElapsed - rawClientElapsed) > 0.45 then
 		FishingSessionManager.CloseSessionOnce(player, sess.sessionId, "Miss", false)
 		return
 	end
 
-	local needlePos = Util.TriangleBounce(0.08, sess.speed, clientElapsed)
+	local needlePos = Util.TriangleBounce(0.08, sess.speed, rawClientElapsed)
 	local targetCenter = sess.zoneCenters[sess.currentRound] or 0.5
-	local halfTolerance = sess.zoneWidth * 0.52 + 0.055
+	local halfTolerance = sess.zoneWidth * 0.52 + 0.05
 
 	if math.abs(needlePos - targetCenter) > halfTolerance then
 		FishingSessionManager.CloseSessionOnce(player, sess.sessionId, "Miss", false)
 		return
 	end
 
+	sess.lastStrikeElapsed = rawClientElapsed
 	if sess.currentRound >= sess.rounds then
 		local closed = FishingSessionManager.CloseSessionOnce(player, sess.sessionId, "Win", true)
 		if closed then

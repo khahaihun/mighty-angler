@@ -18,7 +18,7 @@ local PerkService = {}
 
 local ownedPassesCache: { [Player]: { [string]: boolean } } = {}
 local groupMemberCache: { [Player]: boolean } = {}
-local paidRandomRestrictedCache: { [Player]: boolean } = {}
+local paidRandomPolicyState: { [Player]: string } = {}
 local devSimulatedFreeMode: { [Player]: boolean } = {}
 local devGrantedPasses: { [Player]: { [string]: boolean } } = {}
 local passUnlockedCallbacks: { (Player, string) -> () } = {}
@@ -44,18 +44,35 @@ local function checkIsInGroup(player: Player): boolean
 end
 
 local function loadPolicyForPlayer(player: Player)
-	local ok, info = pcall(function()
-		return PolicyService:GetPolicyInfoForPlayerAsync(player)
-	end)
-	if ok and type(info) == "table" then
-		paidRandomRestrictedCache[player] = (info.ArePaidRandomItemsRestricted == true)
-	else
-		paidRandomRestrictedCache[player] = false
+	paidRandomPolicyState[player] = "Loading"
+	for attempt = 1, 3 do
+		if not player:IsDescendantOf(Players) then
+			return
+		end
+		local ok, info = pcall(function()
+			return PolicyService:GetPolicyInfoForPlayerAsync(player)
+		end)
+		if ok and type(info) == "table" then
+			paidRandomPolicyState[player] = if info.ArePaidRandomItemsRestricted == true then "Restricted" else "Allowed"
+			PerkService.PushPerks(player)
+			return
+		end
+		if attempt < 3 then
+			task.wait(1.0)
+		end
 	end
+	-- Fail-closed tren server publish; chi cho phep trong Studio offline PlaceId == 0
+	paidRandomPolicyState[player] = if RunService:IsStudio() and game.PlaceId == 0 then "Allowed" else "Restricted"
+	PerkService.PushPerks(player)
 end
 
+-- Fail-closed: Tra ve true khi dang "Loading" (chua xac minh xong) hoac "Restricted"!
 function PerkService.ArePaidRandomItemsRestricted(player: Player): boolean
-	return paidRandomRestrictedCache[player] == true
+	return paidRandomPolicyState[player] ~= "Allowed"
+end
+
+function PerkService.GetPolicyState(player: Player): string
+	return paidRandomPolicyState[player] or "Loading"
 end
 
 local function syncExclusivePassRodIfNeeded(player: Player)
@@ -123,6 +140,7 @@ function PerkService.GetPerkSnapshot(player: Player)
 		extraPets = PerkService.HasGamepass(player, "ExtraPets"),
 		exclusiveDragonRod = PerkService.HasGamepass(player, "ExclusiveDragonRod"),
 		paidRandomRestricted = PerkService.ArePaidRandomItemsRestricted(player),
+		policyState = PerkService.GetPolicyState(player),
 		simFreeMode = devSimulatedFreeMode[player] == true,
 	}
 end
@@ -176,7 +194,7 @@ function PerkService.Init()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		ownedPassesCache[player] = nil
 		groupMemberCache[player] = nil
-		paidRandomRestrictedCache[player] = nil
+		paidRandomPolicyState[player] = nil
 		devSimulatedFreeMode[player] = nil
 		devGrantedPasses[player] = nil
 	end)

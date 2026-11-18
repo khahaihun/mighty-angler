@@ -113,16 +113,18 @@ function DevTestService.Init()
 				})
 			end
 		elseif rawAction == "ResetSave" then
-			FishingService.CancelSession(player, true)
-			DataService.ResetProfileForDev(player)
+			FishingService.CancelSession(player, true, "ManualCancel")
+			local fresh = DataService.ResetProfileForDev(player)
+			local saveRes = DataService.SaveProfile(player, false)
 			IslandService.TeleportCharacterToIsland(player, 1)
 			RodVisuals.EquipRodOnCharacter(player, "Twig")
 			PetsService.SyncVisualsAndClient(player)
 			ShopAndItemsService.PushInventory(player)
 			CurrencyService.PushCurrencies(player)
+			local seqVal = if fresh then fresh.saveSeq else 0
 			Net.FireClient(player, Net.ServerToClient.Toast, {
 				kind = "Info",
-				text = "[DEV] Profile reset to fresh starter state!",
+				text = string.format("[DEV] Profile reset (%s • saveSeq=%d)!", saveRes, seqVal),
 			})
 		end
 	end)

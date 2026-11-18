@@ -172,7 +172,9 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 			for _, hand in ipairs({ lHand, rHand }) do
 				if hand then
 					local db, bar = RodAndWeightBuilder.BuildHandheldDumbbell(isl.theme.accentColor, scale)
-					local targetCf = hand.CFrame * CFrame.new(0, -0.18, 0)
+					local isR6Arm = (hand.Name == "Right Arm" or hand.Name == "Left Arm")
+					local yOffset = if isR6Arm then -0.95 else -0.18
+					local targetCf = hand.CFrame * CFrame.new(0, yOffset, 0)
 					local inv = bar.CFrame:Inverse()
 					for _, d in ipairs(db:GetDescendants()) do
 						if d:IsA("BasePart") and d ~= bar then
@@ -187,21 +189,24 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 					w.Parent = bar
 				end
 			end
-		elseif stationType == "BenchPress" and rHand then
-			local bb, shaft = RodAndWeightBuilder.BuildHandheldBarbell(isl.theme.accentColor, scale)
-			local targetCf = rHand.CFrame * CFrame.new(-1.1, -0.15, -0.25)
-			local inv = shaft.CFrame:Inverse()
-			for _, d in ipairs(bb:GetDescendants()) do
-				if d:IsA("BasePart") and d ~= shaft then
-					d.CFrame = targetCf * (inv * d.CFrame)
+		elseif stationType == "BenchPress" then
+			local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+			if torso and torso:IsA("BasePart") then
+				local bb, shaft = RodAndWeightBuilder.BuildHandheldBarbell(isl.theme.accentColor, scale)
+				local targetCf = torso.CFrame * CFrame.new(0, 0.52, -1.42)
+				local inv = shaft.CFrame:Inverse()
+				for _, d in ipairs(bb:GetDescendants()) do
+					if d:IsA("BasePart") and d ~= shaft then
+						d.CFrame = targetCf * (inv * d.CFrame)
+					end
 				end
+				shaft.CFrame = targetCf
+				bb.Parent = holder
+				local w = Instance.new("WeldConstraint")
+				w.Part0 = torso
+				w.Part1 = shaft
+				w.Parent = shaft
 			end
-			shaft.CFrame = targetCf
-			bb.Parent = holder
-			local w = Instance.new("WeldConstraint")
-			w.Part0 = rHand
-			w.Part1 = shaft
-			w.Parent = shaft
 		end
 	end
 

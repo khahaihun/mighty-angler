@@ -1,5 +1,5 @@
 --!strict
--- HudPanel.luau: Thanh Tien Te, Chi so 5-Stat Can Cau + Effective Luck, Menu Trai & uy quyen Hotbar/Bait/Auto
+-- HudPanel.luau: Thanh Tien Te, Chi so 5-Stat Can Cau + Bang % Base vs Effective Live, Menu Trai & Hotbar/Bait/Auto
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -26,6 +26,7 @@ local goldLbl: TextLabel? = nil
 local gemsLbl: TextLabel? = nil
 local strengthLbl: TextLabel? = nil
 local rodHintLbl: TextLabel? = nil
+local liveOddsLbl: TextLabel? = nil
 local islandBannerLbl: TextLabel? = nil
 local eventBannerLbl: TextLabel? = nil
 local bagBtnRef: TextButton? = nil
@@ -66,23 +67,25 @@ local function createCurrencyPill(parent: Instance, title: string, accent: Color
 end
 
 local function refreshRodProgressHint()
-	if not rodHintLbl then
-		return
-	end
+	if not rodHintLbl then return end
 	local eff = RodsConfig.GetEffectiveStats(curRodId, ownedRodsCache, rodEnchantsCache)
 	local ench = if eff.enchantId then EnchantsConfig.ById[eff.enchantId] else nil
 	local baseline = math.max(eff.masteryBaselineStrength, 300)
 	local mastery = math.clamp(math.log10(1 + curStrength / baseline) / 2.0, 0, 1)
-	local barWidthPct = math.floor(math.clamp(0.28 + eff.controlBonus + (if ench then ench.controlBonus else 0) + mastery * GameConfig.STRENGTH_MAX_BAR_BONUS, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
-	local totalLuckPct = math.floor((eff.luckBonus + (if ench then ench.luckBonus else 0) + (if autoFishOn and hasAutoFishPerk then GameConfig.PERFECT_CAST_LUCK_ADD else 0)) * 100 + 0.5)
+	local ctrlTotal = eff.controlBonus + (if ench then ench.controlBonus else 0) + mastery * GameConfig.STRENGTH_MAX_BAR_BONUS
+	local rareBarPct = math.floor(math.clamp(0.28 + ctrlTotal, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
+	local bossBarPct = math.floor(math.clamp(0.22 + ctrlTotal, 0.20, GameConfig.MINIGAME_MAX_WIDTH) * 100 + 0.5)
+	local rodLuckPct = math.floor((eff.luckBonus + (if ench then ench.luckBonus else 0) + (if autoFishOn and hasAutoFishPerk then GameConfig.PERFECT_CAST_LUCK_ADD else 0)) * 100 + 0.5)
 	local enchTag = if ench then (" • 🔮 " .. ench.name) else ""
 
 	rodHintLbl.Text = string.format(
-		"🎣 %s (%s Max) • +%d%% Luck • Bar %d%%%s  |  Hold Click on Water to Cast!",
+		"🎣 %s (%s Max • %d%% Stdy) • +%d%% Rod/Cast Luck • Bar %d%% (Boss %d%%)%s",
 		eff.name,
 		Util.FormatWeight(eff.maxWeight),
-		totalLuckPct,
-		barWidthPct,
+		math.floor((eff.steadiness + (if ench then ench.steadinessBonus else 0)) * 100 + 0.5),
+		rodLuckPct,
+		rareBarPct,
+		bossBarPct,
 		enchTag
 	)
 end
@@ -115,16 +118,30 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	local subHint = Instance.new("TextLabel")
 	subHint.Name = "RodStrengthHint"
 	subHint.AnchorPoint = Vector2.new(0.5, 0)
-	subHint.Position = UDim2.new(0.5, 0, 0, 54)
-	subHint.Size = UDim2.fromOffset(760, 20)
+	subHint.Position = UDim2.new(0.5, 0, 0, 53)
+	subHint.Size = UDim2.fromOffset(780, 18)
 	subHint.BackgroundTransparency = 1
 	subHint.Font = Theme.FontBody
-	subHint.TextSize = 13
+	subHint.TextSize = 12
 	subHint.TextColor3 = Theme.Colors.TextMuted
 	subHint.Text = ""
 	subHint.Parent = rootGui
 	Theme.AddTextStroke(subHint, 1.5)
 	rodHintLbl = subHint
+
+	local oddsHint = Instance.new("TextLabel")
+	oddsHint.Name = "LiveOddsBanner"
+	oddsHint.AnchorPoint = Vector2.new(0.5, 0)
+	oddsHint.Position = UDim2.new(0.5, 0, 0, 71)
+	oddsHint.Size = UDim2.fromOffset(820, 18)
+	oddsHint.BackgroundTransparency = 1
+	oddsHint.Font = Theme.FontBody
+	oddsHint.TextSize = 11
+	oddsHint.TextColor3 = Color3.fromRGB(132, 238, 255)
+	oddsHint.Text = ""
+	oddsHint.Parent = rootGui
+	Theme.AddTextStroke(oddsHint, 1.4)
+	liveOddsLbl = oddsHint
 
 	local islTag = Instance.new("TextLabel")
 	islTag.Name = "IslandTag"
@@ -171,23 +188,18 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	bagBtn.TextSize = 14
 	bagBtnRef = bagBtn
 
-	local shopBtn = Theme.CreateButton(leftDock, "BtnShop", "🛒 Shop", UDim2.new(1, 0, 0, 42), UDim2.new(), Theme.Colors.Warning, function() actions.OnTogglePanel("Shop") end)
-	shopBtn.TextSize = 15
-
-	local enchBtn = Theme.CreateButton(leftDock, "BtnAltar", "🔮 Enchants", UDim2.new(1, 0, 0, 42), UDim2.new(), Color3.fromRGB(118, 212, 255), function() actions.OnTogglePanel("Enchant") end)
-	enchBtn.TextSize = 15
-
-	local petsBtn = Theme.CreateButton(leftDock, "BtnPets", "🐾 Pets", UDim2.new(1, 0, 0, 42), UDim2.new(), Color3.fromRGB(186, 92, 255), function() actions.OnTogglePanel("Pets") end)
-	petsBtn.TextSize = 15
-
-	local islBtn = Theme.CreateButton(leftDock, "BtnIslands", "🗺️ Islands", UDim2.new(1, 0, 0, 42), UDim2.new(), Color3.fromRGB(48, 188, 176), function() actions.OnTogglePanel("Islands") end)
-	islBtn.TextSize = 15
-
-	local progBtn = Theme.CreateButton(leftDock, "BtnProgress", "🏆 Progress", UDim2.new(1, 0, 0, 42), UDim2.new(), Color3.fromRGB(238, 118, 72), function() actions.OnTogglePanel("Progress") end)
-	progBtn.TextSize = 15
-
-	local giftBtn = Theme.CreateButton(leftDock, "BtnGifts", "🎁 Gifts & ⚙️", UDim2.new(1, 0, 0, 42), UDim2.new(), Color3.fromRGB(82, 198, 128), function() actions.OnTogglePanel("Gifts") end)
-	giftBtn.TextSize = 14
+	local navButtons = {
+		{ id = "BtnShop", label = "🛒 Shop", col = Theme.Colors.Warning, key = "Shop", sz = 15 },
+		{ id = "BtnAltar", label = "🔮 Enchants", col = Color3.fromRGB(118, 212, 255), key = "Enchant", sz = 15 },
+		{ id = "BtnPets", label = "🐾 Pets", col = Color3.fromRGB(186, 92, 255), key = "Pets", sz = 15 },
+		{ id = "BtnIslands", label = "🗺️ Islands", col = Color3.fromRGB(48, 188, 176), key = "Islands", sz = 15 },
+		{ id = "BtnProgress", label = "🏆 Progress", col = Color3.fromRGB(238, 118, 72), key = "Progress", sz = 15 },
+		{ id = "BtnGifts", label = "🎁 Gifts & ⚙️", col = Color3.fromRGB(82, 198, 128), key = "Gifts", sz = 14 },
+	}
+	for _, nb in ipairs(navButtons) do
+		local b = Theme.CreateButton(leftDock, nb.id, nb.label, UDim2.new(1, 0, 0, 42), UDim2.new(), nb.col, function() actions.OnTogglePanel(nb.key) end)
+		b.TextSize = nb.sz
+	end
 
 	local gymBanner = Theme.CreateButton(rootGui, "GymActiveBanner", "🏋️ GYM — CLICK TO LIFT!", UDim2.fromOffset(380, 40), UDim2.new(0.5, -190, 1, -168), Theme.Colors.Strength, actions.OnManualGymTap)
 	gymBanner.Visible = false
@@ -221,9 +233,7 @@ function HudPanel.UpdateRodAndIsland(rodId: string, islandId: number, ownedRods:
 end
 
 function HudPanel.UpdateBagCount(count: number)
-	if bagBtnRef then
-		bagBtnRef.Text = string.format("🎒 Bag (%d/%d)", count, GameConfig.BAG_CAPACITY)
-	end
+	if bagBtnRef then bagBtnRef.Text = string.format("🎒 Bag (%d/%d)", count, GameConfig.BAG_CAPACITY) end
 end
 
 function HudPanel.UpdatePerks(canTrain: boolean, canFishPro: boolean)
@@ -241,20 +251,18 @@ end
 function HudPanel.UpdateGymState(stationName: string?, isAutoTrain: boolean)
 	autoTrainOn = isAutoTrain
 	if gymWorkoutBanner then
-		if stationName then
-			gymWorkoutBanner.Text = string.format("🏋️ %s — TAP / CLICK TO LIFT!", string.upper(stationName))
-			gymWorkoutBanner.Visible = true
-		else
-			gymWorkoutBanner.Visible = false
-		end
+		gymWorkoutBanner.Visible = (stationName ~= nil)
+		if stationName then gymWorkoutBanner.Text = string.format("🏋️ %s — TAP / CLICK TO LIFT!", string.upper(stationName)) end
 	end
 	syncHotbarStateFlags()
 end
 
 function HudPanel.UpdateEventBanner(text: string)
-	if eventBannerLbl then
-		eventBannerLbl.Text = text
-	end
+	if eventBannerLbl then eventBannerLbl.Text = text end
+end
+
+function HudPanel.UpdateLiveOddsText(text: string)
+	if liveOddsLbl then liveOddsLbl.Text = text end
 end
 
 return HudPanel

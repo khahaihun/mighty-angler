@@ -28,9 +28,9 @@ local function refreshBanner()
 	if not ownedBamboo and not unlockedIslands["2"] then
 		lbl.Visible = true
 		if fishCaught == 0 then
-			lbl.Text = "💡 Welcome! Step 1/4: Walk onto the Wooden Pier & click [🎣 CAST ROD]!"
+			lbl.Text = "💡 Step 1/4: Equip Rod [1], walk onto the Pier & Hold + Release on Ocean Water!"
 		elseif curGold == 0 then
-			lbl.Text = "💡 Step 2/4: Click [💰 SELL ALL] or visit the Fish Market to earn Gold!"
+			lbl.Text = "💡 Step 2/4: Talk to Captain Barnaby at Fish Market (or open [🎒 Bag]) to Sell Fish!"
 		elseif curStrength < 1500 then
 			lbl.Text = string.format("💡 Step 3/4: Stand on a Gym Pad & Click to reach 1.5K Strength (%s / 1.5K)!", Util.FormatNumber(curStrength))
 		else
@@ -58,8 +58,8 @@ function TutorialController.Init(rootGui: ScreenGui)
 	local banner = Instance.new("TextLabel")
 	banner.Name = "OnboardingHint"
 	banner.AnchorPoint = Vector2.new(0.5, 1)
-	banner.Position = UDim2.new(0.5, 0, 1, -72)
-	banner.Size = UDim2.fromOffset(560, 28)
+	banner.Position = UDim2.new(0.5, 0, 1, -122)
+	banner.Size = UDim2.fromOffset(600, 28)
 	banner.BackgroundColor3 = Color3.fromRGB(26, 44, 68)
 	banner.BackgroundTransparency = 0.12
 	banner.Font = Theme.FontBody

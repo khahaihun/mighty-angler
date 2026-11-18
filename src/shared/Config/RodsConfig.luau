@@ -255,7 +255,7 @@ function RodsConfig.GetEffectiveStats(
 		power = baseRod.power,
 		equipStrengthReq = 0,
 		masteryBaselineStrength = baseRod.strengthReq,
-		maxWeight = math.max(18, math.floor(baseRod.maxWeight * sf)),
+		maxWeight = math.max(1, math.floor(baseRod.maxWeight * sf)),
 		lureSpeed = baseRod.lureSpeed * sf + (def.flatLure or 0),
 		luckBonus = baseRod.luckBonus * sf + (def.flatLuck or 0),
 		controlBonus = baseRod.controlBonus + (def.flatControl or 0),

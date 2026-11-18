@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local TrophyHelper = require(Shared:WaitForChild("TrophyHelper"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
 local RebirthConfig = require(Shared:WaitForChild("Config"):WaitForChild("RebirthConfig"))
@@ -110,30 +111,11 @@ local function awardFirstDiscoveryIfNeeded(player: Player, profile: Types.Player
 end
 
 local function selectSoulboundTrophies(fishBag: { Types.CaughtFish }): ({ Types.CaughtFish }, { [string]: boolean })
-	local lockedCandidates: { Types.CaughtFish } = {}
-	for _, entry in ipairs(fishBag) do
-		if entry.locked == true then
-			table.insert(lockedCandidates, entry)
-		end
-	end
-	table.sort(lockedCandidates, function(a: Types.CaughtFish, b: Types.CaughtFish)
-		local oa = tonumber(a.originalValue) or a.sellValue
-		local ob = tonumber(b.originalValue) or b.sellValue
-		if oa ~= ob then
-			return oa > ob
-		end
-		return a.weight > b.weight
-	end)
-
-	local kept: { Types.CaughtFish } = {}
-	local keptUidSet: { [string]: boolean } = {}
-	local limit = math.min(#lockedCandidates, GameConfig.MAX_SOULBOUND_TROPHIES)
-	for i = 1, limit do
-		local trophy = lockedCandidates[i]
+	local kept, _, keptUidSet = TrophyHelper.PartitionForRebirth(fishBag)
+	for _, trophy in ipairs(kept) do
 		trophy.soulbound = true
+		trophy.locked = true
 		trophy.sellValue = 0
-		table.insert(kept, trophy)
-		keptUidSet[trophy.uid] = true
 	end
 	return kept, keptUidSet
 end
@@ -154,7 +136,7 @@ local function handleDoRebirth(player: Player)
 	end
 
 	local gemReward = RebirthConfig.GetGemReward(profile.rebirths)
-	FishingService.CancelSession(player, false)
+	FishingService.CancelSession(player, false, "Rebirth")
 
 	-- Giu nguyen cac cay Can Exclusive trong ownedRods va toi da 12 con ca Locked (Soulbound Trophy)
 	local nextOwnedRods: { [string]: boolean } = { Twig = true }

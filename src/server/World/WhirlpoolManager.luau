@@ -1,7 +1,6 @@
 --!strict
 -- WhirlpoolManager.luau: Quan ly Xoay Nuoc Ca Hiem (Ocean Whirlpools) noi ngau nhien tren bien (+2x Luck & Boss)
 
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -43,6 +42,7 @@ end
 local function buildWhirlpoolModel(parent: Instance, centerPos: Vector3, accentColor: Color3): Model
 	local m = Instance.new("Model")
 	m.Name = "LuckyWhirlpool"
+	m:SetAttribute("WhirlpoolCenter", centerPos)
 	m.Parent = parent
 
 	local outerRing = PartFactory.VerticalCylinder(
@@ -176,29 +176,11 @@ end
 
 function WhirlpoolManager.Init()
 	ensureFolder()
-	-- Khoi tao san xoay nuoc tren Dao 1 va 1 dao ngau nhien de nguoi choi vao thay ngay
+	-- Khoi tao san xoay nuoc tren Dao 1 va 1 dao ngau nhien de nguoi choi vao thay ngay (chuyen dong ca bong chay tren Client de 0% ton bang thong!)
 	WhirlpoolManager.SpawnOnIsland(1, false)
 	if #IslandsRegistry.List >= 2 then
 		WhirlpoolManager.SpawnOnIsland(2, false)
 	end
-
-	-- Xoay nhe dan ca bong duoi nuoc
-	RunService.Heartbeat:Connect(function()
-		local t = os.clock()
-		for _, wp in pairs(activeByIsland) do
-			if wp.model.Parent then
-				for i = 1, 4 do
-					local f = wp.model:FindFirstChild("ShadowFish_" .. tostring(i))
-					if f and f:IsA("BasePart") then
-						local ang = t * 1.6 + i * (math.pi * 0.5)
-						local pos = wp.position + Vector3.new(math.cos(ang) * 7.2, -0.7, math.sin(ang) * 7.2)
-						local tangent = Vector3.new(-math.sin(ang), 0, math.cos(ang))
-						f.CFrame = CFrame.lookAt(pos, pos + tangent)
-					end
-				end
-			end
-		end
-	end)
 
 	task.spawn(function()
 		while true do

@@ -7,7 +7,7 @@ Hướng dẫn chuẩn cho **Antigravity** và **OpenAI Codex** khi cùng làm v
 ## 1. Tổng quan dự án
 - **Tên dự án:** Mighty Angler (v2.0 Overhaul — Bản Launch 5 Đảo chuẩn Fisch × PS99 × Arm Wrestle)
 - **Thể loại:** Game Roblox Simulator (**Luau + Rojo**), giao diện Tiếng Anh chuẩn quốc tế, Nước biển `Terrain Water` sóng thật + NPC người thật R15 + Lưới 3D `ViewportFrame` + hỗ trợ `Assets Override` từ Toolbox.
-- **Chiến lược triển khai hiện tại:** Đã hoàn tất trọn gói **Đại Tu 2.0 cả 4 Chặng (`Chặng A → Chặng D`)** theo `PLAN.md` (`85` file `.luau`, mọi file `≤ 350` dòng, đạt `[PASS] 6/6` kiểm định tự động).
+- **Chiến lược triển khai hiện tại:** Đã hoàn tất trọn gói **Đại Tu 2.0 cả 4 Chặng (`Chặng A → Chặng D`) + Bản Vá Hotfix Vòng Cuối** xử lý 100% kiểm toán của cả Codex & Argon (`88` file `.luau`, mọi file `≤ 350` dòng, cả 5 file cam kết riêng `< 310` dòng, đạt `[PASS] 6/6` kiểm định tự động).
 
 ---
 

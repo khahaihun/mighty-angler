@@ -1,6 +1,7 @@
 --!strict
--- FishingController.luau: Dieu phoi Quang Can, Auto-Fish (Free 1.10s / Pro 0.45s Perfect), Minigame Per-Strike & 1 Recast Coordinator
+-- FishingController.luau: Dieu phoi Quang Can, Auto-Fish (Free 1.10s / Pro 0.45s Perfect), Minigame Server-Ack & Recast Coordinator
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
@@ -14,17 +15,21 @@ local MinigameBar = require(script.Parent.Parent.UI.Panels.MinigameBar)
 
 local FishingController = {}
 
+local localPlayer = Players.LocalPlayer
 local isCastingOrWaiting = false
 local autoFishEnabled = false
 local hasAutoFishPro = false
+local currentHotbarSlot = 1
 local recastTicket = 0
 
 local stateListeners: { (boolean, boolean) -> () } = {}
 local catchListeners: { (any) -> () } = {}
 
 local function notifyUiState()
+	-- An nut REEL IN ngay khi Minigame dang mo de nguoi choi khong bam nham!
+	local canCancelWaiting = isCastingOrWaiting and not MinigameBar.IsOpen()
 	for _, cb in ipairs(stateListeners) do
-		task.spawn(cb, isCastingOrWaiting, autoFishEnabled)
+		task.spawn(cb, canCancelWaiting, autoFishEnabled)
 	end
 end
 
@@ -40,25 +45,47 @@ function FishingController.IsBusy(): boolean
 	return isCastingOrWaiting or MinigameBar.IsOpen()
 end
 
+function FishingController.IsAutoFishEnabled(): boolean
+	return autoFishEnabled
+end
+
 function FishingController.SetAutoFishPerkAvailable(ownsPro: boolean)
 	hasAutoFishPro = ownsPro
 	notifyUiState()
 end
 
-local function scheduleSingleAutoRecast()
+local function isCharacterAlive(): boolean
+	local char = localPlayer.Character
+	local hum = if char then char:FindFirstChildOfClass("Humanoid") else nil
+	return hum ~= nil and hum.Health > 0
+end
+
+local function scheduleSingleAutoRecast(extraDelaySec: number?)
 	recastTicket += 1
 	local myTicket = recastTicket
 	if not autoFishEnabled then
 		return
 	end
-	local delaySec = if hasAutoFishPro then GameConfig.AUTO_FISH_PRO_RECAST_SEC else GameConfig.AUTO_FISH_FREE_RECAST_SEC
+	local baseDelay = if hasAutoFishPro then GameConfig.AUTO_FISH_PRO_RECAST_SEC else GameConfig.AUTO_FISH_FREE_RECAST_SEC
+	local delaySec = baseDelay + (extraDelaySec or 0)
 	task.delay(delaySec, function()
-		if recastTicket == myTicket and autoFishEnabled and not isCastingOrWaiting and not MinigameBar.IsOpen() then
-			Net.FireServer(Net.ClientToServer.FishingCastWithAim, {
-				castMode = "Auto",
-				hitWater = true,
-			})
+		if recastTicket ~= myTicket or not autoFishEnabled or isCastingOrWaiting or MinigameBar.IsOpen() then
+			return
 		end
+		if currentHotbarSlot ~= 1 then
+			autoFishEnabled = false
+			Net.FireServer(Net.ClientToServer.SetAutoFish, false)
+			notifyUiState()
+			return
+		end
+		if not isCharacterAlive() then
+			scheduleSingleAutoRecast(1.0)
+			return
+		end
+		Net.FireServer(Net.ClientToServer.FishingCastWithAim, {
+			castMode = "Auto",
+			hitWater = true,
+		})
 	end)
 end
 
@@ -67,24 +94,16 @@ function FishingController.CancelCurrentCast()
 	if MinigameBar.IsOpen() then
 		return
 	end
+	if autoFishEnabled then
+		autoFishEnabled = false
+		Net.FireServer(Net.ClientToServer.SetAutoFish, false)
+	end
 	if isCastingOrWaiting then
 		isCastingOrWaiting = false
 		AnimationController.StopFishingHold()
 		Net.FireServer(Net.ClientToServer.FishingCancel)
-		notifyUiState()
 	end
-end
-
-function FishingController.RequestCastOrCancel()
-	if isCastingOrWaiting then
-		FishingController.CancelCurrentCast()
-	elseif not MinigameBar.IsOpen() then
-		Net.FireServer(Net.ClientToServer.FishingCastWithAim, {
-			castMode = "Manual",
-			holdRatio = 0.85,
-			hitWater = true,
-		})
-	end
+	notifyUiState()
 end
 
 function FishingController.ToggleAutoFish()
@@ -94,6 +113,10 @@ function FishingController.ToggleAutoFish()
 	notifyUiState()
 
 	if autoFishEnabled and not isCastingOrWaiting and not MinigameBar.IsOpen() then
+		if currentHotbarSlot ~= 1 then
+			Net.FireServer(Net.ClientToServer.SelectHotbarSlot, 1)
+			currentHotbarSlot = 1
+		end
 		Net.FireServer(Net.ClientToServer.FishingCastWithAim, {
 			castMode = "Auto",
 			hitWater = true,
@@ -115,11 +138,31 @@ end
 function FishingController.Init(rootGui: ScreenGui)
 	MinigameBar.OnOpenStateChanged(function(isOpen: boolean)
 		setMinigameCameraZoom(isOpen)
+		notifyUiState()
 	end)
 
 	MinigameBar.Mount(rootGui, function(sessionId: string, roundIdx: number, clientElapsed: number)
 		AnimationController.PlayReelPull()
 		Net.FireServer(Net.ClientToServer.FishingMinigameStrike, sessionId, roundIdx, clientElapsed)
+	end)
+
+	Net.OnClientEvent(Net.ServerToClient.HotbarUpdated, function(payload: any)
+		if type(payload) == "table" then
+			local slot = tonumber(payload.equippedSlot) or 1
+			currentHotbarSlot = slot
+			if slot ~= 1 and autoFishEnabled then
+				autoFishEnabled = false
+				recastTicket += 1
+				Net.FireServer(Net.ClientToServer.SetAutoFish, false)
+				notifyUiState()
+			end
+		end
+	end)
+
+	Net.OnClientEvent(Net.ServerToClient.StateSnapshot, function(snap: any)
+		if type(snap) == "table" and type(snap.profile) == "table" then
+			currentHotbarSlot = tonumber(snap.profile.equippedHotbarSlot) or 1
+		end
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.FishingCastStarted, function(_payload: any)
@@ -157,24 +200,36 @@ function FishingController.Init(rootGui: ScreenGui)
 		MinigameBar.ForceClose()
 		AnimationController.PlayReelPull()
 		notifyUiState()
-
 		for _, cb in ipairs(catchListeners) do
 			task.spawn(cb, payload)
 		end
-
-		scheduleSingleAutoRecast()
+		scheduleSingleAutoRecast(0)
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.FishingStateReset, function(payload: any)
 		isCastingOrWaiting = false
 		MinigameBar.ForceClose()
 		AnimationController.StopFishingHold()
-		if type(payload) == "table" and (payload.bagFull or payload.tooFar or payload.weakRod or payload.reason == "Unequip") then
+		local reason = if type(payload) == "table" then tostring(payload.reason or "") else ""
+		local stopAuto = type(payload) == "table" and (
+			payload.bagFull == true
+			or payload.tooFar == true
+			or payload.weakRod == true
+			or reason == "Unequip"
+			or reason == "ManualCancel"
+		)
+		if stopAuto then
 			autoFishEnabled = false
 			recastTicket += 1
 			Net.FireServer(Net.ClientToServer.SetAutoFish, false)
+			notifyUiState()
+			return
 		end
 		notifyUiState()
+		if autoFishEnabled then
+			local resumeExtra = if reason == "Died" then 1.2 elseif (reason == "IslandChange" or reason == "Rebirth") then 0.55 else 0
+			scheduleSingleAutoRecast(resumeExtra)
+		end
 	end)
 end
 

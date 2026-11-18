@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 
 local Theme = require(script.Parent.Parent.Theme)
+local MinigameBar = require(script.Parent.Parent.Panels.MinigameBar)
 
 export type DialogueHandlers = {
 	OpenPanel: (panelKey: string) -> (),
@@ -37,7 +38,7 @@ local function setCameraTalkZoom(talking: boolean)
 	if not cam then
 		return
 	end
-	local targetFov = if talking then 62 else 70
+	local targetFov = if talking then 62 elseif MinigameBar.IsOpen() then 64 else 70
 	TweenService:Create(cam, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = targetFov }):Play()
 end
 

@@ -11,6 +11,7 @@ local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfi
 local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfig"))
 
 local DataService = require(script.Parent.DataService)
+local PerkService = require(script.Parent.PerkService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
 local CurrencyService = require(script.Parent.CurrencyService)
 
@@ -139,6 +140,14 @@ function PetsService.HandleHatchEgg(player: Player, eggId: string)
 			return
 		end
 	else
+		if PerkService.ArePaidRandomItemsRestricted(player) then
+			local st = PerkService.GetPolicyState(player)
+			local msg = if st == "Loading"
+				then "Verifying regional policy — please wait 1 second and try again!"
+				else "Regional policy restricts paid random Gem eggs — hatch Gold Eggs or earn Boss Pet drops!"
+			Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Error", text = msg })
+			return
+		end
 		if not CurrencyService.SpendGems(player, egg.cost) then
 			Net.FireClient(player, Net.ServerToClient.Toast, {
 				kind = "Error",

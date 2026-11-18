@@ -1,5 +1,5 @@
 --!strict
--- HotbarAndCastController.luau: Phim 1..5 Hotbar, Giu Chuot nap thanh Cast Power, Raycast Nuoc vs Dat/Cau go & Hieu ung "!" Ca dop
+-- HotbarAndCastController.luau: Phim 1..5 Hotbar, Giu Chuot/Touch rieng biet nap Cast Power, Raycast Nuoc vs Vat can & Hieu ung "!"
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -24,8 +24,10 @@ local localPlayer = Players.LocalPlayer
 local isUiModalBlocking: (() -> boolean)? = nil
 
 local holdingCast = false
+local activeCastInput: InputObject? = nil
 local holdStartClock = 0.0
 local holdPointerPos = Vector2.new()
+local holdIsTouch = false
 local CHARGE_CYCLE_SEC = 1.15
 
 local KEY_TO_SLOT: { [Enum.KeyCode]: number } = {
@@ -38,35 +40,42 @@ local KEY_TO_SLOT: { [Enum.KeyCode]: number } = {
 
 local function computeChargeRatio(elapsed: number): number
 	local u = (elapsed / CHARGE_CYCLE_SEC) % 2.0
-	if u <= 1.0 then
-		return u
-	end
-	return 2.0 - u
+	return if u <= 1.0 then u else (2.0 - u)
 end
 
-local function raycastPointerAim(screenPos: Vector2): (boolean, Vector3?)
+local function raycastPointerAim(screenPos: Vector2, isTouchCoord: boolean): (boolean, Vector3?)
 	local cam = Workspace.CurrentCamera
 	if not cam then
-		return true, nil
+		return false, nil
 	end
-	local ray = cam:ViewportPointToRay(screenPos.X, screenPos.Y)
+	-- GetMouseLocation bao gom GuiInset tren Roblox (ViewportPointToRay), con Touch input.Position khong co GuiInset (ScreenPointToRay)
+	local ray = if isTouchCoord
+		then cam:ScreenPointToRay(screenPos.X, screenPos.Y)
+		else cam:ViewportPointToRay(screenPos.X, screenPos.Y)
+
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.IgnoreWater = false
 
 	local excludeList: { Instance } = {}
-	if localPlayer.Character then
-		table.insert(excludeList, localPlayer.Character)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.Character then
+			table.insert(excludeList, p.Character)
+		end
 	end
 	local wpFolder = Workspace:FindFirstChild("OceanWhirlpools")
 	if wpFolder then
 		table.insert(excludeList, wpFolder)
 	end
+	local petsFolder = Workspace:FindFirstChild("ClientRenderedPets")
+	if petsFolder then
+		table.insert(excludeList, petsFolder)
+	end
 	params.FilterDescendantsInstances = excludeList
 
-	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 240, params)
+	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 320, params)
 	if not hit then
-		return true, nil
+		return false, nil
 	end
 	if hit.Material == Enum.Material.Water then
 		return true, hit.Position
@@ -112,6 +121,7 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 		end
 		if HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() or (isUiModalBlocking and isUiModalBlocking()) then
 			holdingCast = false
+			activeCastInput = nil
 			HotbarAndBaitUi.SetCastCharge(false, 0)
 			return
 		end
@@ -130,45 +140,57 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 			return
 		end
 
-		local isPrimaryTap = (input.UserInputType == Enum.UserInputType.MouseButton1)
-			or (input.UserInputType == Enum.UserInputType.Touch)
-		if not isPrimaryTap then
+		local isTouch = (input.UserInputType == Enum.UserInputType.Touch)
+		local isMouse = (input.UserInputType == Enum.UserInputType.MouseButton1)
+		if (not isTouch and not isMouse) or holdingCast then
 			return
 		end
 		if isUiModalBlocking and isUiModalBlocking() then
 			return
 		end
-		if GymController.IsOnStation() then
-			return
-		end
-		if HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() then
+		if GymController.IsOnStation() or HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() then
 			return
 		end
 
 		holdingCast = true
+		activeCastInput = input
+		holdIsTouch = isTouch
 		holdStartClock = os.clock()
-		holdPointerPos = UserInputService:GetMouseLocation()
+		holdPointerPos = if isTouch
+			then Vector2.new(input.Position.X, input.Position.Y)
+			else UserInputService:GetMouseLocation()
 		HotbarAndBaitUi.SetCastCharge(true, 0.05)
+		Net.FireServer(Net.ClientToServer.FishingChargeStart)
 	end)
 
 	UserInputService.InputEnded:Connect(function(input: InputObject, _gameProcessed: boolean)
-		local isPrimaryTap = (input.UserInputType == Enum.UserInputType.MouseButton1)
-			or (input.UserInputType == Enum.UserInputType.Touch)
-		if not isPrimaryTap or not holdingCast then
+		if not holdingCast or input ~= activeCastInput then
 			return
 		end
 
 		local elapsed = os.clock() - holdStartClock
 		local ratio = if elapsed < 0.14 then 0.55 else computeChargeRatio(elapsed)
+		local wasTouch = holdIsTouch
+		local fallbackPos = holdPointerPos
+
 		holdingCast = false
+		activeCastInput = nil
 		HotbarAndBaitUi.SetCastCharge(false, 0)
 
-		local endPos = UserInputService:GetMouseLocation()
-		local aimScreen = if endPos.Magnitude > 1 then endPos else holdPointerPos
-		local hitWater, hitPos = raycastPointerAim(aimScreen)
+		local endPos = if wasTouch
+			then Vector2.new(input.Position.X, input.Position.Y)
+			else UserInputService:GetMouseLocation()
+		local aimScreen = if endPos.Magnitude > 1 then endPos else fallbackPos
+		local hitWater, hitPos = raycastPointerAim(aimScreen, wasTouch)
+
+		if not hitPos then
+			AnimationController.StopFishingHold()
+			SoundAndFxController.ShowToast("Info", "🌊 Aim downward at the ocean water to cast your rod!")
+			return
+		end
 
 		SoundAndFxController.PlaySfx("Cast")
-		if not hitWater and hitPos then
+		if not hitWater then
 			AnimationController.PlayCast()
 			Net.FireServer(Net.ClientToServer.FishingCastWithAim, {
 				hitWater = false,
@@ -177,7 +199,7 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 			return
 		end
 
-		if ratio >= GameConfig.PERFECT_HOLD_MIN and ratio <= GameConfig.PERFECT_HOLD_MAX then
+		if ratio >= GameConfig.PERFECT_HOLD_MIN and ratio <= GameConfig.PERFECT_HOLD_MAX and elapsed >= 0.55 then
 			SoundAndFxController.SpawnFloatingGain("Gems", 0, "✨ PERFECT CAST! (+25% LUCK)")
 		end
 		Net.FireServer(Net.ClientToServer.FishingCastWithAim, {

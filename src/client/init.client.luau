@@ -187,6 +187,11 @@ PromptController.Init({
 		openSpecificWindow("Enchant")
 		EnchantAndBountyModal.OpenTab("Enchants")
 	end,
+	OpenEggHatchPreview = function(eggId: string)
+		SoundAndFxController.PlaySfx("Click")
+		openSpecificWindow("Pets")
+		PetsPanel.OpenEggPreview(eggId)
+	end,
 	TriggerGymRep = function()
 		GymController.TriggerManualRep()
 	end,

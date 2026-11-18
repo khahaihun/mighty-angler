@@ -1,5 +1,5 @@
 --!strict
--- MinigameBar.luau: Thanh Minigame Song Tam Giac Tat Dinh (Per-Strike Server Verification + Countdown chong ket AFK)
+-- MinigameBar.luau: Thanh Minigame Song Tam Giac Tat Dinh (Cho xac nhan vong/ket qua tu Server, khong dong som cuc bo!)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -35,6 +35,8 @@ local inputConn: RBXScriptConnection? = nil
 local activeSpec: MinigameSpec? = nil
 local startClock = 0.0
 local currentRound = 1
+local awaitingRoundAck: number? = nil
+local awaitingSinceClock = 0.0
 local strikeCooldownUntil = 0.0
 local strikeCallback: ((string, number, number) -> ())? = nil
 local openStateChangedCallback: ((boolean) -> ())? = nil
@@ -61,6 +63,7 @@ local function closeMinigame()
 		container.Visible = false
 	end
 	activeSpec = nil
+	awaitingRoundAck = nil
 	if wasOpen and openStateChangedCallback then
 		openStateChangedCallback(false)
 	end
@@ -68,35 +71,27 @@ end
 
 local function attemptStrike()
 	local spec = activeSpec
-	if not spec or os.clock() < strikeCooldownUntil then
+	local now = os.clock()
+	if not spec or now < strikeCooldownUntil then
 		return
 	end
-	strikeCooldownUntil = os.clock() + 0.12
-	local elapsed = math.max(0.01, os.clock() - startClock)
-	if elapsed > spec.timeoutSec then
+	-- Neu dang cho Server phan hoi cu bam vua gui (< 0.50s), khong gui trung cung 1 round!
+	if awaitingRoundAck == currentRound and (now - awaitingSinceClock) < 0.50 then
+		return
+	end
+
+	local elapsed = math.max(0.01, now - startClock)
+	if elapsed > (spec.timeoutSec + 0.45) then
 		closeMinigame()
 		return
 	end
 
-	local roundSent = currentRound
-	local needlePos = Util.TriangleBounce(0.08, spec.speed, elapsed)
-	local targetCenter = spec.zoneCenters[roundSent] or 0.52
-	local hitLocal = math.abs(needlePos - targetCenter) <= (spec.zoneWidth * 0.52 + 0.05)
+	strikeCooldownUntil = now + 0.12
+	awaitingRoundAck = currentRound
+	awaitingSinceClock = now
 
 	if strikeCallback then
-		strikeCallback(spec.sessionId, roundSent, elapsed)
-	end
-
-	if not hitLocal then
-		closeMinigame()
-		return
-	end
-
-	if currentRound >= spec.rounds then
-		closeMinigame()
-	else
-		currentRound += 1
-		applyRoundZone(spec, currentRound)
+		strikeCallback(spec.sessionId, currentRound, elapsed)
 	end
 end
 
@@ -200,6 +195,7 @@ function MinigameBar.Start(spec: MinigameSpec)
 	activeSpec = spec
 	startClock = os.clock()
 	currentRound = 1
+	awaitingRoundAck = nil
 	strikeCooldownUntil = 0
 
 	if container and titleLbl and progressLbl then
@@ -220,7 +216,7 @@ function MinigameBar.Start(spec: MinigameSpec)
 			return
 		end
 		local elapsed = os.clock() - startClock
-		if elapsed >= cur.timeoutSec then
+		if elapsed >= (cur.timeoutSec + 0.45) then
 			closeMinigame()
 			return
 		end
@@ -246,6 +242,7 @@ end
 
 function MinigameBar.SyncRoundFromServer(sessionId: string, nextRound: number)
 	if activeSpec and activeSpec.sessionId == sessionId and nextRound > currentRound then
+		awaitingRoundAck = nil
 		currentRound = nextRound
 		applyRoundZone(activeSpec, currentRound)
 	end

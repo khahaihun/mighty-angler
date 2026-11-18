@@ -1,10 +1,11 @@
 --!strict
--- ProgressPanel.luau: Giao dien 4 tab (Rebirth kem Xem Truoc 12 Soulbound Trophies, Quests, Index, Achievements)
+-- ProgressPanel.luau: Giao dien 4 tab (Rebirth kem Xem Truoc 12 Soulbound Trophies dong nhat 100% Server, Quests, Index, Achievements)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local TrophyHelper = require(Shared:WaitForChild("TrophyHelper"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local RebirthConfig = require(Shared:WaitForChild("Config"):WaitForChild("RebirthConfig"))
 local AchievementsConfig = require(Shared:WaitForChild("Config"):WaitForChild("AchievementsConfig"))
@@ -41,26 +42,35 @@ for _, isl in ipairs(IslandsRegistry.List) do
 	end
 end
 
-local function clearBody(body: ScrollingFrame)
+local function clearNonIndexBody(body: ScrollingFrame)
+	local keepName = IndexGridSection.GetContainerName()
 	for _, ch in ipairs(body:GetChildren()) do
-		if ch:IsA("GuiObject") then
+		if ch:IsA("GuiObject") and ch.Name ~= keepName then
 			ch:Destroy()
 		end
 	end
 end
 
-local function makeSimpleRow(body: ScrollingFrame, order: number, titleText: string, subText: string, col: Color3, bg: Color3, height: number?): Frame
+local function makeSimpleRow(body: ScrollingFrame, order: number, titleText: string, subText: string, col: Color3, bg: Color3, autoHeight: boolean?): Frame
 	local card = Instance.new("Frame")
-	card.Size = UDim2.new(1, 0, 0, height or 58)
+	card.Size = UDim2.new(1, 0, 0, if autoHeight then 0 else 58)
+	if autoHeight then
+		card.AutomaticSize = Enum.AutomaticSize.Y
+	end
 	card.BackgroundColor3 = bg
 	card.LayoutOrder = order
 	card.ZIndex = 22
 	card.Parent = body
 	Theme.AddCorner(card, 10)
 	Theme.AddStroke(card, col, 2)
+	if autoHeight then
+		local p = Instance.new("UIPadding")
+		p.PaddingBottom = UDim.new(0, 10)
+		p.Parent = card
+	end
 
 	local t = Instance.new("TextLabel")
-	t.Size = UDim2.new(0.68, 0, 0, 24)
+	t.Size = UDim2.new(if autoHeight then 0.94 else 0.68, 0, 0, 24)
 	t.Position = UDim2.fromOffset(12, 5)
 	t.BackgroundTransparency = 1
 	t.Font = Theme.FontTitle
@@ -73,8 +83,11 @@ local function makeSimpleRow(body: ScrollingFrame, order: number, titleText: str
 	Theme.AddTextStroke(t, 1.4)
 
 	local s = Instance.new("TextLabel")
-	s.Size = UDim2.new(0.70, 0, 1, -32)
-	s.Position = UDim2.fromOffset(12, 29)
+	s.Size = if autoHeight then UDim2.new(1, -24, 0, 0) else UDim2.new(0.70, 0, 1, -32)
+	if autoHeight then
+		s.AutomaticSize = Enum.AutomaticSize.Y
+	end
+	s.Position = UDim2.fromOffset(12, 30)
 	s.BackgroundTransparency = 1
 	s.Font = Theme.FontBody
 	s.TextSize = 12
@@ -88,47 +101,49 @@ local function makeSimpleRow(body: ScrollingFrame, order: number, titleText: str
 end
 
 local function buildRebirthTrophySummary(): (string, string)
-	local lockedList: { any } = {}
-	for _, entry in ipairs(fishBagCache) do
-		if type(entry) == "table" and entry.locked == true then
-			table.insert(lockedList, entry)
-		end
-	end
-	table.sort(lockedList, function(a: any, b: any)
-		local oa = tonumber(a.originalValue) or tonumber(a.sellValue) or 0
-		local ob = tonumber(b.originalValue) or tonumber(b.sellValue) or 0
-		return oa > ob
-	end)
-
+	local keptList, overflowLocked, _ = TrophyHelper.PartitionForRebirth(fishBagCache :: any)
 	local pinSlotByUid: { [string]: string } = {}
 	for sKey, uid in pairs(pinnedUidsCache) do
 		pinSlotByUid[uid] = sKey
 	end
 
-	local keptCount = math.min(#lockedList, GameConfig.MAX_SOULBOUND_TROPHIES)
+	local keptCount = #keptList
 	local clearedCount = math.max(0, #fishBagCache - keptCount)
 	if keptCount == 0 then
 		return string.format("🏆 Soulbound Trophies Kept: 0/%d  •  Fish Cleared: %d", GameConfig.MAX_SOULBOUND_TROPHIES, clearedCount),
-			"Tip: Lock (🔒) up to 12 prized fish in your Bag before Rebirthing to keep them forever as Soulbound Trophies!"
+			"Tip: Lock (🔒) up to 12 prized fish in your Bag before Rebirthing to keep them as Soulbound Trophies!"
 	end
 
 	local previewNames: { string } = {}
-	for i = 1, keptCount do
-		local item = lockedList[i]
+	for _, item in ipairs(keptList) do
 		local nm = fishNameById[tostring(item.fishId)] or "Fish"
 		local pinTag = if pinSlotByUid[tostring(item.uid)] then (" [Slot " .. pinSlotByUid[tostring(item.uid)] .. "]") else ""
 		table.insert(previewNames, string.format("%s (%s)%s", nm, Util.FormatWeight(tonumber(item.weight) or 1), pinTag))
 	end
-	return string.format("🏆 %d/%d Locked Fish Kept as Soulbound Trophies  •  %d Other Fish Cleared", keptCount, GameConfig.MAX_SOULBOUND_TROPHIES, clearedCount),
-		table.concat(previewNames, "  •  ")
+	local bodyText = "✅ KEPT (" .. tostring(keptCount) .. "): " .. table.concat(previewNames, " • ")
+	if #overflowLocked > 0 then
+		local lostNames: { string } = {}
+		for _, item in ipairs(overflowLocked) do
+			local nm = fishNameById[tostring(item.fishId)] or "Fish"
+			table.insert(lostNames, string.format("%s (%s)", nm, Util.FormatWeight(tonumber(item.weight) or 1)))
+		end
+		bodyText = bodyText .. "\n⚠️ OVER 12-CAP (WILL BE CLEARED): " .. table.concat(lostNames, " • ")
+	end
+	return string.format("🏆 %d/%d Locked Fish Kept as Soulbound Trophies  •  %d Fish Cleared", keptCount, GameConfig.MAX_SOULBOUND_TROPHIES, clearedCount), bodyText
 end
 
 function ProgressPanel.Render()
 	local w = win
-	if not w then
+	if not w then return end
+
+	if currentTab == "Index" then
+		clearNonIndexBody(w.body)
+		IndexGridSection.Render(w.body, indexFish, indexPets)
 		return
 	end
-	clearBody(w.body)
+
+	IndexGridSection.SetVisible(w.body, false)
+	clearNonIndexBody(w.body)
 
 	if currentTab == "Rebirth" then
 		local reqStr = RebirthConfig.GetStrengthRequirement(curRebirths)
@@ -137,32 +152,17 @@ function ProgressPanel.Render()
 		local gemGain = RebirthConfig.GetGemReward(curRebirths)
 		local ready = (curStrength >= reqStr)
 
-		makeSimpleRow(
-			w.body,
-			1,
-			string.format("✨ Current Rebirth Rank: %d (%.1fx Gold & Strength)", curRebirths, curMult),
-			string.format("Next Rank: %.1fx Permanent Multiplier + %d Gems + 3 Potions! Keeps Exclusive Rods, Pets & Relics.", nextMult, gemGain),
-			Theme.Colors.Gems,
-			Theme.Colors.CardBg
-		)
+		makeSimpleRow(w.body, 1, string.format("✨ Current Rebirth Rank: %d (%.1fx Gold & Strength)", curRebirths, curMult), string.format("Next Rank: %.1fx Permanent Multiplier + %d Gems + 3 Potions! Keeps Exclusive Rods, Pets & Relics.", nextMult, gemGain), Theme.Colors.Gems, Theme.Colors.CardBg)
 
-		local reqCard = makeSimpleRow(
-			w.body,
-			2,
-			string.format("Strength Progress: %s / %s", Util.FormatNumber(curStrength), Util.FormatNumber(reqStr)),
-			"Rebirth resets Gold, Strength & Normal Rods/Islands, while preserving Exclusive Rods & top 12 Locked Trophies!",
-			if ready then Theme.Colors.Success else Theme.Colors.Strength,
-			Theme.Colors.CardBg,
-			66
-		)
+		local reqCard = makeSimpleRow(w.body, 2, string.format("Strength Progress: %s / %s", Util.FormatNumber(curStrength), Util.FormatNumber(reqStr)), "Resets Gold, Strength & Normal Rods/Islands; preserves Exclusive Rods & top 12 Locked Trophies!", if ready then Theme.Colors.Success else Theme.Colors.Strength, Theme.Colors.CardBg)
+		reqCard.Size = UDim2.new(1, 0, 0, 66)
 		local rebBtn = Theme.CreateButton(reqCard, "RebirthBtn", if ready then "✨ REBIRTH!" else "NEED STR", UDim2.fromOffset(138, 38), UDim2.new(1, -150, 0.5, -19), if ready then Theme.Colors.Success else Color3.fromRGB(88, 68, 82), function()
 			Net.FireServer(Net.ClientToServer.DoRebirth)
 		end)
-		rebBtn.TextSize = 15
-		rebBtn.ZIndex = 23
+		rebBtn.TextSize = 15; rebBtn.ZIndex = 23
 
 		local trophyTitle, trophyBody = buildRebirthTrophySummary()
-		makeSimpleRow(w.body, 3, trophyTitle, trophyBody, Theme.Colors.Gold, Theme.Colors.CardOwned, 92)
+		makeSimpleRow(w.body, 3, trophyTitle, trophyBody, Theme.Colors.Gold, Theme.Colors.CardOwned, true)
 	elseif currentTab == "Quests" then
 		local nextStreak = if canClaimDaily then (dailyStreak + 1) else math.max(1, dailyStreak)
 		local dailyGems = AchievementsConfig.GetDailyLoginGems(nextStreak)
@@ -170,8 +170,7 @@ function ProgressPanel.Render()
 		local dBtn = Theme.CreateButton(loginCard, "ClaimDailyBtn", if canClaimDaily then "CLAIM GIFT" else "CLAIMED", UDim2.fromOffset(132, 36), UDim2.new(1, -144, 0.5, -18), if canClaimDaily then Theme.Colors.Success else Theme.Colors.Primary, function()
 			if canClaimDaily then Net.FireServer(Net.ClientToServer.ClaimDailyReward) end
 		end)
-		dBtn.TextSize = 14
-		dBtn.ZIndex = 23
+		dBtn.TextSize = 14; dBtn.ZIndex = 23
 
 		for idx, qDef in ipairs(AchievementsConfig.DailyQuests) do
 			local st = dailyQuests[qDef.id] or { progress = 0, claimed = false }
@@ -182,11 +181,8 @@ function ProgressPanel.Render()
 			local qBtn = Theme.CreateButton(row, "ClaimQuestBtn", if claimed then "DONE" elseif done then "CLAIM" else "IN PROGRESS", UDim2.fromOffset(132, 36), UDim2.new(1, -144, 0.5, -18), if claimed then Theme.Colors.Primary elseif done then Theme.Colors.Success else Color3.fromRGB(72, 82, 108), function()
 				if done and not claimed then Net.FireServer(Net.ClientToServer.ClaimQuest, qDef.id) end
 			end)
-			qBtn.TextSize = 13
-			qBtn.ZIndex = 23
+			qBtn.TextSize = 13; qBtn.ZIndex = 23
 		end
-	elseif currentTab == "Index" then
-		IndexGridSection.Render(w.body, indexFish, indexPets)
 	else
 		for idx, ach in ipairs(AchievementsConfig.List) do
 			local unlocked = claimedAch[ach.id] == true
@@ -204,7 +200,7 @@ function ProgressPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	built.AddTab("Index", function() currentTab = "Index"; ProgressPanel.Render() end)
 	built.AddTab("Trophies", function() currentTab = "Achievements"; ProgressPanel.Render() end)
 	built.OnVisibilityChanged(function(vis: boolean)
-		if not vis then ViewportPool.ClearFocus() end
+		if not vis then ViewportPool.ClearFocus() else ProgressPanel.Render() end
 	end)
 	built.SetActiveTab(rebTab)
 	ProgressPanel.Render()
@@ -222,9 +218,7 @@ end
 function ProgressPanel.SyncBagAndHotbar(fishBag: { any }?, pinnedUids: { [string]: string }?)
 	if fishBag then fishBagCache = fishBag end
 	if pinnedUids then pinnedUidsCache = pinnedUids end
-	if win and win.IsVisible() and currentTab == "Rebirth" then
-		ProgressPanel.Render()
-	end
+	if win and win.IsVisible() and currentTab == "Rebirth" then ProgressPanel.Render() end
 end
 
 function ProgressPanel.SyncFromProfile(p: any)

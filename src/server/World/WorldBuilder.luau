@@ -133,10 +133,13 @@ function WorldBuilder.BuildIsland(
 	)
 	TerrainWaterBuilder.BuildLagoonWater(islandFolder, islandDef)
 
-	-- Tuong chan vo hinh ngoai khoi xa de khong ai chay lac ra khoi ban do
-	PartFactory.Block(islandFolder, "OceanBoundS", Vector3.new(214, 24, 2), CFrame.new(c + Vector3.new(0, 6, 174)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
-	PartFactory.Block(islandFolder, "OceanBoundW", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(-106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
-	PartFactory.Block(islandFolder, "OceanBoundE", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+	-- Tuong chan vo hinh ngoai khoi xa de khong ai chay lac ra khoi ban do (CanQuery = false de khong chan tia Raycast quang phao!)
+	local boundS = PartFactory.Block(islandFolder, "OceanBoundS", Vector3.new(214, 24, 2), CFrame.new(c + Vector3.new(0, 6, 174)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+	local boundW = PartFactory.Block(islandFolder, "OceanBoundW", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(-106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+	local boundE = PartFactory.Block(islandFolder, "OceanBoundE", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+	boundS.CanQuery = false
+	boundW.CanQuery = false
+	boundE.CanQuery = false
 
 	-- 3. Diem hoi sinh / Teleport Pad giua Dao
 	if islandDef.id == 1 then

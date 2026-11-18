@@ -46,7 +46,7 @@ function PropsBuilder.BuildWoodenDock(islandFolder: Folder, center: Vector3, acc
 		false,
 		0.35
 	)
-	PartFactory.AddBillboard(spot, "FISHING PIER", "Click Cast or Tap FISH!", Color3.fromRGB(110, 245, 255), 3.4)
+	PartFactory.AddBillboard(spot, "FISHING PIER", "Equip Rod [1] • Hold & Release on Water!", Color3.fromRGB(110, 245, 255), 3.4)
 end
 
 function PropsBuilder.BuildMarketStalls(islandFolder: Folder, islandDef: Types.IslandDef)
