@@ -36,11 +36,16 @@ Hướng dẫn chuẩn cho **OpenAI Codex** (Kỹ sư trưởng) và **Antigravi
 - `build/mighty-angler-dev.rbxlx` — File place đóng gói sẵn để mở test trên Roblox Studio.
 - `run.bat` — Chạy 1-click trên Windows (chạy 6 bước kiểm tra + build `.rbxlx` + bật `rojo serve`).
 - `logs/app.log` — Nhật ký kiểm tra & lỗi khi build/sync.
-- `tests/README.md`, `tests/studio_data_isolation.luau`, `tools/test_studio_data_isolation.ps1` — Bộ mô phỏng hồi quy cách ly dữ liệu Studio, chạy riêng ngoài 6 chốt chặn; chưa chứng minh khóa phiên/lưu cuối hay Roblox Engine thật.
+- `tests/README.md` — Hướng dẫn trình chạy hồi quy chung `tools/test_studio_data_isolation.ps1`, gồm `studio_data_isolation`, `session_acquisition` và `data_persistence`.
+- `.github/workflows/ci.yml` — GitHub Actions chạy kiểm định và hồi quy trên mỗi push và pull request, lưu log và bản build làm bằng chứng review.
 
-### Lệnh verify bắt buộc sau MỖI task (exit code `0` = đạt đủ 6 chốt chặn)
+### Quy trình trước và sau mỗi thay đổi
+
+- Trước mỗi task, đọc [SPEC_CODE_MATRIX.md](docs/SPEC_CODE_MATRIX.md) và [PROGRESS.md](PROGRESS.md) để nắm trạng thái thực tế. Sau mỗi thay đổi, chạy cả hai lệnh dưới đây và ghi kết quả từng lệnh.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 ```
 
 ---
@@ -53,8 +58,9 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 2. **Chuẩn Roblox Engine API thật (Cấm gọi API ảo):**
    - Luôn kiểm tra class, enum và material hợp lệ của Roblox Engine.
    - **CẤM LẶP LẠI LỖI V1:** Không bao giờ viết `Instance.new("Ball")` (phải là `Instance.new("Part")` + `Shape = Enum.PartType.Ball`), và KHÔNG gán terrain-only material (`Enum.Material.Water`, `Basalt`, `Snow`, `Glacier`, `Ground`, `LeafyGrass`, `Rock`, `Sandstone`, `CrackedLava`, `Mud`, `Salt`, `Limestone`, `Pavement`) trực tiếp lên `BasePart` vì Roblox Studio sẽ crash runtime.
-3. **Làm cuốn chiếu & Test Studio sớm:**
-   - Không code mù hàng chục task một lèo. Mỗi chặng nhỏ xong phải build ra `.rbxlx` hoặc sync Rojo để người dùng bấm **Play (F5)** xem tận mắt trên Roblox Studio ngay.
+3. **Làm cuốn chiếu và kiểm thử hai tầng:**
+   - **Logic thuần:** chạy Luau CLI headless. Dùng mock ở biên dịch vụ như DataStore, tín hiệu và đồng hồ để kiểm logic mà không cần Roblox DataModel thật.
+   - **Gameplay/UI:** sau hai lệnh tự động ở mục 3, mở bản `.rbxlx` hoặc sync Rojo để kiểm tra thủ công phần vừa thay đổi. Nghiệm thu bằng **Play Solo (F5)**, **Server & Clients** trong Roblox Studio và chạy trên **điện thoại thật**. Ghi kết quả từng chế độ trước khi đánh dấu xong. Ca chưa chạy ghi **chờ nghiệm thu**.
 4. **Kiến trúc Server-Authoritative:**
    - Mọi tính toán Gold, Gems, Strength, túi đồ, mồi, thuốc, giao dịch mua bán phải do Server quyết định và kiểm tra; Client chỉ gửi yêu cầu hành động và hiển thị phản hồi.
    - Tập trung toàn bộ RemoteEvent vào một manifest duy nhất (`Net.luau`) và gộp toàn bộ hệ số buff vào một nơi duy nhất (`BuffAggregator`).
@@ -66,3 +72,5 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
    - Trao đổi với người dùng bằng **tiếng Việt đời thường, ngôn ngữ sản phẩm** (trải nghiệm người chơi, hình ảnh, cảm giác bấm nút).
    - Sau mỗi bước ổn định, cập nhật `PROGRESS.md` và tạo atomic `git commit` làm điểm lưu an toàn.
    - Nếu sửa cùng một lỗi quá 2 lần chưa xong → dừng lại ghi rõ vào `PROGRESS.md` để đổi model hoặc chuyển công cụ.
+7. **Phát hành qua staging:**
+   - Publish bản ứng viên lên place staging trước. Chỉ publish lên place chính sau khi đúng bản ứng viên đã qua nghiệm thu trên staging và Kỹ sư trưởng duyệt phát hành.
