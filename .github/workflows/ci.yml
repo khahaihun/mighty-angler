@@ -1,0 +1,90 @@
+name: Mighty Angler CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify, build and test
+    runs-on: windows-2022
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+
+      - name: Install pinned tools
+        id: tools
+        run: |
+          New-Item -ItemType Directory -Force logs | Out-Null
+          Start-Transcript -Path logs/install-tools.log | Out-Null
+          try {
+            function Get-VerifiedDownload($Url, $Path, $Sha256) {
+              Write-Host "Downloading $Url"
+              Invoke-WebRequest -Uri $Url -OutFile $Path -TimeoutSec 90
+              if ((Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -ne $Sha256) {
+                throw "SHA-256 mismatch for $Url"
+              }
+            }
+
+            function Install-Tool($Release, $Archive, $Exe, $Sha256) {
+              $zip = Join-Path $env:RUNNER_TEMP $Archive
+              $target = Join-Path $env:RUNNER_TEMP ([IO.Path]::GetFileNameWithoutExtension($Archive))
+              Get-VerifiedDownload "https://github.com/$Release/$Archive" $zip $Sha256
+              Expand-Archive -LiteralPath $zip -DestinationPath $target -Force
+              $executables = @(Get-ChildItem -LiteralPath $target -Recurse -File -Filter $Exe)
+              if ($executables.Count -ne 1) {
+                throw "Expected exactly one $Exe in $Archive"
+              }
+              Copy-Item -LiteralPath $executables[0].FullName -Destination (Join-Path 'tools' $Exe)
+            }
+
+            Install-Tool 'rojo-rbx/rojo/releases/download/v7.7.1' 'rojo-7.7.1-windows-x86_64.zip' 'rojo.exe' 'd4dfa3493a1613a43fc87312d6dac660d7c8bf38e6a99aa5dcd0d26154ba0b82'
+            Install-Tool 'JohnnyMorganz/luau-lsp/releases/download/1.70.1' 'luau-lsp-win64.zip' 'luau-lsp.exe' '64225b9738102a30de6ee09fb28e5a3827edc402ecf2a6364af570312468159f'
+            Install-Tool 'Kampfkarren/selene/releases/download/0.32.0' 'selene-0.32.0-windows.zip' 'selene.exe' 'c8b693de81d0ddc11490d8e1170dd98d775c2b21431144bd8286f738ef416109'
+            Install-Tool 'luau-lang/luau/releases/download/0.747' 'luau-windows.zip' 'luau.exe' '16bbd26575e9a6a3ecd2bd5fc772a81f3232520b56a40a86f2b47fec576d7cc7'
+            Get-VerifiedDownload 'https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.70.1/scripts/globalTypes.d.luau' 'tools/globalTypes.d.luau' '2857efa8245485f8c25c19c018ee1ef9b46afab4efd2ea70fc3257cd3faf7080'
+          } catch {
+            Write-Host $_
+            throw
+          } finally {
+            Stop-Transcript | Out-Null
+          }
+
+      - name: Run six verification gates
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/verify_project.ps1 2>&1 |
+            Tee-Object -FilePath logs/verify-console.log
+          exit $LASTEXITCODE
+
+      - name: Run Studio isolation, session acquisition and data persistence regressions
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/test_studio_data_isolation.ps1 2>&1 |
+            Tee-Object -FilePath logs/regressions.log
+          exit $LASTEXITCODE
+
+      - name: Save logs and Roblox place
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mighty-angler-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            logs/install-tools.log
+            logs/app.log
+            logs/verify-console.log
+            logs/regressions.log
+            build/mighty-angler-dev.rbxlx
+            build/sourcemap.json
