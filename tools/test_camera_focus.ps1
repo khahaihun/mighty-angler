@@ -2,6 +2,7 @@ param([string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'))
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+[IO.Directory]::CreateDirectory((Join-Path $root 'build')) | Out-Null
 $source = [IO.File]::ReadAllText((Join-Path $root 'src/client/Controllers/CameraFocusController.luau'))
 $runner = @'
 local camera = { FieldOfView = 70 }
