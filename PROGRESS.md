@@ -230,3 +230,5 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 - `tools/test_paid_random_policy.ps1`: PASS 7 trạng thái pending/API lỗi/thiếu trường/string/numeric/true/false, thực thi nguyên hàm policy trích từ nguồn; chưa mô phỏng giao dịch đầy đủ.
 - Verify PASS 6/6, exit 0. Suite chung: cách ly Studio PASS, session 19/19 PASS; data_persistence 3/7 (4 lỗi có sẵn ở nền 9282aa6 thuộc Đợt 1), không sửa ngoài phạm vi.
 - Ca trứng Gold/Relic và giao dịch Gems trên Roblox, hai client/điện thoại: chờ nghiệm thu. Không mở kho thật.
+- Camera/cảm ứng: dùng CameraFocusController giữ ưu tiên thoại 62°, minigame 64°, bình thường 70° và hủy tween cũ; hai thứ tự đóng chạy mô phỏng nguồn thật PASS (`test_camera_focus.ps1`). Touch chỉ cập nhật vị trí ngón đang nạp lực, ngón thứ hai không đổi aim.
+- Verify sau vá camera PASS 6/6 (một sửa kiểu Tween nullable). Suite dữ liệu chạy lại vẫn 4 lỗi nền Đợt 1; log `logs/ui-camera-data-regression.log`. Rê ngón/di chuyển đồng thời và ảnh/video trên máy thật chờ nghiệm thu.
