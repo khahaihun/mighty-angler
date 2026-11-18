@@ -1,5 +1,5 @@
 --!strict
--- PromptController.luau: Xu ly tuong tac ProximityPrompt tai Quay Sell, Shop, May Gym, Tru Trung va Cong Dao
+-- PromptController.luau: Xu ly tuong tac ProximityPrompt voi 4 NPC Hoi thoai, Bệ Enchant, Máy Gym, Trứng & Cổng Đảo
 
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +9,8 @@ local Net = require(Shared:WaitForChild("Net"))
 
 export type PromptCallbacks = {
 	OpenPanel: (panelKey: string) -> (),
+	OpenNpcDialogue: (role: string) -> (),
+	OpenEnchantAltar: () -> (),
 	TriggerGymRep: () -> (),
 }
 
@@ -17,7 +19,17 @@ local PromptController = {}
 function PromptController.Init(callbacks: PromptCallbacks)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, _player: Player)
 		local kind = prompt:GetAttribute("PromptKind")
-		if kind == "SellAll" then
+		if kind == "NpcMerchant" then
+			callbacks.OpenNpcDialogue("Merchant")
+		elseif kind == "NpcShop" then
+			callbacks.OpenNpcDialogue("Shop")
+		elseif kind == "NpcCollector" then
+			callbacks.OpenNpcDialogue("Collector")
+		elseif kind == "NpcCoach" then
+			callbacks.OpenNpcDialogue("Coach")
+		elseif kind == "OpenEnchantAltar" then
+			callbacks.OpenEnchantAltar()
+		elseif kind == "SellAll" then
 			Net.FireServer(Net.ClientToServer.SellAllFish)
 		elseif kind == "OpenShop" then
 			callbacks.OpenPanel("Shop")

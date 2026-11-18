@@ -1,7 +1,18 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 11:42 bởi Antigravity & OpenAI Codex (`gpt-6.2-astra`)
-- **Trạng thái hiện tại:** **HAI AI ĐÃ ĐẠT 100% ĐỒNG THUẬN CHỐT `PLAN.md` ĐẠI TU 2.0** *(Biên bản đóng dấu tại `docs/CODEX_CONSENSUS_STAMP.md` — sẵn sàng bắt đầu thi công `Chặng A → Chặng D` ngay khi chủ dự án phát lệnh)*.
+- **Cập nhật lần cuối:** 2026-11-18 11:55 bởi Antigravity
+- **Trạng thái hiện tại:** **Đang thi công trọn gói Đại Tu 2.0 (`Chặng A → Chặng D`)** — Đã hoàn tất **Chặng A (`A1–A3`)** đạt `[PASS] 6/6`, đang chuyển sang **Chặng B (`B1–B3`)**.
+
+---
+
+## Tiến Độ Đại Tu 2.0 (Phase 2 Overhaul)
+- [x] **Chặng A (`A1–A3`) — Nước Biển Sóng Thật, Xoáy Nước & Dàn 4 NPC R15 Hội Thoại:**
+  - `TerrainWaterBuilder.luau`: Đổ `Terrain:FillBlock` cục bộ từng đảo (không xóa địa hình chung), giữ hộp neo `FishingWater` vô hình (`CanQuery = false`), bổ sung đồi vách đa tầng, ngọn hải đăng Đảo 1, lửa trại, hàng rào dây thừng và Bệ `Enchant Altar`.
+  - `WhirlpoolManager.luau`: Xoáy nước sủi bọt + cột sáng + bóng cá bơi vòng, nhân `×2` tổng Luck và `×2` trọng số rớt Boss khi quăng trúng vùng xoáy.
+  - `NpcBuilder.luau` & `NpcDialogueModal.luau`: 4 NPC R15 cử động thở/vẫy tay (*Captain Barnaby*, *Master Kaito*, *Old Man Finn*, *Coach Atlas*) + hộp thoại đa lựa chọn an toàn (mở rồi đóng thoại Merchant giữ nguyên 100% túi cá).
+- [~] **Chặng B (`B1–B3`) — Session Lock `v2`, Hotbar Cầm Đồ/Khoe Cá, Vật Lý Nảy Đất, 5 Chỉ Số Cần & Exclusive Rod**
+- [ ] **Chặng C (`C1–C3`) — Lưới Thẻ 3D `ViewportPool`, Khóa Cá, Bán Chọn Lọc, Appraise & Fish Bounty**
+- [ ] **Chặng D (`D1–D3`) — Mô Hình 3D Chi Tiết Cao, `ClientPetRenderer`, Đập Trứng, Rank Aura & Âm Thanh**
 
 ---
 

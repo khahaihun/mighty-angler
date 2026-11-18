@@ -58,7 +58,8 @@ function FishingRoller.RollFishSpecies(
 	forcedRarity: string?,
 	islandDef: Types.IslandDef,
 	rodPower: number,
-	mults: Types.AggregatedMultipliers
+	mults: Types.AggregatedMultipliers,
+	inWhirlpool: boolean?
 ): Types.FishDef
 	if forcedRarity then
 		for _, f in ipairs(islandDef.fishPool) do
@@ -78,13 +79,16 @@ function FishingRoller.RollFishSpecies(
 		return islandDef.fishPool[1]
 	end
 
+	local wpMult = if inWhirlpool then 2.0 else 1.0
+	local effectiveLuck = mults.luckMult * wpMult
+
 	return Util.PickWeighted(candidates, function(f: Types.FishDef): number
 		local w = f.weightChance
 		local order = GameConfig.RarityOrder[f.rarity] or 1
 		if f.rarity == "Boss" then
-			w = w * mults.bossChanceMult * math.sqrt(mults.luckMult)
+			w = w * mults.bossChanceMult * wpMult * (1 + 0.25 * math.max(0, effectiveLuck - 1))
 		elseif order >= 3 then
-			w = w * mults.luckMult
+			w = w * effectiveLuck
 		end
 		return w
 	end)

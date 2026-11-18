@@ -21,12 +21,14 @@ local FishingRoller = require(script.Parent.FishingRoller)
 
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 local PetAndFishVisuals = require(script.Parent.Parent.World.PetAndFishVisuals)
+local WhirlpoolManager = require(script.Parent.Parent.World.WhirlpoolManager)
 
 type CastSession = {
 	sessionId: string,
 	state: "Waiting" | "Minigame",
 	islandId: number,
 	waterPos: Vector3,
+	inWhirlpool: boolean,
 	rolledFish: Types.FishDef?,
 	rolledMutation: Types.MutationName,
 	expiresAt: number,
@@ -188,11 +190,13 @@ function FishingService.StartCast(player: Player)
 		+ math.random() * (GameConfig.BASE_BITE_MAX_SEC - GameConfig.BASE_BITE_MIN_SEC)
 	local biteDelay = math.max(0.65, rawWait / math.max(1, mults.biteSpeedMult))
 
+	local inWhirlpool = WhirlpoolManager.IsPointInWhirlpool(islandId, waterPos)
 	sessions[player] = {
 		sessionId = sessionId,
 		state = "Waiting",
 		islandId = islandId,
 		waterPos = waterPos,
+		inWhirlpool = inWhirlpool,
 		rolledFish = nil,
 		rolledMutation = "None",
 		expiresAt = os.clock() + biteDelay + 20,
@@ -203,6 +207,7 @@ function FishingService.StartCast(player: Player)
 		sessionId = sessionId,
 		waterPos = waterPos,
 		biteDelay = biteDelay,
+		inWhirlpool = inWhirlpool,
 	})
 
 	task.delay(biteDelay, function()
@@ -221,7 +226,7 @@ function FishingService.StartCast(player: Player)
 		local islandDef = IslandsRegistry.Get(current.islandId)
 		local forced = forcedRarityDev[player]
 		forcedRarityDev[player] = nil
-		local fish = FishingRoller.RollFishSpecies(forced, islandDef, rod.power, latestMults)
+		local fish = FishingRoller.RollFishSpecies(forced, islandDef, rod.power, latestMults, current.inWhirlpool)
 		local rawMut, _ = FishingRoller.RollMutation(latestMults.mutationMult)
 		local mutName = (rawMut :: any) :: Types.MutationName
 

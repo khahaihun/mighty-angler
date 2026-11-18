@@ -11,14 +11,6 @@ local PartFactory = require(script.Parent.PartFactory)
 
 local PropsBuilder = {}
 
-local function buildStylizedNpc(parent: Instance, basePos: Vector3, shirtColor: Color3, hatColor: Color3)
-	PartFactory.Block(parent, "NpcLegs", Vector3.new(2.2, 2.2, 1.2), CFrame.new(basePos + Vector3.new(0, 1.1, 0)), Color3.fromRGB(52, 74, 112))
-	PartFactory.Block(parent, "NpcTorso", Vector3.new(2.4, 2.4, 1.3), CFrame.new(basePos + Vector3.new(0, 3.4, 0)), shirtColor)
-	PartFactory.Ball(parent, "NpcHead", 2.0, basePos + Vector3.new(0, 5.5, 0), Color3.fromRGB(255, 216, 178), Enum.Material.SmoothPlastic, false)
-	PartFactory.VerticalCylinder(parent, "NpcHatBrim", 0.3, 3.1, CFrame.new(basePos + Vector3.new(0, 6.35, 0)), hatColor)
-	PartFactory.VerticalCylinder(parent, "NpcHatTop", 1.0, 1.9, CFrame.new(basePos + Vector3.new(0, 6.85, 0)), hatColor)
-end
-
 function PropsBuilder.BuildWoodenDock(islandFolder: Folder, center: Vector3, accentColor: Color3)
 	local dockModel = Instance.new("Model")
 	dockModel.Name = "FishingDock"
@@ -75,10 +67,9 @@ function PropsBuilder.BuildMarketStalls(islandFolder: Folder, islandDef: Types.I
 	end
 	PartFactory.Block(sellFolder, "Roof", Vector3.new(15.2, 1.1, 8.6), CFrame.new(sellPos + Vector3.new(0, 9.2, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(245, 92, 76))
 	PartFactory.Block(sellFolder, "RoofStripe", Vector3.new(5.2, 1.18, 8.7), CFrame.new(sellPos + Vector3.new(0, 9.22, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(255, 246, 224))
-	buildStylizedNpc(sellFolder, sellPos + Vector3.new(0, 0, -4.2), Color3.fromRGB(245, 152, 56), Color3.fromRGB(245, 214, 92))
 
-	PartFactory.AddBillboard(counter, "FISH MARKET", "Sell Your Catch for Gold!", Color3.fromRGB(255, 222, 76), 8.8)
-	PartFactory.AddPrompt(counter, "Sell All Fish", "Fish Market", 16, "SellAll", { IslandId = islandDef.id })
+	PartFactory.AddBillboard(counter, "FISH MARKET", "Talk to Captain Barnaby!", Color3.fromRGB(255, 222, 76), 8.8)
+	PartFactory.AddPrompt(counter, "Talk to Merchant", "Fish Market", 16, "NpcMerchant", { IslandId = islandDef.id })
 
 	-- 2. Quay Cua Hang Can Cau & Phu Kien (Angler Shop - Ben Phai)
 	local shopFolder = Instance.new("Model")
@@ -95,10 +86,9 @@ function PropsBuilder.BuildMarketStalls(islandFolder: Folder, islandDef: Types.I
 	end
 	PartFactory.Block(shopFolder, "Roof", Vector3.new(15.2, 1.1, 8.6), CFrame.new(shopPos + Vector3.new(0, 9.2, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(56, 168, 255))
 	PartFactory.Block(shopFolder, "RoofStripe", Vector3.new(5.2, 1.18, 8.7), CFrame.new(shopPos + Vector3.new(0, 9.22, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(245, 250, 255))
-	buildStylizedNpc(shopFolder, shopPos + Vector3.new(0, 0, -4.2), Color3.fromRGB(62, 182, 245), Color3.fromRGB(48, 72, 128))
 
-	PartFactory.AddBillboard(shopCounter, "ANGLER SHOP", "Rods, Bait & Gym Gear", Color3.fromRGB(98, 224, 255), 8.8)
-	PartFactory.AddPrompt(shopCounter, "Open Shop", "Angler Shop", 16, "OpenShop", { IslandId = islandDef.id })
+	PartFactory.AddBillboard(shopCounter, "ANGLER SHOP", "Rods, Bait & Exclusive Gear", Color3.fromRGB(98, 224, 255), 8.8)
+	PartFactory.AddPrompt(shopCounter, "Talk to Crafter", "Angler Shop", 16, "NpcShop", { IslandId = islandDef.id })
 end
 
 local function buildGymEquipmentVisual(parent: Instance, stationType: string, pos: Vector3, accentColor: Color3)

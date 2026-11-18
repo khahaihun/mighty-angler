@@ -19,6 +19,7 @@ local ClientStateController = require(script.Controllers.ClientStateController)
 local TutorialController = require(script.Controllers.TutorialController)
 
 local WindowFrame = require(script.UI.Components.WindowFrame)
+local NpcDialogueModal = require(script.UI.Components.NpcDialogueModal)
 local HudPanel = require(script.UI.Panels.HudPanel)
 local BagPanel = require(script.UI.Panels.BagPanel)
 local ShopPanel = require(script.UI.Panels.ShopPanel)
@@ -120,8 +121,35 @@ GymController.Init()
 ClientStateController.Init(progressModRef)
 TutorialController.Init(rootGui)
 
+NpcDialogueModal.Mount(rootGui, {
+	OpenPanel = toggleExclusivePanel,
+	OpenBagSelectMode = function()
+		toggleExclusivePanel("Bag")
+	end,
+	OpenEnchantOrBounty = function(_tabName: string)
+		toggleExclusivePanel("Shop")
+	end,
+	SellHeldFish = function()
+		SoundAndFxController.ShowToast("Info", "Equip a fish onto your Hotbar (Stage B) to sell held fish!")
+	end,
+	AppraiseHeldFish = function()
+		SoundAndFxController.ShowToast("Info", "Appraisal unlocks with Held Fish Hotbar in Stage B & C!")
+	end,
+})
+
 PromptController.Init({
 	OpenPanel = toggleExclusivePanel,
+	OpenNpcDialogue = function(role: string)
+		SoundAndFxController.PlaySfx("Click")
+		for _, w in pairs(windows) do
+			w.SetVisible(false)
+		end
+		NpcDialogueModal.OpenForRole(role)
+	end,
+	OpenEnchantAltar = function()
+		SoundAndFxController.PlaySfx("Click")
+		toggleExclusivePanel("Shop")
+	end,
 	TriggerGymRep = function()
 		GymController.TriggerManualRep()
 	end,

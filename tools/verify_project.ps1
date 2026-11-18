@@ -79,8 +79,13 @@ foreach ($file in $luauFiles) {
         if ($codePart -match $badClassRegex) {
             $violations += "${rel}:$($i+1) Goi Instance.new sai ten class ('$($Matches[1])'). Dung Instance.new('Part') + Shape hoac WedgePart!"
         }
-        if (($codePart -match $terrainMatRegex) -and ($codePart -notmatch "Terrain")) {
-            $violations += "${rel}:$($i+1) Gan vat lieu chi danh cho Terrain ('Enum.Material.$($Matches[1])') len BasePart se gay crash Studio!"
+        if ($codePart -match $terrainMatRegex) {
+            $matName = $Matches[1]
+            $isTerrainCall = ($codePart -match "Terrain")
+            $isEqualityCheck = ($codePart -match "(==|~=|~=)\s*Enum\.Material\.$matName\b") -or ($codePart -match "Enum\.Material\.$matName\s*(==|~=)")
+            if ((-not $isTerrainCall) -and (-not $isEqualityCheck)) {
+                $violations += "${rel}:$($i+1) Gan vat lieu chi danh cho Terrain ('Enum.Material.$matName') len BasePart se gay crash Studio!"
+            }
         }
         $anglesIdx = $codePart.IndexOf("CFrame.Angles(")
         if ($anglesIdx -ge 0) {

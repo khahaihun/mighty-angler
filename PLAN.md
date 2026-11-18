@@ -140,13 +140,13 @@ Gọi `B` là cây Cần thường có `order` cao nhất trong `profile.ownedRo
 Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành & PASS 6/6.
 
 ### 🏝️ CHẶNG A: ĐẠI TU THẾ GIỚI 5 ĐẢO, NƯỚC SÓNG THẬT, XOÁY NƯỚC & NPC HỘI THOẠI
-- [ ] **A1 — Nước Biển Sóng Thật (`Terrain:FillBlock` cục bộ) & Địa Hình 5 Đảo Đa Tầng Chi Tiết:**
+- [x] **A1 — Nước Biển Sóng Thật (`Terrain:FillBlock` cục bộ) & Địa Hình 5 Đảo Đa Tầng Chi Tiết:**
   - Cập nhật `verify_project.ps1` cho phép `Terrain:FillBlock` và phép so sánh `==` / `~=` với `Enum.Material.Water` nhưng chặn mọi phép gán `.Material = Enum.Material.Water` lên `BasePart`.
   - Đổ `Terrain Water` sóng thật đúng trong hộp hồ biển của 5 đảo (không gọi `Terrain:Clear()`), giữ `FishingWater` vô hình nằm đúng trong từng thư mục `Island_<id>` với mặt trên khớp mặt nước (loại khỏi Raycast vật cản), nâng cấp cảnh quan đa tầng 5 Đảo + Bệ `Enchant Altar`.
   - *Nghiệm thu ngay cuối A1:* Câu thành công trên **cả 5 đảo** ngay sau khi thay nước Terrain, và địa hình ngoài hộp tạo biển vẫn còn nguyên vẹn.
-- [ ] **A2 — Hệ Thống Xoáy Nước Cá Hiếm Trên Biển (`WhirlpoolManager.luau`):**
+- [x] **A2 — Hệ Thống Xoáy Nước Cá Hiếm Trên Biển (`WhirlpoolManager.luau`):**
   - Xuất hiện ngẫu nhiên xoáy nước sủi bọt + cột sáng + đàn bóng cá bơi vòng dưới mặt nước; quăng trúng vùng xoáy nhân đôi hệ số Luck tổng và nhân đôi trọng số Boss.
-- [ ] **A3 — Dàn 4 NPC Người Thật R15 (`NpcBuilder.luau`) & Khung Hội Thoại (`NpcDialogueModal.luau`):**
+- [x] **A3 — Dàn 4 NPC Người Thật R15 (`NpcBuilder.luau`) & Khung Hội Thoại (`NpcDialogueModal.luau`):**
   - Dựng 4 NPC R15 (Merchant, Shop/Crafter, Appraiser/Collector, Gym Coach) có cử động đứng thở/vẫy tay + hộp thoại đa lựa chọn; mở rồi đóng thoại Merchant giữ nguyên 100% túi cá.
   - *Nghiệm thu Chặng A:* Câu thành công trên cả 5 đảo ngay trên nước Terrain mới; địa hình ngoài vùng biển giữ nguyên; đóng/mở thoại NPC an toàn.
 

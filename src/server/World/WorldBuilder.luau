@@ -13,6 +13,8 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 local PartFactory = require(script.Parent.PartFactory)
 local PropsBuilder = require(script.Parent.PropsBuilder)
 local IslandScenery1_2 = require(script.Parent.IslandScenery1_2)
+local TerrainWaterBuilder = require(script.Parent.TerrainWaterBuilder)
+local NpcBuilder = require(script.Parent.NpcBuilder)
 
 local WorldBuilder = {}
 
@@ -113,7 +115,7 @@ function WorldBuilder.BuildIsland(
 		)
 	end
 
-	-- 2. Ho Bien Phia Nam (Vung Nuoc Cau Ca + Day cat an toan khong bao gio roi vuc!)
+	-- 2. Ho Bien Phia Nam (Nuoc bien song that Terrain Water + Day cat an toan khong roi vuc!)
 	local lagoonCenter = c + Vector3.new(0, 0, 114)
 	PartFactory.Block(
 		islandFolder,
@@ -122,7 +124,6 @@ function WorldBuilder.BuildIsland(
 		CFrame.new(lagoonCenter + Vector3.new(0, -4.8, 0)),
 		theme.sandColor
 	)
-	-- Doc thoai tu day bien len bai cat de nhay xuong nuoc di bo len de dang
 	PartFactory.Wedge(
 		islandFolder,
 		"BeachSlope",
@@ -130,19 +131,7 @@ function WorldBuilder.BuildIsland(
 		CFrame.new(c + Vector3.new(0, -1.9, 64)) * CFrame.Angles(0, math.rad(180), 0),
 		theme.sandColor
 	)
-
-	local waterPart = PartFactory.Block(
-		islandFolder,
-		"FishingWater",
-		Vector3.new(206, 1.2, 118),
-		CFrame.new(lagoonCenter + Vector3.new(0, -1.8, 0)),
-		theme.waterColor,
-		Enum.Material.Glass,
-		false,
-		0.28
-	)
-	waterPart:SetAttribute("IsFishingWater", true)
-	waterPart:SetAttribute("IslandId", islandDef.id)
+	TerrainWaterBuilder.BuildLagoonWater(islandFolder, islandDef)
 
 	-- Tuong chan vo hinh ngoai khoi xa de khong ai chay lac ra khoi ban do
 	PartFactory.Block(islandFolder, "OceanBoundS", Vector3.new(214, 24, 2), CFrame.new(c + Vector3.new(0, 6, 174)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
@@ -185,6 +174,8 @@ function WorldBuilder.BuildIsland(
 	local goldEggCost, gemEggCost = getDefaultEggCosts(islandDef.id)
 	PropsBuilder.BuildEggPedestals(islandFolder, islandDef, goldEggCost, gemEggCost)
 	PropsBuilder.BuildPortals(islandFolder, islandDef, nextIsland)
+	TerrainWaterBuilder.BuildMultiTierReliefAndProps(islandFolder, islandDef)
+	NpcBuilder.BuildIslandNpcs(islandFolder, islandDef)
 
 	-- 5. Trang tri canh quan theo chu de Dao
 	local sceneryFolder = Instance.new("Folder")
@@ -203,6 +194,7 @@ end
 function WorldBuilder.BuildAll(): Folder
 	AssetRegistry.EnsureFolders()
 	WorldBuilder.SetupLighting()
+	TerrainWaterBuilder.ConfigureTerrainWater()
 
 	local existing = Workspace:FindFirstChild(WORLD_FOLDER_NAME)
 	if existing and existing:IsA("Folder") then

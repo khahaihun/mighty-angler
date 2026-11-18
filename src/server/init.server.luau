@@ -9,6 +9,7 @@ local PotionsConfig = require(Shared:WaitForChild("Config"):WaitForChild("Potion
 local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfig"))
 
 local WorldBuilder = require(script.World.WorldBuilder)
+local WhirlpoolManager = require(script.World.WhirlpoolManager)
 local DataService = require(script.Services.DataService)
 local PerkService = require(script.Services.PerkService)
 local CurrencyService = require(script.Services.CurrencyService)
@@ -24,6 +25,7 @@ local DevTestService = require(script.Services.DevTestService)
 -- 1. Khoi tao mang RemoteEvent va dung canh quan the gioi
 Net.InitServer()
 WorldBuilder.BuildAll()
+WhirlpoolManager.Init()
 
 -- 2. Khoi tao cac Service nen tang & Endgame
 DataService.Init()
