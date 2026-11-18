@@ -36,7 +36,6 @@ local activeSpec: MinigameSpec? = nil
 local startClock = 0.0
 local currentRound = 1
 local awaitingRoundAck: number? = nil
-local awaitingSinceClock = 0.0
 local strikeCooldownUntil = 0.0
 local strikeCallback: ((string, number, number) -> ())? = nil
 local openStateChangedCallback: ((boolean) -> ())? = nil
@@ -76,19 +75,17 @@ local function attemptStrike()
 		return
 	end
 	-- Neu dang cho Server phan hoi cu bam vua gui (< 0.50s), khong gui trung cung 1 round!
-	if awaitingRoundAck == currentRound and (now - awaitingSinceClock) < 0.50 then
+	if awaitingRoundAck == currentRound then
 		return
 	end
 
 	local elapsed = math.max(0.01, now - startClock)
-	if elapsed > (spec.timeoutSec + 0.45) then
-		closeMinigame()
+	if elapsed > spec.timeoutSec then
 		return
 	end
 
 	strikeCooldownUntil = now + 0.12
 	awaitingRoundAck = currentRound
-	awaitingSinceClock = now
 
 	if strikeCallback then
 		strikeCallback(spec.sessionId, currentRound, elapsed)
@@ -216,8 +213,8 @@ function MinigameBar.Start(spec: MinigameSpec)
 			return
 		end
 		local elapsed = os.clock() - startClock
-		if elapsed >= (cur.timeoutSec + 0.45) then
-			closeMinigame()
+		if elapsed >= cur.timeoutSec then
+			if progressLbl then progressLbl.Text = "WAITING FOR SERVER..." end
 			return
 		end
 		local pos = Util.TriangleBounce(0.08, cur.speed, elapsed)
