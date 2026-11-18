@@ -224,3 +224,9 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 ## Bước tiếp theo dành cho Chủ dự án khi thức dậy [ ]
 - [ ] Mở Roblox Studio → **File → Open from File...** → chọn `D:\Projects\mighty-angler\build\mighty-angler-dev.rbxlx` (hoặc chạy `run.bat`) → bấm **Play (F5)** để trải nghiệm & dùng nút **`🛠️ [DEV]`** góc phải trên màn hình test nhanh toàn bộ 5 Đảo, Boss, Pet, Rebirth và Server Event.
 - [ ] Trước khi Publish chính thức lên Roblox: điền `ROBLOX_GROUP_ID` thật vào `src/shared/Config/GameConfig.luau` và 4 mã `id` Gamepass thật vào `src/shared/Config/GamepassesConfig.luau`.
+
+## Nhánh thi công riêng Đợt 3 — Codex UI (nền 9282aa6)
+- 3.1 / Codex P1-13: PerkService chỉ chấp nhận boolean false; lỗi API và Studio offline không còn tự mở quyền. Hai điểm trừ Gems (PetsService, EnchantAndBountyService) đã có kiểm policy server và giữ nguyên.
+- `tools/test_paid_random_policy.ps1`: PASS 7 trạng thái pending/API lỗi/thiếu trường/string/numeric/true/false, thực thi nguyên hàm policy trích từ nguồn; chưa mô phỏng giao dịch đầy đủ.
+- Verify PASS 6/6, exit 0. Suite chung: cách ly Studio PASS, session 19/19 PASS; data_persistence 3/7 (4 lỗi có sẵn ở nền 9282aa6 thuộc Đợt 1), không sửa ngoài phạm vi.
+- Ca trứng Gold/Relic và giao dịch Gems trên Roblox, hai client/điện thoại: chờ nghiệm thu. Không mở kho thật.

@@ -53,7 +53,7 @@ local function loadPolicyForPlayer(player: Player)
 			return PolicyService:GetPolicyInfoForPlayerAsync(player)
 		end)
 		if ok and type(info) == "table" then
-			paidRandomPolicyState[player] = if info.ArePaidRandomItemsRestricted == true then "Restricted" else "Allowed"
+			paidRandomPolicyState[player] = if info.ArePaidRandomItemsRestricted == false then "Allowed" else "Restricted"
 			PerkService.PushPerks(player)
 			return
 		end
@@ -61,8 +61,8 @@ local function loadPolicyForPlayer(player: Player)
 			task.wait(1.0)
 		end
 	end
-	-- Fail-closed tren server publish; chi cho phep trong Studio offline PlaceId == 0
-	paidRandomPolicyState[player] = if RunService:IsStudio() and game.PlaceId == 0 then "Allowed" else "Restricted"
+	-- Never infer permission from an unavailable or malformed policy response.
+	paidRandomPolicyState[player] = "Restricted"
 	PerkService.PushPerks(player)
 end
 
