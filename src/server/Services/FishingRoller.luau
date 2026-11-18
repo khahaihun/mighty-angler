@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local OddsCalculator = require(Shared:WaitForChild("OddsCalculator"))
 local Util = require(Shared:WaitForChild("Util"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
@@ -135,13 +136,7 @@ function FishingRoller.GetEligibleCandidates(
 	effPower: number,
 	effMaxWeight: number
 ): { Types.FishDef }
-	local list: { Types.FishDef } = {}
-	for _, f in ipairs(islandDef.fishPool) do
-		if effPower >= f.minRodPower and f.minWeight <= effMaxWeight then
-			table.insert(list, f)
-		end
-	end
-	return list
+	return OddsCalculator.GetEligibleCandidates(islandDef, effPower, effMaxWeight)
 end
 
 function FishingRoller.RollFishSpecies(
@@ -162,18 +157,8 @@ function FishingRoller.RollFishSpecies(
 		return islandDef.fishPool[1]
 	end
 
-	local wpMult = if inWhirlpool then 2.0 else 1.0
-	local effectiveLuck = mults.luckMult * wpMult
-
-	return Util.PickWeighted(candidates, function(f: Types.FishDef): number
-		local w = f.weightChance
-		local order = GameConfig.RarityOrder[f.rarity] or 1
-		if f.rarity == "Boss" then
-			w = w * mults.bossChanceMult * wpMult * (1 + 0.25 * math.max(0, effectiveLuck - 1))
-		elseif order >= 3 then
-			w = w * effectiveLuck
-		end
-		return w
+	return Util.PickWeighted(candidates, function(fish: Types.FishDef): number
+		return OddsCalculator.GetFishWeight(fish, mults.luckMult, mults.bossChanceMult, inWhirlpool == true)
 	end)
 end
 

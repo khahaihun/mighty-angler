@@ -13,6 +13,7 @@ local GymGearConfig = require(Shared:WaitForChild("Config"):WaitForChild("GymGea
 local GamepassesConfig = require(Shared:WaitForChild("Config"):WaitForChild("GamepassesConfig"))
 
 local Theme = require(script.Parent.Parent.Theme)
+local PurchaseOddsController = require(script.Parent.Parent.Parent.Controllers.PurchaseOddsController)
 local WindowFrame = require(script.Parent.Parent.Components.WindowFrame)
 local ViewportCard = require(script.Parent.Parent.Components.ViewportCard)
 local ViewportPool = require(script.Parent.Parent.Components.ViewportPool)
@@ -157,7 +158,7 @@ function ShopPanel.Render()
 			if selOwned then "OWNED ✅" else ("BUY R$ " .. tostring(selGp.robuxDisplay)),
 			if selOwned then Theme.Colors.Primary else Theme.Colors.Success,
 			function()
-				if not selOwned then Net.FireServer(Net.ClientToServer.PromptGamepass, selGp.key) end
+				if not selOwned then PurchaseOddsController.Show(selGp.key) end
 			end
 		)
 
@@ -180,7 +181,7 @@ function ShopPanel.Render()
 						selectedPassKey = gp.key
 						ShopPanel.Render()
 					elseif not hasPass then
-						Net.FireServer(Net.ClientToServer.PromptGamepass, gp.key)
+						PurchaseOddsController.Show(gp.key)
 					end
 				end,
 			})

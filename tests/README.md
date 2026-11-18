@@ -39,3 +39,21 @@ Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉ
 `data_persistence.luau` dùng lại kho RAM và lịch coroutine của `session_fixture.luau`. Bảy ca kiểm hai phiên tranh khóa, thử lại lưu cuối khi lỗi tạm, phản hồi lưu muộn, hai đường đóng đồng thời, hồ sơ sai kiểu, nút Reset DEV trong lúc autosave và nộp lại cùng UID cá trước/sau đổi máy chủ.
 
 Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.
+
+## Hồi quy Đợt 3 (không truy cập kho Roblox)
+
+Chạy cùng `tools/luau.exe` như trên:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_paid_random_policy.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_paid_random_transactions.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_live_odds.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_catch_control.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_camera_focus.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_particle_budget.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_animation_pose.ps1
+```
+
+Các runner tự tạo `build/`, nhúng nguồn thật, giả lập các biên Engine rồi trả exit khác 0 nếu lỗi. Policy transactions chạy nguyên hàm tải policy và handler HatchEgg/RollEnchant; biên tiền, vị trí, cấp pet và roll được giả lập. Live odds tải cấu hình, OddsCalculator, FishingRoller, BuffAggregator, provider pet và vật phẩm thật; 19.200 rổ gồm năm đảo, cần thường/Exclusive, phù phép, mồi, thuốc, pet Tiki, mọi sự kiện, bốn chế độ và hai loại nước. Bộ này đối chiếu callback trọng số đi qua RollFishSpecies, tổng rổ, loài bị loại, Swift/Midas, trứng và biên Shiny của RollMutation. Thời gian, quyền gamepass và chọn số ngẫu nhiên là biên điều khiển.
+
+Pose dùng đại số CFrame giản lược để kiểm vòng đời và thứ tự cập nhật, không kiểm hướng khớp hay hình học trên Engine. Camera/particle cũng là mô phỏng. Nghiệm thu hai client R6/R15, hai thứ tự đóng thoại, đa cảm ứng, ảnh/video và frame time median/p95 trên điện thoại vẫn cần chạy riêng; PASS không thay các ca đó.
