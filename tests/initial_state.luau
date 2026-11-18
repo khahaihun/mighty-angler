@@ -19,7 +19,7 @@ local function client(sources)
 		GymController = panel, SoundAndFxController = panel, HotbarAndBaitUi = panel,
 		BagPanel = panel, ShopPanel = panel, PetsPanel = panel, EnchantAndBountyModal = panel,
 		PlaytimeAndSettingsModal = panel,
-		
+
 	}
 	local f = Client.new(sources, true, deps)
 	f.load("HudPanel").Mount({}, { OnTogglePanel=ignore,OnCancelCast=ignore,OnToggleAutoFish=ignore,OnToggleAutoTrain=ignore,OnManualGymTap=ignore })

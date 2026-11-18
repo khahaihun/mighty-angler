@@ -1,5 +1,7 @@
 # V3_REGRESSION_MATRIX — bảo vệ 21 mục đã đạt theo mã
 
+> **Ứng viên hợp nhất cuối:** code kiểm sạch `dd53d3a`, đã nhập dữ liệu đến1.5 `8699970`. Tất cả13 runner mặc định exit0 +verify6/6; init14/14 (13gốc+1giao thoa LiveOdds/readOnly), schema29/29, Reset12/12, persistence7/7; Source101/101, hash `9BD66C58AD037E8D5AAE3841841E315EC0B727465FC98CB56699A35A1D52EDE5`. Các phần kết quả nền9282aa6/ghép sơ bộ bên dưới là **lịch sử**, lỗi/pending cũ không còn là kết quả hiện tại. [Bàn giao23mã và checklist cuối](V3_BAN_GIAO_NGHIEM_THU.md). **Studio chưa chạy vì quyền ứng dụng; toàn bộ ca Engine vẫn chờ, chưa duyệt phát hành.**
+
 - Nền chạy: `9282aa6`, nhánh riêng `codex/v3-regression`, ngày 18/11/2026, Codex (công nhân kiểm thử).
 - Nguồn 21 ID: các dòng **Đạt** trong `docs/CODEX_CODE_AUDIT_V3.md`: 12 Argon + 9 Codex. Đây là 21 nhận định kiểm toán theo mã, **không phải 21 ca Studio đã đạt**.
 - Không sửa `src/`, suite dữ liệu cũ, hoặc checkout chính. Suite mới dùng nguồn production nguyên văn nhúng vào Luau VM; chỉ giả lập Net, DataService, vị trí NPC, biểu diễn, cấu hình thành tựu và biên dịch vụ liên quan.

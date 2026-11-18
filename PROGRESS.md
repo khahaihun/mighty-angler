@@ -1,7 +1,7 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 19:24 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Đã thi công tới hết **1.5**, chờ Kỹ sư trưởng review chuỗi commit 1.3–1.5 và các vá slot 0/lease Reset. Bộ chung **exit 0**: 19 acquisition, 12 lifecycle, 29 schema, 12 Reset, 13 init/HUD, 7 persistence và cách ly Studio. Verify **6/6 exit 0**, build **92/92 script khớp nguồn** qua sourcemap. Code 1.2 đã được chấp nhận. **Chưa phát hành; Play Solo/Server & Clients/hai server/điện thoại/staging chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 bởi Codex (tích hợp/nghiệm thu tự động)
+- **Trạng thái hiện tại:** Nhánh dự án có bản ứng viên hợp nhất đến hết1.5 (`8699970`) cùng gameplay/UI/odds; mã kiểm sạch `dd53d3a`. Tất cả13 runner mặc định exit0, verify6/6, Source101/101; init14/14 (13gốc+1giao thoa LiveOdds/readOnly), schema29, Reset12, persistence7. Năm file cam kết<310. **Chưa duyệt phát hành; Studio chưa chạy vì quyền ứng dụng; Play Solo/hai client/hai server staging/điện thoại chờ nghiệm thu.** Xem [bàn giao cuối](docs/V3_BAN_GIAO_NGHIEM_THU.md) và [matrix21](docs/V3_REGRESSION_MATRIX.md).
 
 ## Mục 1.5 — Một snapshot mỗi yêu cầu và cảnh báo quyền ghi
 
@@ -445,3 +445,10 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 - Bảng trực tiếp trên điện thoại/Engine và readOnly UI sau tích hợp: chờ nghiệm thu. Lần đầu verify phát hiện union callback; đã giải quyết ở lần sửa thứ2 bằng khai báo kiểu và nhánh gán rõ ràng; không còn lỗi vượt hai vòng.
 - UI Live Odds `9c93901` đã merge giữ lịch sử, giữ FishingRayFilter và PurchaseOddsController cùng có trong runner. Test odds PASS 19.200 rổ + người có cả AutoPro/Dragon xem Base/Live từng loài, đổi mode/buff và đóng không prompt mua. Bổ sung assertions handler thật: chủ động bỏ pet cũ để lắp con mới, Unequip All và Equip Best vẫn chọn pet mạnh nhất/đủ slot/không trùng; PASS. Đọc PetsPanel xác nhận card EQUIPPED gửi UnequipPet và nút Unequip All/Equip Best còn nguyên. Verify6/6; bảng điểm hai kho/môi trường PASS; data vẫn 1.3/1.4 đỏ nền0ded6d4. Chờ dữ liệu 1.3–1.5 cuối để kiểm HUD Live Odds không mất khi ghép safeReadOnly; chưa phát hành.
 - Tích hợp dữ liệu `99216b5` bằng merge `053a393`, 12/12 test runners cũ exit0 (liệt kê từ rg), verify6/6. Dữ liệu schema29/29, Reset12/12, persistence7/7, acquisition19/19, lifecycle12/12; không nới fixture/assert. Thêm `test_place_sources.ps1` đối chiếu100/100 Source/class/path (chuẩn hóa xuống dòng XML). Tài liệu `docs/V3_BAN_GIAO_NGHIEM_THU.md` đủ23 mã/3đợt, build/hash tạm đã kiểm và checklist ngắn;1.5 còn chờ tip. Studio chưa chạy vì quyền ứng dụng, chưa phát hành; checkout chính nguyên.
+
+## Chốt hợp nhất cuối (code kiểm sạch dd53d3a)
+
+- [x] Merge `8699970` giữ cả dữ liệu/init/readOnly và LiveOdds/Net/FishingAutoState. Fixture client nạp đủ CatchControl/PurchaseOdds/odds/config thật; thêm biên Instance signal/Players/Vector3 hợp lệ, không nới assertion. Init13ca gốc đạt; thêm1ca cùng HUD/ClientState/LiveOdds thật qua loading→snapshot→khóa→khôi phục, nay14/14.
+- [x] Từ cây sạch chạy verify6/6 rồi toàn bộ13test*.ps1 tìm bằng rg: từng runner exit0. Source101/101; SHA256 `9BD66C58AD037E8D5AAE3841841E315EC0B727465FC98CB56699A35A1D52EDE5`. HudPanel275/ProgressPanel268/PetsService299/FishingService288/BagPanel307 (<310),101file≤350.
+- [x] Tài liệu bàn giao23mã/3đợt đã chốt, linkmatrix21 và đủ13runner/hash. Ghi rõ HAI server cùng universe staging riêng hoặc namespace đã xác minh; liệt kê ba kho thật và `_StudioDev` chỉ khi IsStudio. Không tự thêm namespace hoặc tự publish.
+- [ ] Studio chưa chạy vì quyền ứng dụng; chưa nghiệm thu Engine/thiết bị, chưa duyệt phát hành. Kỹ sư trưởng nhập fast-forward và kiểm độc lập; phần trạng thái pending cũ bên dưới/phía trên là lịch sử của từng mốc, không phải kết luận ứng viên cuối.

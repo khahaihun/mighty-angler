@@ -1,23 +1,24 @@
 # V3 — Bàn giao bản ứng viên và nghiệm thu chơi thật
 
-- **Ngày:** 18/11/2026 — Codex, nhánh riêng `codex/v3-combined` trong `build/v3-regression-sol`.
-- **Phạm vi hiện tại:** đã ghép dữ liệu `99216b5` (1.1–1.4), gameplay `3f43d35`, UI/odds `ad013c4`, UI Live Odds/pet `9c93901`, cùng bộ hồi quy `3132629` và test giao thoa. Merge dữ liệu hiện tại `053a393`.
-- **1.5 vẫn đang thi công**, chờ SHA cuối để ghép và kiểm lại. Các kết quả dưới đây là bản ứng viên tạm này, không phải quyết định phát hành và không gọi “đã sạch lỗi”. Checkout chính được giữ nguyên.
-- **Studio chưa chạy vì quyền ứng dụng**; chưa có bằng chứng Play Solo, hai client/server thật hoặc điện thoại. Không dùng mô phỏng để thay thế nghiệm thu đó.
-- [Matrix 21 mục đã đạt theo mã trước V3](V3_REGRESSION_MATRIX.md) phân biệt VM/đọc mã/ca Engine chờ; [matrix thiết kế–mã](SPEC_CODE_MATRIX.md); [blueprint 3 đợt](superpowers/plans/2026-11-18-action-blueprint-v3.md).
+Nhánh dự án có bản ứng viên hợp nhất, **chưa duyệt phát hành**. Mã/gameplay/test cuối đã kiểm trên cây sạch: `dd53d3a4f800c55b6f5d41ced37aff269b16cd58`, gồm dữ liệu `8699970` (đến hết1.5), gameplay `3f43d35`, UI/odds `ad013c4` + `9c93901`, regression và các test giao thoa. Commit tài liệu bàn giao đi sau không đổi mã game.
 
-## Kết quả tự động và bản đóng gói hiện tại
+**Studio chưa chạy vì quyền ứng dụng.** Play Solo, hai client/server thật, ping thực và điện thoại vẫn chờ; kết quả tự động không phải tuyên bố đã sạch lỗi hoặc nghiệm thu Engine.
 
-Sau merge dữ liệu `99216b5`, đã tìm script bằng `rg --files tools` và chạy **12/12 runner test, mỗi lệnh exit 0**, cùng `verify_project.ps1` **PASS 6/6, exit 0**. Kết quả suite dữ liệu: acquisition **19/19**, lifecycle **12/12**, schema **29/29**, reset **12/12**, persistence **7/7**; cách ly Studio/bảng điểm PASS. Regression gameplay **23/23**, odds **19.200 rổ**, Equip Best/bỏ pet cũ/trang bị mới, Live Odds khi có cả hai pass và giao thoa Auto–camera–odds PASS trong VM.
+- **Kiểm sạch:** `rg --files tools` liệt kê13 `test*.ps1`; từng runner **exit0**, verify **PASS6/6 exit0**. Dữ liệu acquisition19, lifecycle12, schema29, Reset12, init/HUD**14** (13 gốc+1 giao thoa LiveOdds/readOnly), persistence7 đều đạt; regression23/23, odds19.200 rổ. Bảng runner cuối file ghi từng lệnh.
+- **Giao thoa đã kiểm:** Auto đổi đảo/Rebirth/hồi sinh, hủy tay, camera thoại/minigame; LiveOdds cùng cảnh báo loading→snapshot→khóa→khôi phục, chỉ mở số liệu sau snapshot đầy đủ, không prompt mua. Người có cả hai pass vẫn xem odds; EquipBest/Unequip/đeo mới giữ đúng hành vi.
+- **Build:** `build/mighty-angler-dev.rbxlx`; **101/101** Script/LocalScript/ModuleScript khớp class/path/toàn bộ Source với sourcemap và đĩa, chỉ chuẩn hóa xuống dòng XML. SHA256 **`9BD66C58AD037E8D5AAE3841841E315EC0B727465FC98CB56699A35A1D52EDE5`**.
+- **Năm file cam kết<310:** HudPanel275, ProgressPanel268, PetsService299, FishingService288, BagPanel307 dòng; tất cả101 file game≤350.
+- [Matrix21 mục đã đạt trướcV3](V3_REGRESSION_MATRIX.md) · [matrix thiết kế–mã](SPEC_CODE_MATRIX.md) · [blueprint](superpowers/plans/2026-11-18-action-blueprint-v3.md). Log cục bộ `logs/final-*.log` không theo Git; khi đổi máy phải chạy lại.
 
-Bổ sung `tools/test_place_sources.ps1`: **100/100** Script/LocalScript/ModuleScript khớp đường dẫn, class và toàn bộ Source với sourcemap/đĩa (chuẩn hóa xuống dòng XML); không có script thừa/thiếu. Đây là kiểm nội dung đóng gói, không chạy Roblox Engine.
+Kiểm lại: từ cây sạch, chạy verify để dựng build mới, `rg --files tools` và chạy từng `test*.ps1`; mọi runner mặc định phải exit0. Bốn probe âm regression chạy riêng và phải exit1 vì assertion dự kiến, sau đó chạy regression không probe exit0. Bất kỳ đổi mã/build nào đều phải tính lại hash và Source parity.
 
-- Build đã kiểm: `build/mighty-angler-dev.rbxlx` trong clone ứng viên.
-- SHA-256: `4951C3D041276553D0DDF0AF4F19B76B549A74CB80B0F05373C296DBB5955014`.
-- Hash/SHA và số script **phải cập nhật lại sau tip 1.5**. Build không được coi là cùng ứng viên nếu Source hoặc hash khác.
-- Log cục bộ: `logs/data992-test_*.log`, `logs/data992-verify.log`; bị Git bỏ qua, chuyển máy phải chạy lại từ commit.
+## Kho staging cần xác minh trước chơi thật
 
-Cách kiểm cuối: từ cây Git sạch, chạy verify để dựng build mới, dùng `rg --files tools` liệt kê **mọi** `test*.ps1`, chạy từng file bằng PowerShell và ghi exit code; bao gồm `test_place_sources.ps1` mới. Bốn probe âm của regression chạy riêng, mỗi probe cố tình phải exit 1 vì assertion; không trộn vào danh sách runner mặc định phải exit 0. Sau đó chạy regression không probe lại exit 0.
+Chọn **HAI server của cùng một experience/universe staging riêng với production**, hoặc namespace staging đã xác minh tách biệt. Hai place trong cùng universe có thể dùng chung DataStore; khác place không đủ cách ly. Bản mã hiện tại chưa thêm hậu tố `_Staging`.
+
+- Server Roblox thật trong universe staging dùng `MightyAngler_Profile_v2`, `MightyAngler_TopStr_v2`, `MightyAngler_TopGold_v2`; sự tách biệt đến từ universe riêng đã xác minh.
+- **Chỉ khi `RunService:IsStudio()`**, mã dùng `MightyAngler_Profile_v2_StudioDev`, `MightyAngler_TopStr_v2_StudioDev`, `MightyAngler_TopGold_v2_StudioDev`. Publish rồi chạy Roblox thật không có hậu tố này.
+- Studio chưa publish (`PlaceId=0`) dùng RAM-only theo thiết kế. Chưa có universe/place staging ID được xác minh trong ca này; chủ dự án/Kỹ sư trưởng ghi ID và kiểm đúng kho trước thử hai server. Không chạy các ca phá lỗi trên production.
 
 ## Đủ 23 mã còn một phần trong V3, theo ba đợt
 
@@ -31,7 +32,7 @@ Cách kiểm cuối: từ cây Git sạch, chạy verify để dựng build mớ
 | 4 | 1 · Argon P0-3 | Lifecycle + persistence7/7 + reset12/12, đóng/lưu cuối/Reset hàng đợi. | Chồng shutdown/rời và Reset khi autosave; vào lại đúng một kết quả. |
 | 5 | 1 · Codex P1-03 | Schema29/29, cách ly hồ sơ sai, migration/slot0 hợp lệ; không đè dữ liệu lỗi. | Hồ sơ lỗi chỉ đọc; hồ sơ tốt cùng server vẫn gia hạn/lưu được. |
 | 6 | 1 · Codex P2-06 | Reset12/12, RAM/lưu bền tách rõ, lease hết không reset dữ liệu. | Reset DEV rồi vào lại mặc định sau xác nhận; lỗi API/RAM-only báo đúng. |
-| 7 | 1 · Codex P1-04 | **1.5 chờ tip**, chưa ký kết quả khởi tạo muộn/safeReadOnly. | Tải trước/sát/sau8s: đúng một snapshot đầy đủ, cảnh báo chỉ đọc, Live Odds vẫn có. |
+| 7 | 1 · Codex P1-04 | Init13/13 gốc +1 ca giao thoa LiveOdds/readOnly =14/14 VM; snapshot muộn và accessVersion được kiểm. | Tải trước/sát/sau8s: đúng một snapshot đầy đủ, cảnh báo chỉ đọc, Live Odds vẫn có. |
 | 8 | 2 · Argon P1-4 | Ray first-hit thật, chung filter Client/Server; VM ray/Auto PASS. | Cầu/đất/đá/trời/tường/biển: không nhận nước dưới vật cản, không xuyên tường người. |
 | 9 | 2 · Codex P1-08 | Auto tìm nước qua cùng validator; bounce dùng hit server. | 4 chế độ câu tại 5 đảo; không mất mồi/thưởng cá khi điểm sai. |
 | 10 | 2 · Argon P1-5 | Một lịch Auto, readyAt server; lifecycle/client scheduler PASS. | Win/Miss/Timeout/đổi đảo/Rebirth/hồi sinh tiếp đúng một lượt. |
@@ -53,12 +54,12 @@ Cách kiểm cuối: từ cây Git sạch, chạy verify để dựng build mớ
 
 - [ ] **Play Solo (F5):** hồ sơ mới mở Index; rút/cất cần và giữ/thả; câu nước/đất/cầu; thử Auto OFF→ON, hủy tay; xem Live Odds kể cả đã có pass; bán/khóa/Appraise10,4kg, Trident/Bounty đúng UID; preview14 cá khóa rồi Rebirth giữ12/ghim/Exclusive; bỏ pet cũ rồi đeo mới/EquipBest. Xem Output và thông báo chỉ đọc; đóng thoại không tự bán cá.
 - [ ] **Server & Clients, 2 client, ping200ms:** 1/2/3 vòng sát hạn; đổi đảo/Rebirth/chết giữ Auto, hủy tay dừng; một cá/nhịp; camera thoại chồng minigame; hai người quan sát hoạt ảnh/tạ/R6-R15, pet gần/xa, LowGFX. Ghi ảnh/video, số thẻ/kết nối trước/sau50 lần mở cửa sổ.
-- [ ] **Staging, 2 server:** cùng tài khoản thử chuyển A→B trong lúc tải/lưu chậm; nộp một UID Bounty và nhận đúng một thưởng sau vào lại; lỗi API/lưu cuối/lease/Reset có kết quả rõ; hồ sơ chỉ đọc không tiêu tiền hoặc ghi bảng điểm. Giữ nguyên kho production; dùng place staging và tài khoản thử.
+- [ ] **Staging, HAI server cùng universe staging riêng đã xác minh:** cùng tài khoản thử chuyển A→B trong lúc tải/lưu chậm; nộp một UID Bounty và nhận đúng một thưởng sau vào lại; lỗi API/lưu cuối/lease/Reset có kết quả rõ; hồ sơ chỉ đọc không tiêu tiền hoặc ghi bảng điểm. Giữ nguyên kho production; dùng universe staging riêng (hoặc namespace đã xác minh) và tài khoản thử, ghi tên kho/ID trước thử.
 - [ ] **Điện thoại thật:** giữ quăng bằng ngónA, ngónB không đổi/hủy aim; A thả lấy điểm cuối; nút/preview không cắt; túi60 cá/80pet/65Index cuộn ổn, LowGFX gần/xa. Ghi thiết bị, cấu hình, FPS/p95 cùng cảnh trước/sau.
 
 Mỗi ô ghi SHA/place/hash, ngày, người thử, kết quả thực tế và lỗi còn lại. Chỉ publish ứng viên lên staging theo chỉ đạo; place chính phải đợi đúng bản đó được nghiệm thu và Kỹ sư trưởng duyệt. File này không cấp quyền phát hành.
 
-### Runner mặc định đã chạy trên ứng viên dữ liệu 99216b5
+### Runner mặc định đã chạy trên ứng viên cuối dd53d3a
 
 | Script trong tools | Exit |
 |---|---|

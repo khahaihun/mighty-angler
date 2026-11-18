@@ -121,3 +121,9 @@ Bổ sung review HUD: `test_live_odds.ps1` còn chạy controller bảng thật 
 Script/LocalScript/ModuleScript trong build với sourcemap và file nguồn: class, path,
 Source (chuẩn hóa xuống dòng XML), số thừa/thiếu và SHA256. Chạy verify trước để tạo
 build mới; đây là kiểm đóng gói, không thực thi Roblox Engine.
+
+Bản hợp nhất cuối còn kiểm chung HUD/ProfileAccessBanner/ClientStateController và
+LiveOdds/PurchaseOddsSummary/OddsCalculator thật: trạng thái loading, snapshot đầy đủ,
+mất quyền rồi khôi phục không mất nút xem odds hoặc sinh prompt mua. Bộ init có14ca
+(13gốc+1giao thoa), không hạ assertion cũ. Fixture chỉ bổ sung biên signal/Players/Vector3.
+Xem `docs/V3_BAN_GIAO_NGHIEM_THU.md` cho13runner, hash/Source parity và kho staging.
