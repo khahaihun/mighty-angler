@@ -115,8 +115,6 @@ function FishingSessionManager.CloseSessionOnce(
 				kind = "Error",
 				text = "The rare fish slipped off the hook! Train Strength or Steadiness!",
 			})
-		elseif reason ~= "Win" then
-			Net.FireClient(player, Net.ServerToClient.FishingStateReset, { reason = reason })
 		end
 	end
 	return cur

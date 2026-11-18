@@ -71,5 +71,49 @@ return function(sources)
  assert(awards==3,"one fish for each 1/2/3 round session")
  pro=true; state.Close(p,"pro","Timeout"); now+=.449; assert(not state.CanAutoCast(p)); now+=.0011; assert(state.CanAutoCast(p))
  state.Close(p,"cancel","Unequip"); now+=2; assert(not state.CanAutoCast(p),"unequip stops auto")
+ for _,reason in ipairs({"IslandChange","Rebirth","Died"}) do
+  state.SetAuto(p,true); state.Close(p,"transition",reason); now+=2
+  assert(state.CanAutoCast(p),"transition retains server intent "..reason)
+  state.Reset(p,reason); assert(state.CanAutoCast(p),"cooling reset retains server intent")
+ end
+ assert(state.ApplyRequest(p,true,10)); assert(not state.ApplyRequest(p,false,9)); assert(not state.ApplyRequest(p,true,10))
+ assert(state.CanAutoCast(p),"stale/duplicate intent cannot turn OFF or restart")
+ local handlers={}
+ net.OnServerEvent=function(event,callback) handlers[event]=callback end
+ local loaded
+ local locked=true
+ local profile={fishBag={},stats={fishCaught=0},indexFish={}}
+ cache.DataService={Get=function() return profile end,IsTransactionLocked=function() return locked end,OnProfileLoaded=function(fn) loaded=fn end}
+ cache.CurrencyService={AddStrength=function() error("must not grant Strength while locked") end}
+ cache.ShopAndItemsService={OnHotbarSlotChanged=function() end,SyncCharacterHandVisuals=function() end}
+ cache.BuffAggregator={}; cache.BountiesConfig={}; cache.Islands={}; cache.RodsConfig={}; cache.PetAndFishVisuals={}; cache.WhirlpoolManager={}
+ local service=env.require(node("FishingService")); service.Init()
+ for _,reason in ipairs({"IslandChange","Rebirth","Died"}) do
+  state.SetAuto(p,true)
+  manager.CreateWaitingSession(p,1,vec(0,0,20),false,"AutoFree",{},nil,{})
+  service.CancelSession(p,false,reason); now+=2
+  assert(state.CanAutoCast(p),"real CancelSession retains ON for "..reason)
+  service.CancelSession(p,false,reason)
+  assert(state.CanAutoCast(p),"CancelSession while cooling retains ON")
+ end
+ -- Execute the real registered minigame handler and its real reward callback at the write gate.
+ for _,mode in ipairs({"read-only","closing","profile removed"}) do
+  local saved=profile
+  if mode=="profile removed" then profile=nil end
+  local sess=manager.CreateWaitingSession(p,1,vec(0,0,20),false,"AutoFree",{},nil,{minigameWidthBonus=0,minigameSpeedDivisor=1})
+  manager.BeginMinigame(p,sess,{rarity="Rare",name="Fish"},"None")
+  now+=.1
+  handlers.FishingMinigameStrike(p,sess.sessionId,1,.1)
+  assert(#saved.fishBag==0 and saved.stats.fishCaught==0 and next(saved.indexFish)==nil,"award gate preserves bag/stats/index: "..mode)
+  profile=saved
+ end
+ local died,added
+ local humanoid={Health=100,IsA=function(_,k) return k=="Humanoid" end,Died={Connect=function(_,fn) died=fn end}}
+ p.Character.FindFirstChildOfClass=function() return humanoid end
+ p.CharacterAdded={Connect=function(_,fn) added=fn end}
+ env.task.spawn=function(fn,...) fn(...) end; env.task.wait=function() end
+ loaded(p); assert(died and added)
+ state.SetAuto(p,true); died(); now+=2; assert(state.CanAutoCast(p),"actual Humanoid.Died keeps ON")
+ added(p.Character); assert(state.CanAutoCast(p),"server CharacterAdded does not erase ON")
  print("PASS fishing rays/first hit/Auto, server 1/2/3 rounds at 200ms, atomic close and Free/Pro cooldown")
 end

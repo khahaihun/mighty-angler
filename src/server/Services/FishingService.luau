@@ -56,6 +56,10 @@ end
 
 local function finalizeFishAward(player: Player, sess: FishingSessionManager.CastSession)
 	local profile = DataService.Get(player)
+ if not profile or DataService.IsTransactionLocked(player, true) then
+  FishingCastState.Reset(player, "ReadOnly")
+  return
+ end
 	local fishDef = sess.rolledFish
 	if not profile or not fishDef then return end
 
@@ -110,16 +114,16 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 end
 
 function FishingService.CancelSession(player: Player, silent: boolean?, customReason: string?)
-	FishingCastState.SetAuto(player, false)
  FishingCastState.TakeCharge(player)
- local closed = FishingSessionManager.CloseSessionOnce(player, nil, customReason or "Cancel", silent)
- if not closed then Net.FireClient(player, Net.ServerToClient.FishingStateReset, { reason = customReason or "Cancel" }) end
+ local reason = customReason or "Cancel"
+ local closed = FishingSessionManager.CloseSessionOnce(player, nil, reason, silent)
+ if not closed then FishingCastState.Reset(player, reason) end
 end
 
 local function triggerValidatedLandBounce(player: Player, hitPos: Vector3)
 	RodVisuals.PlayLandBounce(player, hitPos)
 	Net.FireClient(player, Net.ServerToClient.FishingLandBounce, { hitPos = hitPos })
-	Net.FireClient(player, Net.ServerToClient.FishingStateReset, { reason = "LandBounce" })
+	FishingCastState.Reset(player, "LandBounce")
 end
 
 function FishingService.StartCast(player: Player, aimPayload: any?)
@@ -127,10 +131,13 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 	if not profile or FishingSessionManager.Get(player) ~= nil then return end
  if DataService.IsTransactionLocked(player, true) then
   FishingCastState.SetAuto(player, false)
-  Net.FireClient(player, Net.ServerToClient.FishingStateReset, { reason = "ReadOnly" })
+  FishingCastState.Reset(player, "ReadOnly")
   return
  end
 
+ local character = player.Character
+ local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+ if not character or (humanoid and humanoid.Health <= 0) then FishingCastState.Reset(player, "Died"); return end
 	local isAuto = (type(aimPayload) == "table" and aimPayload.castMode == "Auto")
 	if isAuto then
 		if not FishingCastState.CanAutoCast(player) then FishingCastState.Reply(player); return end
@@ -142,7 +149,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 
 	if #profile.fishBag >= GameConfig.BAG_CAPACITY then
 		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Error", text = "Fish Bag is full! Talk to Captain Barnaby to sell fish!" })
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { bagFull = true })
+		FishingCastState.Reset(player, "BagFull")
 		return
 	end
 
@@ -152,7 +159,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 	local candidates = FishingRoller.GetEligibleCandidates(islandDef, effRod.power, effRod.maxWeight)
 	if #candidates == 0 and forcedRarityDev[player] == nil then
 		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Error", text = "Your rod is too weak for these waters! Equip a stronger rod!" })
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { weakRod = true })
+		FishingCastState.Reset(player, "WeakRod")
 		return
 	end
 
@@ -177,7 +184,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 			kind = "Info",
 			text = if isAuto then "Walk closer to the pier or beach to use Auto-Fish!" else "Stand near the ocean & aim directly at open water to cast!",
 		})
-		Net.FireClient(player, Net.ServerToClient.FishingStateReset, { tooFar = true })
+		FishingCastState.Reset(player, "NoWater")
 		return
 	end
 
@@ -268,9 +275,9 @@ function FishingService.Init()
 	Net.OnServerEvent(Net.ClientToServer.SetAutoFish, function(p: Player, rawEnable: any, requestId: any)
   local profile = DataService.Get(p)
   local active = rawEnable == true and profile ~= nil
-  if active and profile and profile.equippedHotbarSlot ~= 1 then ShopAndItemsService.SetHotbarSlot(p, 1) end
-  FishingCastState.SetAuto(p, active)
-  FishingCastState.Reply(p, requestId)
+  local accepted = FishingCastState.ApplyRequest(p, active, requestId)
+  if accepted and active and profile and profile.equippedHotbarSlot ~= 1 then ShopAndItemsService.SetHotbarSlot(p, 1) end
+  FishingCastState.Reply(p)
  end)
 
 	Players.PlayerRemoving:Connect(function(p: Player)
