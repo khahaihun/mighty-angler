@@ -234,3 +234,12 @@ powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1
 - [~] Test chung `tools/test_studio_data_isolation.ps1`: isolation/acquisition PASS; 4 ca persistence đỏ của nền Đợt 1 (late_save_response_cannot_extend_ownership, both_close_paths_wait_for_final_save, malformed_profile_is_quarantined, dev_reset_during_autosave), đã báo trưởng nhóm; không sửa tại nhánh gameplay.
 - [ ] Chuột/chạm, 200ms 1/2/3 vòng trong Studio: chờ nghiệm thu; test VM hiện xác nhận việc giữ UI tới kết quả server, không suy ra đã thử Engine.
 - File: FishingRoller.luau, MinigameBar.luau, tools/test_fishing_wave.ps1, tests/fishing_wave.luau, PROGRESS.md.
+
+
+## Nhánh Đợt 2 · phạm vi giao dịch và Index (Codex Sol, 2026-11-18)
+- [x] 2.4 Argon P1-3/Codex P1-06: WorldPromptAccess tìm prompt đang tồn tại trong đúng Island, lấy điểm BasePart/Attachment/Model và MaxActivationDistance thật, đo 3D. Finn cho Appraise/Bounty/Trident; chỉ Kaito NPC hoặc bệ cho Enchant, không dùng tọa độ thiết kế hoặc quầy Shop trang trí. Kiểm enabled/IslandId tại lúc xác nhận.
+- [x] 2.5 Argon P1-1/Codex P1-14: signature Index chưa vẽ là nil, khác bộ sưu tập rỗng; lần đầu luôn tạo 65 thông số thẻ/counters. GridWindow không clamp lưới khuất thành hàng 0; chỉ thấy +1 hàng mỗi đầu. ViewportPool theo dõi Visible/Enabled các tổ tiên, vị trí/resize/cuộn; thả thẻ ẩn và ngừng xoay; ngắt các kết nối quan sát khi Destroying.
+- [x] Bổ sung review 2.3: harness Mount thật capture nút/chuột: T-0.05 gửi 1, lặp lúc chờ ack không resend, T+0.001 không gửi mới; ACK trễ 200ms vẫn không mở lại input hay tự đóng UI. Luau nguồn thật PASS cho 1/2/3 vòng.
+- [x] `tools/test_fishing_wave.ps1` PASS, `tools/verify_project.ps1` PASS 6/6 exit0. Test chung chạy lại: 4 ca dữ liệu đỏ nền Đợt 1 giữ nguyên; Bounty test giữ biên kiểm phạm vi riêng bằng WorldPromptAccess fake, logic phạm vi có bộ riêng.
+- [ ] Studio NPC mặc định/override và sát bán kính, 50 lần mở/đóng/resize Index, số kết nối/thẻ sống, điện thoại: chờ nghiệm thu.
+- File: EnchantAndBountyService/WorldPromptAccess, IndexGridSection/ViewportPool/GridWindow, tests/fishing_prompt_grid, tests/fishing_wave, tests/data_persistence, runner và PROGRESS.

@@ -11,7 +11,6 @@ local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfi
 local RodsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RodsConfig"))
 local EnchantsConfig = require(Shared:WaitForChild("Config"):WaitForChild("EnchantsConfig"))
 local BountiesConfig = require(Shared:WaitForChild("Config"):WaitForChild("BountiesConfig"))
-local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
 
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
@@ -23,43 +22,18 @@ local ProfileMigrator = require(script.Parent.ProfileMigrator)
 
 local EnchantAndBountyService = {}
 
-local INTERACT_MAX_DIST = 26
-
-local function isNearWorldSpot(player: Player, spotPos: Vector3): boolean
-	local char = player.Character
-	local root = if char then char:FindFirstChild("HumanoidRootPart") else nil
-	if not (root and root:IsA("BasePart")) then
-		return false
-	end
-	local horiz = Vector3.new(root.Position.X - spotPos.X, 0, root.Position.Z - spotPos.Z).Magnitude
-	return horiz <= INTERACT_MAX_DIST and math.abs(root.Position.Y - spotPos.Y) <= 18
-end
+local WorldPromptAccess = require(script.Parent.WorldPromptAccess)
 
 local function checkNearCollector(player: Player, islandId: number): boolean
-	local islDef = IslandsRegistry.ById[islandId]
-	if not islDef then return false end
-	if isNearWorldSpot(player, islDef.centerPosition + Vector3.new(-11, 0, 48.2)) then
-		return true
-	end
-	Net.FireClient(player, Net.ServerToClient.Toast, {
-		kind = "Info",
-		text = "Walk up to Old Man Finn (near the dock entrance) to Appraise or trade Bounties!",
-	})
-	return false
+ if WorldPromptAccess.IsNear(player, islandId, { NpcCollector = true }) then return true end
+ Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Info", text = "Walk up to Old Man Finn to Appraise or trade Bounties!" })
+ return false
 end
 
 local function checkNearAltarOrCrafter(player: Player, islandId: number): boolean
-	local islDef = IslandsRegistry.ById[islandId]
-	if not islDef then return false end
-	local c = islDef.centerPosition
-	if isNearWorldSpot(player, c + Vector3.new(42, 0, -36)) or isNearWorldSpot(player, c + Vector3.new(28, 0, 36.5)) then
-		return true
-	end
-	Net.FireClient(player, Net.ServerToClient.Toast, {
-		kind = "Info",
-		text = "Stand near the Ancient Enchant Altar or Master Kaito to roll Enchants!",
-	})
-	return false
+ if WorldPromptAccess.IsNear(player, islandId, { NpcShop = true, OpenEnchantAltar = true }) then return true end
+ Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Info", text = "Stand near the Ancient Enchant Altar or Master Kaito to roll Enchants!" })
+ return false
 end
 
 local function getSizeTierValueMult(tierName: string): number

@@ -18,6 +18,7 @@ local function gameplayOptions()
 		globals = { Vector3 = { new = vector } },
 		dependencies = {
 			BuffAggregator = {}, PerkService = {}, FishingRoller = {},
+			WorldPromptAccess = { IsNear = function() return true end }, -- range is covered by fishing_prompt_grid
 			FishingService = { CancelSession = ignoreVisual },
 			IslandService = { TeleportCharacterToIsland = ignoreVisual },
 			PetsService = { SyncVisualsAndClient = ignoreVisual },

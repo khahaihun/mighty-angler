@@ -19,7 +19,7 @@ local indexContainer: Frame? = nil
 local headerTitleLbl: TextLabel? = nil
 local gridHandle: ViewportPool.GridHandle? = nil
 local focusedIndexKey: string? = nil
-local lastIndexSignature = ""
+local lastIndexSignature: string? = nil
 
 function IndexGridSection.GetContainerName(): string
 	return CONTAINER_NAME
@@ -71,7 +71,7 @@ local function ensureMounted(body: ScrollingFrame): (Frame, TextLabel, ViewportP
 	indexContainer = wrap
 	headerTitleLbl = hTitle
 	gridHandle = gh
-	lastIndexSignature = ""
+	lastIndexSignature = nil
 	return wrap, hTitle, gh
 end
 
@@ -106,7 +106,7 @@ function IndexGridSection.Render(body: ScrollingFrame, indexFish: { [string]: nu
 	wrap.Visible = true
 
 	local sig = computeDataSignature(indexFish, indexPets)
-	if sig == lastIndexSignature and lastIndexSignature ~= "__uninit__" and hTitle.Text ~= "" then
+	if sig == lastIndexSignature then
 		return
 	end
 	lastIndexSignature = sig

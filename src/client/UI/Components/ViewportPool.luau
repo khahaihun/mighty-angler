@@ -4,6 +4,7 @@
 local RunService = game:GetService("RunService")
 
 local ViewportCard = require(script.Parent.ViewportCard)
+local GridWindow = require(script.Parent.GridWindow)
 
 export type GridHandle = {
 	frame: Frame,
@@ -21,6 +22,16 @@ local PAD_X = 8
 local PAD_Y = 8
 local MAX_FREE_POOL = 32
 
+local function isUiVisible(inst: Instance): boolean
+ local cursor: Instance? = inst
+ while cursor do
+  if cursor:IsA("GuiObject") and not cursor.Visible then return false end
+  if cursor:IsA("ScreenGui") and not cursor.Enabled then return false end
+  cursor = cursor.Parent
+ end
+ return true
+end
+
 local function stopSpinIfIdle()
 	if not focusedCardGlobal and spinConn then
 		spinConn:Disconnect()
@@ -36,7 +47,7 @@ local function setGlobalFocusedCard(card: ViewportCard.PooledCard?)
 	if card and not spinConn then
 		spinConn = RunService.RenderStepped:Connect(function()
 			local cur = focusedCardGlobal
-			if not cur or not cur.root.Parent or not cur.root.Visible then
+			if not cur or not cur.root.Parent or not isUiVisible(cur.root) then
 				focusedCardGlobal = nil
 				stopSpinIfIdle()
 				return
@@ -111,18 +122,13 @@ function ViewportPool.CreateGrid(parent: Instance, layoutOrder: number, cellSize
 		local totalHeight = totalRows * cellH + math.max(0, totalRows - 1) * PAD_Y
 		gridFrame.Size = UDim2.new(1, 0, 0, totalHeight)
 
-		local firstRow = 0
-		local lastRow = totalRows - 1
-		if scrollParent and totalItems > 16 then
-			if scrollParent.AbsoluteSize.Y <= 4 then
-				firstRow = 0
-				lastRow = math.min(totalRows - 1, 3)
-			else
-				local visTop = math.max(0, (scrollParent.AbsolutePosition.Y - gridFrame.AbsolutePosition.Y) / uiScale)
-				local visH = scrollParent.AbsoluteSize.Y / uiScale
-				firstRow = math.max(0, math.floor(visTop / (cellH + PAD_Y)) - 1)
-				lastRow = math.min(totalRows - 1, math.ceil((visTop + visH) / (cellH + PAD_Y)) + 1)
-			end
+		local firstRow, lastRow = 0, totalRows - 1
+		if not isUiVisible(gridFrame) then
+			lastRow = -1
+		elseif scrollParent then
+			local top = (scrollParent.AbsolutePosition.Y - gridFrame.AbsolutePosition.Y) / uiScale
+			local bottom = top + scrollParent.AbsoluteSize.Y / uiScale
+			firstRow, lastRow = GridWindow.Rows(totalRows, cellH + PAD_Y, totalHeight, top, bottom)
 		end
 
 		local startIdx = firstRow * cols + 1
@@ -165,11 +171,26 @@ function ViewportPool.CreateGrid(parent: Instance, layoutOrder: number, cellSize
 		end
 	end
 
-	if scrollParent then
-		scrollParent:GetPropertyChangedSignal("CanvasPosition"):Connect(renderVisibleWindow)
-		scrollParent:GetPropertyChangedSignal("AbsoluteSize"):Connect(renderVisibleWindow)
+	local connections: { RBXScriptConnection } = {}
+	local function observe(inst: Instance, property: string)
+		table.insert(connections, inst:GetPropertyChangedSignal(property):Connect(renderVisibleWindow))
 	end
-	gridFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(renderVisibleWindow)
+	if scrollParent then
+		observe(scrollParent, "CanvasPosition")
+		observe(scrollParent, "AbsoluteSize")
+	end
+	observe(gridFrame, "AbsoluteSize")
+	observe(gridFrame, "AbsolutePosition")
+	local ancestor: Instance? = gridFrame
+	while ancestor do
+		if ancestor:IsA("GuiObject") then observe(ancestor, "Visible")
+		elseif ancestor:IsA("ScreenGui") then observe(ancestor, "Enabled") end
+		ancestor = ancestor.Parent
+	end
+	gridFrame.Destroying:Connect(function()
+		for _, conn in ipairs(connections) do conn:Disconnect() end
+		if focusedCardGlobal and focusedCardGlobal.root.Parent == gridFrame then setGlobalFocusedCard(nil) end
+	end)
 
 	local function syncItems(specs: { ViewportCard.CardVisualSpec }, focusedKey: string?)
 		currentSpecs = specs
@@ -187,7 +208,7 @@ function ViewportPool.CreateGrid(parent: Instance, layoutOrder: number, cellSize
 
 	local function setFocusedKey(key: string?)
 		currentFocusedKey = key
-		local found = if key then activeByKey[key] else nil
+		local found = if key and isUiVisible(gridFrame) then activeByKey[key] else nil
 		setGlobalFocusedCard(found)
 	end
 
