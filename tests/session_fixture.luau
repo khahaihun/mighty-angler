@@ -23,7 +23,8 @@ function Fixture.backend()
 	return { now = 10000, document = nil, version = 0, calls = {}, commits = 0 }
 end
 
-function Fixture.server(sources, backend, job, placeId)
+function Fixture.server(sources, backend, job, placeId, options)
+	options = options or {}
 	local f = { backend = backend, warnings = {}, messages = {}, guidCount = 0, opens = 0 }
 	local delays, cache, active = {}, {}, {}
 	function f.resume(thread)
@@ -36,6 +37,7 @@ function Fixture.server(sources, backend, job, placeId)
 		local args = table.pack(...)
 		local thread = coroutine.create(function() fn(table.unpack(args, 1, args.n)) end)
 		f.resume(thread)
+		f.lastSpawn = thread
 		return thread
 	end
 	function f.finish(thread, limit)
@@ -96,6 +98,7 @@ function Fixture.server(sources, backend, job, placeId)
 	end }
 	local services = {
 		Players = players, DataStoreService = dataStoreService,
+		LogService = { MessageOut = signal() },
 		RunService = { IsStudio = function()
 			if f.failStudioCheck then error("injected exception before store acquisition") end
 			return true
@@ -107,13 +110,15 @@ function Fixture.server(sources, backend, job, placeId)
 			return string.format("%s%010d", job, f.guidCount)
 		end },
 	}
-	cache.Net = { ClientToServer = { RequestInitialState = "init" },
-		ServerToClient = { Toast = "toast", StateSnapshot = "snapshot" },
-		OnServerEvent = function() end,
+	local handlers = {}
+	local eventNames = { __index = function(_, key) return key end }
+	cache.Net = { ClientToServer = setmetatable({ RequestInitialState = "init" }, eventNames),
+		ServerToClient = setmetatable({ Toast = "toast", StateSnapshot = "snapshot" }, eventNames),
+		OnServerEvent = function(event, fn) handlers[event] = fn end,
 		FireClient = function(player, event, payload)
 			table.insert(f.messages, { player = player, event = event, payload = payload })
 		end }
-	cache.Islands = { List = {} } -- default profiles have no fish; world config irrelevant here
+	if not options.useIslandConfig then cache.Islands = { List = {} } end
 	local testOs = table.clone(os)
 	testOs.time = function() return math.floor(backend.now) end
 	testOs.clock = function() return backend.now end
@@ -126,6 +131,8 @@ function Fixture.server(sources, backend, job, placeId)
 		warn = function(...) table.insert(f.warnings, table.concat({ ... }, " ")) end,
 		task = { spawn = spawn, wait = function(delay) return coroutine.yield(delay) end },
 	}, { __index = getfenv() })
+	for name, dependency in pairs(options.dependencies or {}) do cache[name] = dependency end
+	for name, value in pairs(options.globals or {}) do env[name] = value end
 	function env.require(module)
 		local name = module.Name
 		if cache[name] ~= nil then return cache[name] end
@@ -135,13 +142,19 @@ function Fixture.server(sources, backend, job, placeId)
 		cache[name] = run()
 		return cache[name]
 	end
-	f.data = env.require(node("DataService"))
-	f.helper = env.require(node("DataStoreLockHelper"))
-	f.config = env.require(node("GameConfig"))
+	function f.loadModule(name) return env.require(node(name)) end
+	function f.fireRemote(event, ...)
+		return spawn(assert(handlers[event], "unregistered remote " .. event), ...)
+	end
+	f.data = f.loadModule("DataService")
+	f.helper = f.loadModule("DataStoreLockHelper")
+	f.config = f.loadModule("GameConfig")
 	f.data.Init() -- actual signals and load/save paths; periodic thread remains suspended
+	f.periodic = f.lastSpawn
 	function f.add(userId)
 		local player = { UserId = userId, DisplayName = job }
 		function player:IsDescendantOf(service) return service == players and active[self] == true end
+		function player:FindFirstChild() return nil end
 		active[player] = true
 		return player, players.PlayerAdded:Fire(player)
 	end

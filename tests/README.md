@@ -1,4 +1,4 @@
-# Kiểm cách ly dữ liệu Studio
+# Kiểm hồi quy dữ liệu
 
 Chạy từ gốc dự án:
 
@@ -7,6 +7,10 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 ```
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
+
+Lệnh trên chạy cả ba bộ `studio_data_isolation`, `session_acquisition` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL.
+
+## Cách ly dữ liệu Studio
 
 PowerShell nhúng nguyên văn nguồn `DataStoreLockHelper`, `LiveOpsService`, `GameConfig`, `Types`, `Util` vào runner trong `build/`. Luau VM thực thi các module đó với dịch vụ Roblox giả lập; không dịch lại logic sang ngôn ngữ khác. Bộ thử ghi từng lời gọi tại `GetDataStore` và `GetOrderedDataStore`, chạy refresh đầu tiên và nhịp refresh định kỳ thật của `LiveOpsService.Init()`.
 
@@ -29,3 +33,9 @@ Dùng cùng Luau CLI, chạy nguyên văn `DataService`, `DataStoreLockHelper`, 
 Kho giả sao chép giá trị qua biên API và chạy lại callback nếu máy chủ khác ghi trong lúc yêu cầu bị treo, theo [quy tắc UpdateAsync của Roblox](https://github.com/Roblox/creator-docs/blob/main/content/en-us/reference/engine/classes/GlobalDataStore.yaml#L351). Việc tạm dừng nằm ở biên API, không nằm trong callback. Đồng hồ và lịch coroutine do phép thử điều khiển; đây là mô phỏng, không phải hành vi mạng/Engine đã được chứng nhận.
 
 Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉnh hạn quyền ghi, gia hạn, gộp đóng/lưu cuối của mục 1.2, dữ liệu hỏng của 1.3, Reset 1.4 hoặc HUD 1.5. Không dùng kết quả bộ này để ký các mục đó.
+
+## Lưu hồ sơ và giao dịch đổi cá
+
+`data_persistence.luau` dùng lại kho RAM và lịch coroutine của `session_fixture.luau`. Bảy ca kiểm hai phiên tranh khóa, thử lại lưu cuối khi lỗi tạm, phản hồi lưu muộn, hai đường đóng đồng thời, hồ sơ sai kiểu, nút Reset DEV trong lúc autosave và nộp lại cùng UID cá trước/sau đổi máy chủ.
+
+Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.
