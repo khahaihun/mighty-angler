@@ -170,7 +170,8 @@ function DataService.Init()
 			accPush += 1
 			for _, s in ipairs(Persistence.All()) do
 				local profile, player = s.profile, s.player
-				if profile and player and not s.closing then
+				if profile and player and not s.closing and not s.readOnly then
+					local ok, err = pcall(function(): boolean
 					profile.stats.playTimeSec += 1
 					if ProfileMigrator.RefreshUtcPlaytimeIfNewDay(profile) then
 						profile.playtimeTodaySec = 1
@@ -181,6 +182,9 @@ function DataService.Init()
 							playtimeTodaySec = profile.playtimeTodaySec, playtimeClaimedToday = profile.playtimeClaimedToday,
 						})
 					end
+					return true
+					end)
+					if not ok then Persistence.Quarantine(s, "RuntimeTick:" .. tostring(err)) end
 				end
 			end
 			if accPush >= 5 then accPush = 0 end

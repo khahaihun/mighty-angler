@@ -6,6 +6,7 @@ local Types = require(Shared:WaitForChild("Types"))
 local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local Lock = require(script.Parent.DataStoreLockHelper)
 local Writer = require(script.Parent.ProfileWriteHelper)
+local Validator = require(script.Parent.ProfileValidator)
 
 export type Session = {
 	player: Player?, userId: number, token: string, profile: Types.PlayerProfile?,
@@ -51,6 +52,12 @@ function ProfilePersistenceService.Locked(s: Session?): boolean
 	return not Lock.IsStudioOfflineFallback() and os.time() >= s.confirmedAt + GameConfig.SESSION_LOCK_EXPIRE_SEC
 end
 
+function ProfilePersistenceService.Quarantine(s: Session, reason: string)
+	if not s.readOnly then warn(string.format("[ProfilePersistence] Quarantine user=%d token=%s reason=%s", s.userId, s.token, reason)) end
+	s.readOnly = true
+	s.failure = "InvalidProfile:" .. reason
+end
+
 local function applyPending(s: Session, store: DataStore): string
 	local op = s.pending
 	if not op then return "Skipped" end
@@ -78,6 +85,8 @@ function ProfilePersistenceService.Save(s: Session, release: boolean): string
 	Lock.WithUserLock(s.userId, function()
 		if s.closed or not s.profile or (s.closing and not release) then status = "Skipped"; return end
 		if s.readOnly then status = s.failure or "Skipped"; return end
+		local invalid = Validator.Validate(s.profile)
+		if invalid then ProfilePersistenceService.Quarantine(s, invalid); status = "InvalidProfile"; return end
 		local store = Lock.TryGetStore()
 		if not store then
 			status = if Lock.IsStudioOfflineFallback() then "Saved" else "TransientError"
@@ -128,7 +137,7 @@ local function requestClose(s: Session, deadline: number)
 					finishClose(s, if Lock.IsStudioOfflineFallback() then "RAMOnly" else result)
 					return true
 				end
-				if result == "LostLock" then s.failure = result; break end
+				if result ~= "TransientError" then s.failure = result; break end
 				task.wait(math.min(0.8, math.max(0, s.closeDeadline - os.clock())))
 			end
 			return true

@@ -17,6 +17,7 @@ $modulePaths = @{
     DataStoreLockHelper = 'src/server/Services/DataStoreLockHelper.luau'
     DataService = 'src/server/Services/DataService.luau'
     ProfileWriteHelper = 'src/server/Services/ProfileWriteHelper.luau'
+    ProfileValidator = 'src/server/Services/ProfileValidator.luau'
     ProfilePersistenceService = 'src/server/Services/ProfilePersistenceService.luau'
 }
 $runner = [Text.StringBuilder]::new()

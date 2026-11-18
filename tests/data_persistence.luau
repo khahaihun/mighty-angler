@@ -190,8 +190,8 @@ return function(sources)
 		local profile = a.data.Get(p)
 		profile.enchantRelics = 3
 		profile.fishBag = {
-			{ uid = "fish-to-turn-in", fishId = "sunset_barracuda", weight = 18, mutation = "None" },
-			{ uid = "fish-to-keep", fishId = "sunset_barracuda", weight = 18, mutation = "None" },
+			{ uid = "fish-to-turn-in", fishId = "sunset_barracuda", weight = 18, mutation = "None", sellValue = 99, originalValue = 99, sizeTier = "Normal", locked = false, soulbound = false, midasBonus = 1 },
+			{ uid = "fish-to-keep", fishId = "sunset_barracuda", weight = 18, mutation = "None", sellValue = 99, originalValue = 99, sizeTier = "Normal", locked = false, soulbound = false, midasBonus = 1 },
 		}
 		profile.pinnedFishUids["2"] = "fish-to-turn-in"
 		profile.equippedHotbarSlot = 2

@@ -289,7 +289,8 @@ return function(sources)
 		local b = Fixture.backend()
 		local f = Fixture.server(sources, b, "A")
 		b.document = f.config.CreateDefaultProfile()
-		b.document.fishBag = { { fishId = "fixture_fish_without_uid" } }
+		b.document.dataVersion = 1
+		b.document.fishBag = { { fishId = "fixture_fish_without_uid", weight = 1, sellValue = 1, mutation = "None" } }
 		f.failGuidAt = 3 -- token, claim nonce, then migration UID: actual quarantine path
 		local callbacks, releases = 0, 0
 		f.data.OnProfileLoaded(function() callbacks += 1 end)

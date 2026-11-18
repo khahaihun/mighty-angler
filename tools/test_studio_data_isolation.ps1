@@ -1,6 +1,6 @@
 param(
     [string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'),
-    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence')]
+    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema')]
     [string]$Suite = 'all'
 )
 
@@ -23,6 +23,7 @@ $modulePaths = @{
     LiveOpsService = 'src/server/Services/LiveOpsService.luau'
     DataService = 'src/server/Services/DataService.luau'
     ProfileWriteHelper = 'src/server/Services/ProfileWriteHelper.luau'
+    ProfileValidator = 'src/server/Services/ProfileValidator.luau'
     ProfilePersistenceService = 'src/server/Services/ProfilePersistenceService.luau'
     ProfileMigrator = 'src/server/Services/ProfileMigrator.luau'
     EnchantAndBountyService = 'src/server/Services/EnchantAndBountyService.luau'
@@ -63,6 +64,7 @@ end
 run("studio_data_isolation", function(src) require("../tests/studio_data_isolation")(src) end)
 run("session_acquisition", function(src) require("../tests/session_acquisition")(src) end)
 run("session_lifecycle", function(src) require("../tests/session_lifecycle")(src) end)
+run("profile_schema", function(src) require("../tests/profile_schema")(src) end)
 run("data_persistence", function(src) require("../tests/data_persistence")(src) end)
 assert(failures == 0, string.format("%d suite(s) failed; see PASS/FAIL above", failures))
 '@)

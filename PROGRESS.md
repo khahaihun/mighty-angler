@@ -1,7 +1,20 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 18:33 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Thi công riêng **1.2 — Codex P0-02 / phần lưu cuối Argon P0-3** theo giao việc tiếp sau `0a90644`: 12/12 ca lifecycle, giữ 19/19 nhận khóa và cách ly Studio; **verify PASS 6/6, exit 0**. Bộ hồi quy chung **exit 1**, còn đúng hai ca đã biết thuộc 1.3/1.4. Dừng để Kỹ sư trưởng review commit mục 1.2; **chưa phát hành, Studio/hai server/điện thoại chờ nghiệm thu**. [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 18:45 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Code 1.2 đã được Kỹ sư trưởng chấp nhận. Mục **1.3** qua **26/26 schema**, 19/19 nhận khóa, 12/12 lifecycle và verify 6/6 exit 0. Bộ chung exit 1 chỉ còn Reset 1.4; đang thi công tiếp 1.4 → 1.5 theo chỉ đạo liên tục. **Chưa phát hành; Studio/hai server/điện thoại chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Mục 1.3 — Xác thực hồ sơ và cô lập scheduler
+
+- [x] Tiếp nhận chỉ đạo Kỹ sư trưởng đã chấp nhận code `0ded6d4` và cho thi công liên tục 1.3–1.5. Nền sạch tại `0ded6d4`; không sửa bản copy trong build. Mỗi mục vẫn commit riêng, nghiệm thu Engine chưa thực hiện.
+- [x] Lỗi gốc: reconcile/migration giữ giá trị sai kiểu, dùng ipairs bỏ mục sau lỗ hoặc làm rỗng túi hỏng rồi cho ghi; lỗi một profile dừng vòng scheduler. Đã tái hiện 21 ca đỏ trong `logs/phase13-red.log` trước bản sửa.
+- [x] Thêm `ProfileValidator`: kiểm root/version, scalar hữu hạn/không âm, trường hiện diện sai kiểu kể cả v1, map string đúng kiểu, stats/potions/quests/receipt lồng, UID và mảng đặc qua pairs (không bỏ dữ liệu sau lỗ). v1 được thiếu trường mới có mặc định hợp lệ; v2 phải đủ trường; version tương lai cách ly. Không sửa input, không loại vật phẩm lỗi.
+- [x] Validate trước reconcile, trước claim chỉnh metadata và trước snapshot ghi. Hồ sơ lỗi/future bị từ chối mà kho nguyên trạng cả nghiệp vụ; rejected callback chỉ dùng báo cách ly khi kho hủy ghi, không làm bằng chứng cấp quyền. Receipt nhả của 1.2 được bảo toàn.
+- [x] Scheduler xử lý từng profile bằng pcall và chuyển riêng người lỗi sang chỉ đọc, có cảnh báo. Test lỗi dữ liệu và lỗi biên gửi thông báo của một người vẫn cho người khác gia hạn/lưu/vào lại đúng Gold 81.
+- [x] `profile_schema`: **26/26**, gồm v1 di trú hai lần giữ UID/cân/ghim/mở khóa, v2 tốt giữ receipt, v2 sai kiểu/cá thiếu trường, map lồng, mảng thưa/trộn, version tương lai, UTC cùng/ngày mới và scheduler độc lập. **19/19 acquisition**, **12/12 lifecycle** còn đạt. Persistence **6/7**; ca hỏng schema đã xanh, chỉ `dev_reset_during_autosave` (1.4) còn đỏ.
+- [x] Lệnh `powershell -ExecutionPolicy Bypass -File tools\verify_project.ps1`: **PASS 6/6, exit 0** (`logs/phase13-verify.log`). Lệnh `powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1`: **exit 1** do duy nhất Reset 1.4 (`logs/phase13-final.log`), không bỏ assertion hoặc che lỗi CI. Mục 1.3 được sửa trong một vòng chức năng, không có lỗi quá hai vòng.
+- [x] Sửa DataService/LockHelper/Migrator/Persistence, thêm Validator và test schema; cập nhật fixture/runner. Fixture Bounty nay có đủ cấu trúc CaughtFish như dữ liệu game thật; ca quarantine-yield của 1.1 dùng v1 hợp lệ rồi gây lỗi tạo UID để tiếp tục kiểm đường nhả bất đồng bộ, thay vì nhận khóa một v2 hỏng.
+- [x] **91/91** file mã game ≤350, lớn nhất CurrencyService 342; năm file cam kết không đổi, đều <310. Build SHA-256 `2E504438F62DA840172FA1C0F06BD3F71DE4E502A3F569DC5DCD746FFA933355`. Không mở API thật; Studio/Server & Clients/hai server/điện thoại/staging **chờ nghiệm thu**.
+- [~] Commit của mục này là commit chứa bàn giao; Kỹ sư trưởng sẽ review sau chuỗi 1.3–1.5. Tiếp ngay 1.4 theo chỉ đạo, rồi 1.5. Không coi mô phỏng là quyết định phát hành.
 
 ## Bản vá mục 1.2 — Hạn quyền ghi, gia hạn và lần lưu cuối
 
