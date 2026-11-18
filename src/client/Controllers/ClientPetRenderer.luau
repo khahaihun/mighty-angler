@@ -282,6 +282,8 @@ function ClientPetRenderer.Init()
 						end
 					end
 				end
+			else
+				for _, model in ipairs(models) do model.Parent = nil end
 			end
 		end
 	end)

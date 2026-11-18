@@ -7,13 +7,8 @@ local emitters: { [ParticleEmitter]: boolean } = {}
 local initialized = false
 
 local function register(instance: Instance)
-	if instance:IsA("ParticleEmitter") then
-		local original = instance:GetAttribute("BudgetOriginalEnabled")
-		if type(original) ~= "boolean" then
-			original = instance.Enabled
-			instance:SetAttribute("BudgetOriginalEnabled", original)
-		end
-		emitters[instance] = original == true
+	if instance:IsA("ParticleEmitter") and instance:GetAttribute("ClientBudgetManaged") == true then
+		emitters[instance] = true
 	end
 end
 
@@ -30,13 +25,13 @@ function ParticleBudgetController.Update(lowGfx: boolean)
 	local character = localPlayer.Character
 	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 	local position = if root and root:IsA("BasePart") then root.Position else nil
-	for emitter, originallyEnabled in pairs(emitters) do
+	for emitter in pairs(emitters) do
 		local part = emitter:FindFirstAncestorWhichIsA("BasePart")
 		if not part then continue end
 		local selfOwned = character ~= nil and emitter:IsDescendantOf(character)
 		local distance = if position then (part.Position - position).Magnitude else math.huge
-		local allowed = if lowGfx then selfOwned and distance <= 45 else distance <= 210
-		emitter.Enabled = originallyEnabled and emitter.Rate > 0 and allowed
+		local allowed = if lowGfx then selfOwned and distance <= 45 else distance <= (if emitter.Name == "RankAuraEmitter" then 145 else 210)
+		emitter.Enabled = emitter:GetAttribute("ClientBudgetEnabled") ~= false and emitter.Rate > 0 and allowed
 	end
 end
 

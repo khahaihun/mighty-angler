@@ -102,6 +102,8 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 	local existingAura = root:FindFirstChild("RankAuraEmitter") :: ParticleEmitter?
 	if totalRate <= 0 then
 		if existingAura then
+			existingAura.Rate = 0
+			existingAura:SetAttribute("ClientBudgetEnabled", false)
 			existingAura.Enabled = false
 		end
 		return
@@ -109,6 +111,7 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 
 	if not existingAura then
 		local em = Instance.new("ParticleEmitter")
+	em:SetAttribute("ClientBudgetManaged", true)
 		em.Name = "RankAuraEmitter"
 		em.LightEmission = 1
 		em.Size = NumberSequence.new({
@@ -127,6 +130,7 @@ function PlayerVisuals.RefreshRankAndAura(player: Player)
 		existingAura = em
 	end
 	if existingAura then
+		existingAura:SetAttribute("ClientBudgetEnabled", true)
 		existingAura.Enabled = true
 		existingAura.Color = ColorSequence.new(rank.color)
 		existingAura.Rate = totalRate
@@ -192,10 +196,10 @@ function PlayerVisuals.ShowGymWeightsForRep(player: Player, stationType: string)
 				end
 			end
 		elseif stationType == "BenchPress" then
-			local torso = rHand
+			local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
 			if torso and torso:IsA("BasePart") then
 				local bb, shaft = RodAndWeightBuilder.BuildHandheldBarbell(isl.theme.accentColor, scale)
-				local targetCf = torso.CFrame * CFrame.new(0, -0.18, 0)
+				local targetCf = torso.CFrame * CFrame.new(0, 0.52, -1.42)
 				local inv = shaft.CFrame:Inverse()
 				for _, d in ipairs(bb:GetDescendants()) do
 					if d:IsA("BasePart") and d ~= shaft then

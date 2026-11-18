@@ -110,6 +110,7 @@ local function buildCoralArch(parent: Instance, pos: Vector3, yawDeg: number, co
 
 	local bubbleEmitterPart = PartFactory.Ball(model, "BubbleSource", 1.0, pos + Vector3.new(0, 1.2, 0), glowColor, Enum.Material.Neon, false, 1)
 	local emitter = Instance.new("ParticleEmitter")
+	emitter:SetAttribute("ClientBudgetManaged", true)
 	emitter.Color = ColorSequence.new(Color3.fromRGB(175, 245, 255))
 	emitter.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.35),

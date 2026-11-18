@@ -89,8 +89,10 @@ function RodVisuals.ClearBobber(player: Player)
 	local character = player.Character
 	if character then
 		character:SetAttribute("FishingPoseActive", false)
-		character:SetAttribute("VisualAction", "Reel")
-		character:SetAttribute("VisualActionAt", Workspace:GetServerTimeNow())
+		if activeBobbers[player] then
+			character:SetAttribute("VisualAction", "Reel")
+			character:SetAttribute("VisualActionAt", Workspace:GetServerTimeNow())
+		end
 	end
 	local bob = activeBobbers[player]
 	if bob then
