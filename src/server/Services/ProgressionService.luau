@@ -20,6 +20,7 @@ local FishingService = require(script.Parent.FishingService)
 local GymService = require(script.Parent.GymService)
 local IslandService = require(script.Parent.IslandService)
 local PetsService = require(script.Parent.PetsService)
+local PlayerVisuals = require(script.Parent.Parent.World.PlayerVisuals)
 
 local ProgressionService = {}
 
@@ -193,6 +194,7 @@ local function handleDoRebirth(player: Player)
 
 	IslandService.TeleportCharacterToIsland(player, 1)
 	ShopAndItemsService.SyncCharacterHandVisuals(player)
+	PlayerVisuals.RefreshRankAndAura(player)
 	DataService.MarkDirty(player)
 
 	CurrencyService.PushCurrencies(player)

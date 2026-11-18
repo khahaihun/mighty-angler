@@ -48,29 +48,17 @@ local function isAutoCatchRarity(rarity: Types.Rarity): boolean
 end
 
 local function checkVoidScytheWhirlpoolDrop(player: Player, profile: Types.PlayerProfile, sess: FishingSessionManager.CastSession)
-	if not sess.inWhirlpool or sess.islandId < 4 then
-		return
-	end
-	if math.random() > BountiesConfig.VOID_SCYTHE_WHIRLPOOL_CHANCE then
+	if not sess.inWhirlpool or sess.islandId < 4 or math.random() > BountiesConfig.VOID_SCYTHE_WHIRLPOOL_CHANCE then
 		return
 	end
 	if not profile.ownedRods["VoidScythe"] then
 		profile.ownedRods["VoidScythe"] = true
-		DataService.MarkDirty(player)
-		ShopAndItemsService.PushInventory(player)
-		Net.FireAllClients(Net.ServerToClient.Toast, {
-			kind = "Epic",
-			text = string.format("🌀 MYTHIC DROP! %s pulled the Void Reaper Exclusive Rod from a Whirlpool!", player.DisplayName),
-		})
+		DataService.MarkDirty(player); ShopAndItemsService.PushInventory(player)
+		Net.FireAllClients(Net.ServerToClient.Toast, { kind = "Epic", text = string.format("🌀 MYTHIC DROP! %s pulled the Void Reaper Exclusive Rod from a Whirlpool!", player.DisplayName) })
 	else
-		profile.enchantRelics += 2
-		CurrencyService.AddGems(player, 350, true)
-		DataService.MarkDirty(player)
-		ShopAndItemsService.PushInventory(player)
-		Net.FireClient(player, Net.ServerToClient.Toast, {
-			kind = "Epic",
-			text = "🌀 Duplicate Void Reaper converted to +350 Gems & +2 Enchant Relics!",
-		})
+		profile.enchantRelics += 2; CurrencyService.AddGems(player, 350, true)
+		DataService.MarkDirty(player); ShopAndItemsService.PushInventory(player)
+		Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Epic", text = "🌀 Duplicate Void Reaper converted to +350 Gems & +2 Enchant Relics!" })
 	end
 end
 
@@ -99,32 +87,17 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 		or (sizeTier == "Titanic")
 
 	local entry: Types.CaughtFish = {
-		uid = Util.NewUid(),
-		fishId = fishDef.id,
-		weight = weight,
-		mutation = mutName,
-		sellValue = sellValue,
-		originalValue = sellValue,
-		sizeTier = sizeTier,
-		locked = shouldAutoLock,
-		soulbound = false,
-		midasBonus = midasBonus,
+		uid = Util.NewUid(), fishId = fishDef.id, weight = weight, mutation = mutName,
+		sellValue = sellValue, originalValue = sellValue, sizeTier = sizeTier,
+		locked = shouldAutoLock, soulbound = false, midasBonus = midasBonus,
 	}
 	table.insert(profile.fishBag, entry)
 
 	profile.stats.fishCaught += 1
-	if rarityOrder >= 3 then
-		profile.stats.rareCaught += 1
-	end
-	if fishDef.rarity == "Boss" then
-		profile.stats.bossCaught += 1
-	end
-	if mutName ~= "None" then
-		profile.stats.mutationsCaught += 1
-	end
-	if weight > (profile.indexFish[fishDef.id] or 0) then
-		profile.indexFish[fishDef.id] = weight
-	end
+	if rarityOrder >= 3 then profile.stats.rareCaught += 1 end
+	if fishDef.rarity == "Boss" then profile.stats.bossCaught += 1 end
+	if mutName ~= "None" then profile.stats.mutationsCaught += 1 end
+	if weight > (profile.indexFish[fishDef.id] or 0) then profile.indexFish[fishDef.id] = weight end
 
 	ShopAndItemsService.ConsumeGivenBaitOnCatch(player, profile, sess.snapBait)
 	local gainedStr = CurrencyService.AddStrength(player, fishDef.strengthReward, true, false)
@@ -136,19 +109,10 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 
 	Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
 	Net.FireClient(player, Net.ServerToClient.FishingCatchResult, {
-		success = true,
-		uid = entry.uid,
-		fishId = fishDef.id,
-		fishName = fishDef.name,
-		rarity = fishDef.rarity,
-		sizeTier = sizeTier,
-		weight = weight,
-		mutation = mutName,
-		sellValue = sellValue,
-		locked = shouldAutoLock,
-		strengthGained = gainedStr,
-		bagCount = #profile.fishBag,
-		bagCap = GameConfig.BAG_CAPACITY,
+		success = true, uid = entry.uid, fishId = fishDef.id, fishName = fishDef.name,
+		rarity = fishDef.rarity, sizeTier = sizeTier, weight = weight, mutation = mutName,
+		sellValue = sellValue, locked = shouldAutoLock, strengthGained = gainedStr,
+		bagCount = #profile.fishBag, bagCap = GameConfig.BAG_CAPACITY,
 	})
 
 	if fishDef.rarity == "Boss" or fishDef.rarity == "Legendary" or mutName == "Cosmic" or sizeTier == "Titanic" then

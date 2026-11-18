@@ -19,12 +19,16 @@ local SoundAndFxController = {}
 local fxRootGui: ScreenGui? = nil
 local toastStackFrame: Frame? = nil
 local cachedSounds: { [string]: Sound } = {}
+local ambientSound: Sound? = nil
 local mutedFlag = false
 local lowGfxFlag = false
 
 function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)
 	mutedFlag = muteSfx
 	lowGfxFlag = lowGfx
+	if ambientSound then
+		ambientSound.Volume = if muteSfx then 0 else SoundConfig.OceanAmbience.volume
+	end
 	local lighting = game:GetService("Lighting")
 	lighting.GlobalShadows = not lowGfx
 	local bloom = lighting:FindFirstChild("MightyBloom")
@@ -184,6 +188,16 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = stack
 	toastStackFrame = stack
+
+	local amb = Instance.new("Sound")
+	amb.Name = "OceanAmbienceLoop"
+	amb.SoundId = SoundConfig.OceanAmbience.id
+	amb.Volume = if mutedFlag then 0 else SoundConfig.OceanAmbience.volume
+	amb.PlaybackSpeed = SoundConfig.OceanAmbience.pitch
+	amb.Looped = true
+	amb.Parent = SoundService
+	ambientSound = amb
+	pcall(function() amb:Play() end)
 
 	Net.OnClientEvent(Net.ServerToClient.Toast, function(payload: any)
 		if type(payload) == "table" then

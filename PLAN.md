@@ -174,9 +174,9 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 ---
 
 ### 🐉 CHẶNG D: ĐẠI TU MÔ HÌNH 3D CHI TIẾT CAO, `CLIENTPETRENDERER`, ĐẬP TRỨNG, AURA & ÂM THANH
-- [ ] **D1 — Thư Viện Mô Hình 3D Chi Tiết Cao (`FishModelBuilder`, `PetModelBuilder`, `RodAndWeightBuilder`) & `ClientPetRenderer`:**
+- [x] **D1 — Thư Viện Mô Hình 3D Chi Tiết Cao (`FishModelBuilder`, `PetModelBuilder`, `RodAndWeightBuilder`) & `ClientPetRenderer`:**
   - Dựng chi tiết 5 họ Cá (Thon, Kiếm, Đuối, Cá Mập, Thủy Quái Boss), 6 dòng Pet Chibi mắt long lanh và chuyển toàn bộ diễn hoạt bay của Pet sang Client.
-- [ ] **D2 — Hiệu Ứng Đập Trứng (`EggHatchCutscene`), Overhead Rank Title, Hào Quang (`Aura`) & Cầm Tạ 3D Thật:**
+- [x] **D2 — Hiệu Ứng Đập Trứng (`EggHatchCutscene`), Overhead Rank Title, Hào Quang (`Aura`) & Cầm Tạ 3D Thật:**
   - Diễn hoạt đập trứng nứt vỏ nổ sáng (có nút `Skip`), gắn Danh hiệu & Aura theo mốc Strength/Rebirth, và gắn quả tạ đôi / đòn tạ 3D thật vào bàn tay nhân vật khi tập Gym.
-- [ ] **D3 — Đại Tu Animation Toàn Thân, Âm Thanh Đa Lớp & Kiểm Định Tổng Thể:**
+- [x] **D3 — Đại Tu Animation Toàn Thân, Âm Thanh Đa Lớp & Kiểm Định Tổng Thể:**
   - Tinh chỉnh diễn hoạt toàn thân, lắp âm thanh nền sóng biển + bộ SFX chi tiết, kiểm tra hiệu năng khi túi đầy & nhiều Pet trên cầu tàu, đạt `[PASS] 6/6` sẵn sàng phát hành.

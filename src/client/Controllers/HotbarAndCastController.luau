@@ -189,7 +189,7 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.FishingLandBounce, function(_payload: any)
-		SoundAndFxController.PlaySfx("Error")
+		SoundAndFxController.PlaySfx("LandBounce")
 		AnimationController.StopFishingHold()
 		SoundAndFxController.ShowToast("Info", "💥 Bobber bounced off dry land! Aim at the ocean water!")
 	end)

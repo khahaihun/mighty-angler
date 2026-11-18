@@ -1,5 +1,5 @@
 --!strict
--- PetsService.luau: Mo trung Gold/Gems, trang bi 2-4 Pet bay theo nhan vat & cong he so vao BuffAggregator
+-- PetsService.luau: Mo trung Gold/Gems, trang bi 2-4 Pet (dong bo Attribute cho ClientPetRenderer) & cong BuffAggregator
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -13,7 +13,6 @@ local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfi
 local DataService = require(script.Parent.DataService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
 local CurrencyService = require(script.Parent.CurrencyService)
-local PetAndFishVisuals = require(script.Parent.Parent.World.PetAndFishVisuals)
 
 local PetsService = {}
 
@@ -23,7 +22,7 @@ function PetsService.OnPetHatched(callback: (Player, Types.PetDef) -> ())
 	table.insert(hatchHooks, callback)
 end
 
-local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile)
+local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile): { [string]: string }
 	local ownedByUid: { [string]: string } = {}
 	for _, inst in ipairs(profile.pets) do
 		ownedByUid[inst.uid] = inst.petId
@@ -39,6 +38,7 @@ local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile
 		end
 	end
 	profile.equippedPetUids = clean
+	return ownedByUid
 end
 
 function PetsService.SyncVisualsAndClient(player: Player)
@@ -46,23 +46,18 @@ function PetsService.SyncVisualsAndClient(player: Player)
 	if not profile then
 		return
 	end
-	sanitizeEquippedList(player, profile)
+	local ownedByUid = sanitizeEquippedList(player, profile)
 
-	local ownedByUid: { [string]: string } = {}
-	for _, inst in ipairs(profile.pets) do
-		ownedByUid[inst.uid] = inst.petId
-	end
-
-	local equippedDefs: { Types.PetDef } = {}
+	local equippedIds: { string } = {}
 	for _, uid in ipairs(profile.equippedPetUids) do
 		local petId = ownedByUid[uid]
-		local def = if petId then PetsConfig.PetsById[petId] else nil
-		if def then
-			table.insert(equippedDefs, def)
+		if petId and PetsConfig.PetsById[petId] then
+			table.insert(equippedIds, petId)
 		end
 	end
 
-	PetAndFishVisuals.SyncPlayerPets(player, equippedDefs)
+	-- Dong bo gon nhe qua Attribute de ClientPetRenderer noi suy muot 60FPS tren Client!
+	player:SetAttribute("EquippedPetIds", table.concat(equippedIds, ","))
 
 	Net.FireClient(player, Net.ServerToClient.PetsUpdated, {
 		pets = profile.pets,
@@ -71,7 +66,7 @@ function PetsService.SyncVisualsAndClient(player: Player)
 	})
 end
 
-function PetsService.AwardPetDirect(player: Player, petDef: Types.PetDef, sourceLabel: string)
+function PetsService.AwardPetDirect(player: Player, petDef: Types.PetDef, sourceLabel: string, eggId: string?)
 	local profile = DataService.Get(player)
 	if not profile or #profile.pets >= GameConfig.MAX_PET_INVENTORY then
 		return
@@ -93,14 +88,11 @@ function PetsService.AwardPetDirect(player: Player, petDef: Types.PetDef, source
 	PetsService.SyncVisualsAndClient(player)
 
 	Net.FireClient(player, Net.ServerToClient.EggHatched, {
+		eggId = eggId or petDef.eggId,
 		petId = petDef.id,
 		petName = petDef.name,
 		rarity = petDef.rarity,
 		source = sourceLabel,
-	})
-	Net.FireClient(player, Net.ServerToClient.Toast, {
-		kind = if petDef.rarity == "Mythic" or petDef.rarity == "Legendary" then "Epic" else "Success",
-		text = string.format("🐾 Hatched [%s] %s!", petDef.rarity, petDef.name),
 	})
 
 	if petDef.rarity == "Mythic" then
@@ -118,7 +110,7 @@ end
 function PetsService.HandleHatchEgg(player: Player, eggId: string)
 	local profile = DataService.Get(player)
 	local egg = PetsConfig.EggsById[eggId]
-	if not profile or not egg then
+	if not profile or not egg or DataService.IsTransactionLocked(player, true) then
 		return
 	end
 
@@ -160,7 +152,7 @@ function PetsService.HandleHatchEgg(player: Player, eggId: string)
 	local rolledPet = Util.PickWeighted(egg.pets, function(p: Types.PetDef): number
 		return p.weightChance
 	end)
-	PetsService.AwardPetDirect(player, rolledPet, egg.name)
+	PetsService.AwardPetDirect(player, rolledPet, egg.name, egg.id)
 end
 
 local function handleEquipPet(player: Player, uid: string)
@@ -222,9 +214,7 @@ local function handleEquipBest(player: Player)
 	table.sort(sorted, function(a: Types.PetInstance, b: Types.PetInstance): boolean
 		local defA = PetsConfig.PetsById[a.petId]
 		local defB = PetsConfig.PetsById[b.petId]
-		local scoreA = if defA then PetsConfig.GetPowerScore(defA) else 0
-		local scoreB = if defB then PetsConfig.GetPowerScore(defB) else 0
-		return scoreA > scoreB
+		return (if defA then PetsConfig.GetPowerScore(defA) else 0) > (if defB then PetsConfig.GetPowerScore(defB) else 0)
 	end)
 
 	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
@@ -234,16 +224,12 @@ local function handleEquipBest(player: Player)
 	end
 	DataService.MarkDirty(player)
 	PetsService.SyncVisualsAndClient(player)
-
-	Net.FireClient(player, Net.ServerToClient.Toast, {
-		kind = "Success",
-		text = "⚡ Equipped your strongest Pets!",
-	})
+	Net.FireClient(player, Net.ServerToClient.Toast, { kind = "Success", text = "⚡ Equipped your strongest Pets!" })
 end
 
 local function handleDeletePet(player: Player, uid: string)
 	local profile = DataService.Get(player)
-	if not profile then
+	if not profile or DataService.IsTransactionLocked(player, true) then
 		return
 	end
 	for idx, eqUid in ipairs(profile.equippedPetUids) do
@@ -263,7 +249,6 @@ local function handleDeletePet(player: Player, uid: string)
 end
 
 function PetsService.Init()
-	-- Dang ky buff Pet vao BuffAggregator (KHONG goi nguoc GetMultipliers de tuyet doi khong de quy!)
 	BuffAggregator.RegisterProvider(function(player: Player, profile: Types.PlayerProfile)
 		local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
 		local ownedByUid: { [string]: string } = {}
@@ -271,12 +256,7 @@ function PetsService.Init()
 			ownedByUid[inst.uid] = inst.petId
 		end
 
-		local sellAdd = 0
-		local strAdd = 0
-		local luckAdd = 0
-		local mutAdd = 0
-		local count = 0
-
+		local sellAdd, strAdd, luckAdd, mutAdd, count = 0, 0, 0, 0, 0
 		for _, uid in ipairs(profile.equippedPetUids) do
 			local petId = ownedByUid[uid]
 			local def = if petId then PetsConfig.PetsById[petId] else nil
@@ -292,45 +272,18 @@ function PetsService.Init()
 			end
 		end
 
-		return {
-			sellAdd = sellAdd,
-			strengthAdd = strAdd,
-			luckAdd = luckAdd,
-			mutationAdd = mutAdd,
-		}
+		return { sellAdd = sellAdd, strengthAdd = strAdd, luckAdd = luckAdd, mutationAdd = mutAdd }
 	end)
 
-	DataService.OnProfileLoaded(function(player: Player, _profile: Types.PlayerProfile)
+	DataService.OnProfileLoaded(function(player: Player)
 		PetsService.SyncVisualsAndClient(player)
-		player.CharacterAdded:Connect(function()
-			task.wait(0.25)
-			PetsService.SyncVisualsAndClient(player)
-		end)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.HatchEgg, function(player: Player, rawEggId: any)
-		if type(rawEggId) == "string" then
-			PetsService.HandleHatchEgg(player, rawEggId)
-		end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.EquipPet, function(player: Player, rawUid: any)
-		if type(rawUid) == "string" then
-			handleEquipPet(player, rawUid)
-		end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.UnequipPet, function(player: Player, rawUid: any)
-		if type(rawUid) == "string" then
-			handleUnequipPet(player, rawUid)
-		end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.EquipBestPets, function(player: Player)
-		handleEquipBest(player)
-	end)
-	Net.OnServerEvent(Net.ClientToServer.DeletePet, function(player: Player, rawUid: any)
-		if type(rawUid) == "string" then
-			handleDeletePet(player, rawUid)
-		end
-	end)
+	Net.OnServerEvent(Net.ClientToServer.HatchEgg, function(p: Player, id: any) if type(id) == "string" then PetsService.HandleHatchEgg(p, id) end end)
+	Net.OnServerEvent(Net.ClientToServer.EquipPet, function(p: Player, u: any) if type(u) == "string" then handleEquipPet(p, u) end end)
+	Net.OnServerEvent(Net.ClientToServer.UnequipPet, function(p: Player, u: any) if type(u) == "string" then handleUnequipPet(p, u) end end)
+	Net.OnServerEvent(Net.ClientToServer.EquipBestPets, handleEquipBest)
+	Net.OnServerEvent(Net.ClientToServer.DeletePet, function(p: Player, u: any) if type(u) == "string" then handleDeletePet(p, u) end end)
 end
 
 return PetsService

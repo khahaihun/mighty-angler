@@ -14,6 +14,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
 local CurrencyService = require(script.Parent.CurrencyService)
+local PlayerVisuals = require(script.Parent.Parent.World.PlayerVisuals)
 
 local GymService = {}
 
@@ -87,6 +88,7 @@ local function performStationRep(player: Player, isAuto: boolean): boolean
 	local gained = CurrencyService.AddStrength(player, baseGain, true, false)
 	profile.stats.gymReps += 1
 	DataService.MarkDirty(player)
+	PlayerVisuals.ShowGymWeightsForRep(player, station.stationType)
 
 	Net.FireClient(player, Net.ServerToClient.GymRepFeedback, {
 		stationType = station.stationType,

@@ -1,11 +1,11 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 12:30 bởi Antigravity
-- **Trạng thái hiện tại:** **Đang thi công trọn gói Đại Tu 2.0 (`Chặng A → Chặng D`)** — Đã hoàn tất **Chặng A**, **Chặng B** & **Chặng C (`C1–C3`)** đạt `[PASS] 6/6`, đang bước vào chặng cuối **Chặng D (`D1–D3`)**.
+- **Cập nhật lần cuối:** 2026-11-18 12:40 bởi Antigravity
+- **Trạng thái hiện tại:** **HOÀN TẤT TRỌN GÓI 100% ĐẠI TU 2.0 (`Chặng A → Chặng D`, 85 file `.luau`, `[PASS] 6/6`)** — File place `build/mighty-angler-dev.rbxlx` đã đóng gói sẵn sàng để mở và bấm **Play (F5)** trải nghiệm trên Roblox Studio!
 
 ---
 
-## Tiến Độ Đại Tu 2.0 (Phase 2 Overhaul)
+## Tiến Độ Đại Tu 2.0 (Phase 2 Overhaul) [x]
 - [x] **Chặng A (`A1–A3`) — Nước Biển Sóng Thật, Xoáy Nước & Dàn 4 NPC R15 Hội Thoại:**
   - `TerrainWaterBuilder.luau`: Đổ `Terrain:FillBlock` cục bộ từng đảo (không xóa địa hình chung), giữ hộp neo `FishingWater` vô hình (`CanQuery = false`), bổ sung đồi vách đa tầng, ngọn hải đăng Đảo 1, lửa trại, hàng rào dây thừng và Bệ `Enchant Altar`.
   - `WhirlpoolManager.luau`: Xoáy nước sủi bọt + cột sáng + bóng cá bơi vòng, nhân `×2` tổng Luck và `×2` trọng số rớt Boss khi quăng trúng vùng xoáy.
@@ -18,7 +18,12 @@
   - `ViewportPool.luau` + `ViewportCard.luau`: Tái sử dụng ô lưới thẻ vuông 3D mượt trên mobile cho toàn bộ `BagPanel`, `ShopPanel`, `PetsPanel` và `IndexGridSection` (bóng đen Silhouette cho loài chưa mở, chỉ xoay 1 thẻ đang chọn, dừng 100% khi đóng cửa sổ).
   - `BagPanel.luau` + `CurrencyService.luau`: Hỗ trợ `🔒 Lock/Unlock`, thanh ghim nhanh Hotbar `Slot 2..5`, chế độ `☑️ Multi-Select` bán nhiều cá một lúc, `Sell Held Fish`, và bảo vệ tuyệt đối cá `Soulbound Trophy` ở cả 4 luồng bán Gold.
   - `PlaytimeAndSettingsModal.luau` + `EnchantAndBountyService.luau`: Quà Online 9 mốc cộng dồn theo ngày UTC, `Appraise` nâng bậc kích thước/đột biến (sàn cân `0.85x`), `Fish Bounty` tiêu `uid` nguyên tử và bảng `Settings` (`Auto-Lock`, `Low GFX`, `Mute SFX`).
-- [~] **Chặng D (`D1–D3`) — Mô Hình 3D Chi Tiết Cao, `ClientPetRenderer`, Đập Trứng, Rank Aura & Âm Thanh**
+- [x] **Chặng D (`D1–D3`) — Mô Hình 3D Chi Tiết Cao, `ClientPetRenderer`, Đập Trứng, Rank Aura & Âm Thanh:**
+  - `FishModelBuilder.luau`, `PetModelBuilder.luau`, `RodAndWeightBuilder.luau`: 5 họ cá 3D giải phẫu riêng (*Sleek, Billfish, Manta, Shark, Leviathan*), 6 dòng Pet Chibi mắt long lanh má hồng, 3 Cần Exclusive phát sáng đặc trưng (*Đinh ba 3 mũi, Lưỡi hái Hư không, Đôi cánh Rồng Seraphim*) và quả tạ đôi / đòn tạ 3D.
+  - `ClientPetRenderer.luau`: Chuyển toàn bộ diễn hoạt bay của Pet sang Client (`EquippedPetIds` Attribute), tự động giảm nhịp với người chơi ở xa hoặc khi bật `Low GFX`.
+  - `PlayerVisuals.luau`, `RanksConfig.luau` & `EggHatchCutscene.luau`: 10 Danh hiệu Overhead Rank Title + vòng hào quang `Aura` theo mốc Strength/Rebirth, cầm tạ 3D thật trên tay khi tập Gym, và diễn hoạt Đập Trứng nứt vỏ nổ sáng có nút `SKIP`.
+  - `AnimationController.luau`, `SoundConfig.luau` & `SoundAndFxController.luau`: Tư thế toàn thân (nghiêng hông lấy đà quăng cần, giật cần, giơ 2 tay bế cá khoe hàng, cuốn tạ/đẩy tạ) + nhạc nền sóng biển nhẹ nhàng & SFX nảy đất/câu cá.
+  - Kỷ luật dung lượng file: Cả 5 file từng sát trần đều đã hạ xuống `< 310` dòng (`HudPanel: 260`, `ProgressPanel: 274`, `PetsService: 289`, `FishingService: 301`, `BagPanel: 307`).
 
 ---
 

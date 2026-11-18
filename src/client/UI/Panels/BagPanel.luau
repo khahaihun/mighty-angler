@@ -78,32 +78,25 @@ local function rebuildFishToolbarAndInspector()
 	end
 	local selCount, selList = countSelected()
 
-	local sumLbl = Instance.new("TextLabel")
-	sumLbl.Size = UDim2.new(0.42, 0, 1, 0)
-	sumLbl.BackgroundTransparency = 1
-	sumLbl.Font = Theme.FontTitle
-	sumLbl.TextSize = 14
-	sumLbl.TextXAlignment = Enum.TextXAlignment.Left
-	sumLbl.TextColor3 = Theme.Colors.TextPrimary
-	sumLbl.Text = string.format("🎒 %d/%d  •  Unlocked: %sG", #fishBagCache, GameConfig.BAG_CAPACITY, Util.FormatNumber(unlockedVal))
-	sumLbl.ZIndex = 23
-	sumLbl.Parent = tb
+	local function addQuickLbl(parent: Instance, sz: UDim2, pos: UDim2, txt: string, col: Color3): TextLabel
+		local l = Instance.new("TextLabel")
+		l.Size = sz; l.Position = pos; l.BackgroundTransparency = 1
+		l.Font = Theme.FontTitle; l.TextSize = 13; l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextColor3 = col; l.Text = txt; l.ZIndex = 23; l.Parent = parent
+		return l
+	end
+
+	local sumLbl = addQuickLbl(tb, UDim2.new(0.42, 0, 1, 0), UDim2.new(), string.format("🎒 %d/%d  •  Unlocked: %sG", #fishBagCache, GameConfig.BAG_CAPACITY, Util.FormatNumber(unlockedVal)), Theme.Colors.TextPrimary)
 	Theme.AddTextStroke(sumLbl, 1.4)
 
 	local modeBtn = Theme.CreateButton(tb, "MultiModeBtn", if multiSelectMode then "✖ Exit Select" else "☑️ Multi-Select", UDim2.fromOffset(118, 34), UDim2.new(1, -284, 0.5, -17), if multiSelectMode then Theme.Colors.Warning else Theme.Colors.Primary, function()
-		multiSelectMode = not multiSelectMode
-		table.clear(selectedUids)
-		BagPanel.Render()
+		multiSelectMode = not multiSelectMode; table.clear(selectedUids); BagPanel.Render()
 	end)
 	modeBtn.TextSize = 13; modeBtn.ZIndex = 24
 
-	local sellBtnLabel = if multiSelectMode then string.format("💰 Sell (%d)", selCount) else "💰 Sell Unlocked"
-	local sellBtn = Theme.CreateButton(tb, "MainSellBtn", sellBtnLabel, UDim2.fromOffset(156, 34), UDim2.new(1, -158, 0.5, -17), Theme.Colors.Success, function()
+	local sellBtn = Theme.CreateButton(tb, "MainSellBtn", if multiSelectMode then string.format("💰 Sell (%d)", selCount) else "💰 Sell Unlocked", UDim2.fromOffset(156, 34), UDim2.new(1, -158, 0.5, -17), Theme.Colors.Success, function()
 		if multiSelectMode then
-			if #selList > 0 then
-				Net.FireServer(Net.ClientToServer.SellSelectedFish, selList)
-				table.clear(selectedUids)
-			end
+			if #selList > 0 then Net.FireServer(Net.ClientToServer.SellSelectedFish, selList); table.clear(selectedUids) end
 		else
 			Net.FireServer(Net.ClientToServer.SellAllFish)
 		end
@@ -111,25 +104,12 @@ local function rebuildFishToolbarAndInspector()
 	sellBtn.TextSize = 13; sellBtn.ZIndex = 24
 
 	local focused = findFishEntry(inspectedFishUid)
-	if not focused or multiSelectMode then
-		ins.Visible = false
-		return
-	end
+	if not focused or multiSelectMode then ins.Visible = false; return end
 	ins.Visible = true
 
 	local def = IslandsRegistry.GetFish(focused.fishId)
 	local fName = if def then def.name else focused.fishId
-	local infoLbl = Instance.new("TextLabel")
-	infoLbl.Size = UDim2.new(0.38, 0, 1, 0)
-	infoLbl.Position = UDim2.fromOffset(10, 0)
-	infoLbl.BackgroundTransparency = 1
-	infoLbl.Font = Theme.FontTitle
-	infoLbl.TextSize = 13
-	infoLbl.TextXAlignment = Enum.TextXAlignment.Left
-	infoLbl.TextColor3 = Theme.Colors.Gold
-	infoLbl.Text = string.format("%s (%s)%s", fName, Util.FormatWeight(focused.weight), if focused.soulbound then " 🏆" else "")
-	infoLbl.ZIndex = 23
-	infoLbl.Parent = ins
+	addQuickLbl(ins, UDim2.new(0.38, 0, 1, 0), UDim2.fromOffset(10, 0), string.format("%s (%s)%s", fName, Util.FormatWeight(focused.weight), if focused.soulbound then " 🏆" else ""), Theme.Colors.Gold)
 
 	local lockBtn = Theme.CreateButton(ins, "LockAct", if focused.locked then "🔓 Unlock" else "🔒 Lock", UDim2.fromOffset(76, 30), UDim2.new(1, -342, 0.5, -15), if focused.locked then Theme.Colors.Warning else Theme.Colors.CardBg, function()
 		Net.FireServer(Net.ClientToServer.ToggleLockFish, focused.uid)
@@ -283,33 +263,16 @@ function BagPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	win = built
 
 	local tb = Instance.new("Frame")
-	tb.Size = UDim2.new(1, 0, 0, 38)
-	tb.BackgroundTransparency = 1
-	tb.LayoutOrder = 1
-	tb.ZIndex = 22
-	tb.Parent = built.body
+	tb.Size = UDim2.new(1, 0, 0, 38); tb.BackgroundTransparency = 1; tb.LayoutOrder = 1; tb.ZIndex = 22; tb.Parent = built.body
 	toolbarFrame = tb
 
 	local ins = Instance.new("Frame")
-	ins.Size = UDim2.new(1, 0, 0, 38)
-	ins.BackgroundColor3 = Theme.Colors.CardOwned
-	ins.LayoutOrder = 2
-	ins.Visible = false
-	ins.ZIndex = 22
-	ins.Parent = built.body
-	Theme.AddCorner(ins, 8)
-	Theme.AddStroke(ins, Theme.Colors.Gold, 1.5)
+	ins.Size = UDim2.new(1, 0, 0, 38); ins.BackgroundColor3 = Theme.Colors.CardOwned; ins.LayoutOrder = 2; ins.Visible = false; ins.ZIndex = 22; ins.Parent = built.body
+	Theme.AddCorner(ins, 8); Theme.AddStroke(ins, Theme.Colors.Gold, 1.5)
 	inspectorFrame = ins
 
 	local emp = Instance.new("TextLabel")
-	emp.Size = UDim2.new(1, 0, 0, 56)
-	emp.BackgroundTransparency = 1
-	emp.Font = Theme.FontBody
-	emp.TextSize = 15
-	emp.TextColor3 = Theme.Colors.TextMuted
-	emp.LayoutOrder = 3
-	emp.ZIndex = 22
-	emp.Parent = built.body
+	emp.Size = UDim2.new(1, 0, 0, 56); emp.BackgroundTransparency = 1; emp.Font = Theme.FontBody; emp.TextSize = 15; emp.TextColor3 = Theme.Colors.TextMuted; emp.LayoutOrder = 3; emp.ZIndex = 22; emp.Parent = built.body
 	emptyLbl = emp
 
 	gridHandle = ViewportPool.CreateGrid(built.body, 4)
