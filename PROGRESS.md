@@ -1,7 +1,14 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 14:17 bởi Antigravity
-- **Trạng thái hiện tại:** Đã hoàn tất **Bản Vá Hotfix Vòng Cuối** giải quyết **100% toàn bộ hạng mục `P0 / P1 / P2`** từ cả 2 biên bản kiểm toán độc lập ([docs/CODEX_CODE_AUDIT_V2.md](docs/CODEX_CODE_AUDIT_V2.md) và [docs/ARGON_CODE_AUDIT_V2.md](docs/ARGON_CODE_AUDIT_V2.md)). Đạt **`[PASS] 6/6`** kiểm định tự động, `88/88` file `.luau <= 350` dòng, cả 5 file cam kết riêng đều `< 310` dòng (`HudPanel: 268`, `ProgressPanel: 268`, `FishingService: 282`, `PetsService: 298`, `BagPanel: 307`). Đang bàn giao sang phiên chat **Argon** để tái kiểm toán (`docs/ARGON_CODE_AUDIT_V3.md`) kèm lịch hẹn tự động vá nốt nếu phát sinh.
+- **Cập nhật lần cuối:** 2026-11-18 16:06 bởi Codex
+- **Trạng thái hiện tại:** Tái kiểm toán commit `8227545` đã hoàn tất. **Cần bản vá trước phát hành.** Trong 44 mục V2, 21 mục đạt theo mã và 23 mục mới xử lý một phần. [Biên bản Codex V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Bàn giao tái kiểm toán V3
+
+- [x] Chạy độc lập `tools/verify_project.ps1` đạt 6/6. Đếm 88/88 file nguồn ≤ 350 dòng, năm file cam kết đều < 310. Đối chiếu 88/88 script trong place đã build với nội dung `src/`.
+- [x] Đối chiếu đủ 18 mục Argon và 26 mục Codex với mã tại `8227545`, ghi kết quả và bằng chứng vào `docs/CODEX_CODE_AUDIT_V3.md`. Hai tài liệu của ca này là biên bản V3 và `PROGRESS.md`.
+- [ ] Ưu tiên bảo vệ lần lưu cuối, thống nhất thời hạn khóa và cách ly hồ sơ sai kiểu. Kiểm tiếp Auto bị kẹt, Index của người mới, xác suất hiển thị và quyền lợi gói Pet theo danh sách V3.
+- [ ] Sau bản sửa, thử hai server trên kho dữ liệu riêng, rồi kiểm Roblox Studio với hai client, ping 200 ms và thiết bị cảm ứng. Kết quả chạy thực tế các trường hợp này còn chờ nghiệm thu.
 
 ## Bàn giao Hotfix Vòng Cuối (Xử lý 100% Audit Codex + Argon) [x]
 
