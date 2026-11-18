@@ -1,13 +1,26 @@
 # AGENTS.md — Mighty Angler v2 (Roblox Simulator)
 
-Hướng dẫn chuẩn cho **Antigravity** và **OpenAI Codex** khi cùng làm việc trên dự án tại `D:\Projects\mighty-angler`.
+Hướng dẫn chuẩn cho **OpenAI Codex** (Kỹ sư trưởng) và **Antigravity** (Trợ lý thi công) khi cùng làm việc trên dự án tại `D:\Projects\mighty-angler`.
 
 ---
 
-## 1. Tổng quan dự án
+## 1. Phân định vai trò & Quyền hạn (Team Roles)
+- **OpenAI Codex — Kỹ Sư Trưởng & Tổng Kiến Trúc Sư (Lead Engineer & Principal Architect):**
+  - Nắm quyền quyết định cao nhất về kiến trúc hệ thống, logic Server-Authoritative, DataStore, bảo mật và trải nghiệm người chơi.
+  - Chịu trách nhiệm duyệt code (Code Review), kiểm toán định kỳ (Audit), nghiệm thu tính năng và ra quyết định phát hành (Production Sign-off).
+  - Chỉ đạo lộ trình các bản phát hành kế tiếp (Phase 3 / Update 1: Trading, Clan, World Boss,...).
+- **Antigravity — Trợ Lý Thi Công & Thực Thi Cục Bộ (Local Construction & Execution Agent):**
+  - Thực thi các lệnh kiểm định tự động (`tools/verify_project.ps1`), đóng gói place `.rbxlx` và chạy Rojo server trên máy Windows.
+  - Thi công chi tiết mã nguồn Luau, sửa lỗi, cập nhật tài liệu và tạo atomic commit theo chỉ đạo của Kỹ sư trưởng Codex.
+  - Báo cáo kết quả kiểm tra cục bộ trung thực, không bao che lỗi, đảm bảo 100% tuân thủ giới hạn file `<= 350` dòng.
+
+---
+
+## 2. Tổng quan dự án & Hiện trạng mã nguồn
 - **Tên dự án:** Mighty Angler (v2.0 Overhaul — Bản Launch 5 Đảo chuẩn Fisch × PS99 × Arm Wrestle)
 - **Thể loại:** Game Roblox Simulator (**Luau + Rojo**), giao diện Tiếng Anh chuẩn quốc tế, Nước biển `Terrain Water` sóng thật + NPC người thật R15 + Lưới 3D `ViewportFrame` + hỗ trợ `Assets Override` từ Toolbox.
-- **Chiến lược triển khai hiện tại:** Đã hoàn tất trọn gói **Đại Tu 2.0 cả 4 Chặng (`Chặng A → Chặng D`) + Bản Vá Hotfix Vòng Cuối** xử lý 100% kiểm toán của cả Codex & Argon (`88` file `.luau`, mọi file `≤ 350` dòng, cả 5 file cam kết riêng `< 310` dòng, đạt `[PASS] 6/6` kiểm định tự động).
+- **Trạng thái hiện tại:** Đã hoàn tất trọn gói **Đại Tu 2.0 cả 4 Chặng (`Chặng A → Chặng D`) + Bản Vá Hotfix Vòng Cuối** xử lý 100% kiểm toán của cả Codex & Argon (`88` file `.luau`, mọi file `≤ 350` dòng, cả 5 file cam kết riêng `< 310` dòng, đạt `[PASS] 6/6` kiểm định tự động).
+- **Commit mới nhất:** `8227545` (`fix(v2-audit): resolve 100% of P0/P1/P2 findings from Codex & Argon code audits`).
 
 ---
 
