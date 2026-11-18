@@ -55,6 +55,7 @@ Net.ClientToServer = {
 
 Net.ServerToClient = {
 	StateSnapshot = "S2C_StateSnapshot",
+	ProfileAccessChanged = "S2C_ProfileAccessChanged",
 	CurrencyUpdated = "S2C_CurrencyUpdated",
 	BagUpdated = "S2C_BagUpdated",
 	InventoryUpdated = "S2C_InventoryUpdated",

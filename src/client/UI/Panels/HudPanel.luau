@@ -13,6 +13,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 local Theme = require(script.Parent.Parent.Theme)
 local PurchaseOddsController = require(script.Parent.Parent.Parent.Controllers.PurchaseOddsController)
 local HotbarAndBaitUi = require(script.Parent.Parent.Components.HotbarAndBaitUi)
+local ProfileAccessBanner = require(script.Parent.Parent.Components.ProfileAccessBanner)
 
 export type HudActions = {
 	OnTogglePanel: (panelKey: string) -> (),
@@ -96,6 +97,7 @@ local function syncHotbarStateFlags()
 end
 
 function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
+	ProfileAccessBanner.Mount(rootGui, Theme)
 	local topBar = Instance.new("Frame")
 	topBar.Name = "TopCurrencyBar"
 	topBar.AnchorPoint = Vector2.new(0.5, 0)
@@ -264,6 +266,10 @@ end
 
 function HudPanel.UpdateLiveOddsText(text: string)
 	if liveOddsLbl then liveOddsLbl.Text = "[View all odds] " .. text end
+end
+
+function HudPanel.UpdateProfileAccess(readOnly: boolean, loading: boolean, version: number)
+	ProfileAccessBanner.Update(readOnly, loading, version)
 end
 
 return HudPanel

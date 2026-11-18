@@ -1,6 +1,6 @@
 param(
     [string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'),
-    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema', 'dev_reset')]
+    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema', 'dev_reset', 'initial_state')]
     [string]$Suite = 'all'
 )
 
@@ -30,6 +30,9 @@ $modulePaths = @{
     CurrencyService = 'src/server/Services/CurrencyService.luau'
     DevTestService = 'src/server/Services/DevTestService.luau'
     DevTestPanel = 'src/client/UI/Panels/DevTestPanel.luau'
+    HudPanel = 'src/client/UI/Panels/HudPanel.luau'
+    ClientStateController = 'src/client/Controllers/ClientStateController.luau'
+    ProfileAccessBanner = 'src/client/UI/Components/ProfileAccessBanner.luau'
     ShopAndItemsService = 'src/server/Services/ShopAndItemsService.luau'
     PotionAndBaitHelper = 'src/server/Services/PotionAndBaitHelper.luau'
     BaitConfig = 'src/shared/Config/BaitConfig.luau'
@@ -67,6 +70,7 @@ run("session_acquisition", function(src) require("../tests/session_acquisition")
 run("session_lifecycle", function(src) require("../tests/session_lifecycle")(src) end)
 run("profile_schema", function(src) require("../tests/profile_schema")(src) end)
 run("dev_reset", function(src) require("../tests/dev_reset")(src) end)
+run("initial_state", function(src) require("../tests/initial_state")(src) end)
 run("data_persistence", function(src) require("../tests/data_persistence")(src) end)
 assert(failures == 0, string.format("%d suite(s) failed; see PASS/FAIL above", failures))
 '@)

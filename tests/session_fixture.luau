@@ -20,7 +20,7 @@ local function node(name, parent)
 end
 
 function Fixture.backend()
-	return { now = 10000, document = nil, version = 0, documents = {}, versions = {}, calls = {}, reads = {}, commits = 0 }
+	return { now = 10000, document = nil, version = 0, documents = {}, versions = {}, calls = {}, reads = {}, commits = 0, leaderWrites = {} }
 end
 
 function Fixture.server(sources, backend, job, placeId, options)
@@ -118,8 +118,8 @@ function Fixture.server(sources, backend, job, placeId, options)
 				local response = copy(proposed)
 				if f.afterUpdate then f.afterUpdate(kind, response, key) end
 				local saved = document(key)
-				print(string.format("TRACE t=%.2f server=%s action=%s seq=%s owner=%s", backend.now, job,
-					kind, tostring(saved and saved.saveSeq), tostring(saved and saved.activeSessionId)))
+				print(string.format("TRACE t=%.2f server=%s key=%s action=%s seq=%s owner=%s", backend.now, job,
+					key, kind, tostring(saved and saved.saveSeq), tostring(saved and saved.activeSessionId)))
 				return response
 			end
 		end
@@ -129,9 +129,15 @@ function Fixture.server(sources, backend, job, placeId, options)
 		f.opens += 1
 		assert(name == "MightyAngler_Profile_v2_StudioDev", "test must only open Studio test store")
 		return store
+	end, GetOrderedDataStore = function(_, name)
+		assert(string.sub(name, -10) == "_StudioDev", "leaderboard must remain isolated")
+		return { UpdateAsync = function(_, key, transform)
+			table.insert(backend.leaderWrites, { name = name, key = key, value = transform(nil) })
+		end }
 	end }
 	local services = {
 		Players = players, DataStoreService = dataStoreService,
+		Workspace = { FindFirstChild = function() return nil end },
 		LogService = { MessageOut = signal() },
 		RunService = { IsStudio = function()
 			if f.failStudioCheck then error("injected exception before store acquisition") end
@@ -148,10 +154,16 @@ function Fixture.server(sources, backend, job, placeId, options)
 	local eventNames = { __index = function(_, key) return key end }
 	cache.Net = { ClientToServer = setmetatable({ RequestInitialState = "init" }, eventNames),
 		ServerToClient = setmetatable({ Toast = "toast", StateSnapshot = "snapshot" }, eventNames),
-		OnServerEvent = function(event, fn) handlers[event] = fn end,
+		OnServerEvent = function(event, fn)
+			handlers[event] = handlers[event] or {}; table.insert(handlers[event], fn)
+		end,
 		FireClient = function(player, event, payload)
 			if f.beforeClientFire then f.beforeClientFire(player, event, payload) end
-			table.insert(f.messages, { player = player, event = event, payload = payload })
+			table.insert(f.messages, { player = player, event = event, payload = copy(payload) })
+			if event == "ProfileAccessChanged" then
+				print(string.format("ACCESS t=%.2f user=%d readOnly=%s loading=%s version=%s", backend.now, player.UserId,
+					tostring(payload.safeReadOnly), tostring(payload.loading), tostring(payload.accessVersion)))
+			end
 		end }
 	if not options.useIslandConfig then cache.Islands = { List = {} } end
 	local testOs = table.clone(os)
@@ -163,7 +175,9 @@ function Fixture.server(sources, backend, job, placeId, options)
 			BindToClose = function(_, fn) f.bindToClose = fn end },
 		Color3 = { fromRGB = function() return {} end },
 		Instance = { new = function() return {} end }, -- leaderstats only
-		warn = function(...) table.insert(f.warnings, table.concat({ ... }, " ")) end,
+		warn = function(...)
+			local message = table.concat({ ... }, " "); table.insert(f.warnings, message); print("WARN " .. message)
+		end,
 		task = { spawn = spawn, wait = function(delay) return coroutine.yield(delay) end },
 	}, { __index = getfenv() })
 	for name, dependency in pairs(options.dependencies or {}) do cache[name] = dependency end
@@ -179,7 +193,14 @@ function Fixture.server(sources, backend, job, placeId, options)
 	end
 	function f.loadModule(name) return env.require(node(name)) end
 	function f.fireRemote(event, ...)
-		return spawn(assert(handlers[event], "unregistered remote " .. event), ...)
+		local listeners = assert(handlers[event], "unregistered remote " .. event)
+		if #listeners == 1 then return spawn(listeners[1], ...) end
+		local args = table.pack(...)
+		return spawn(function()
+			local pending = {}
+			for _, fn in ipairs(listeners) do table.insert(pending, spawn(fn, table.unpack(args, 1, args.n))) end
+			for _, thread in ipairs(pending) do while coroutine.status(thread) ~= "dead" do coroutine.yield(0.05) end end
+		end)
 	end
 	f.data = f.loadModule("DataService")
 	f.helper = f.loadModule("DataStoreLockHelper")

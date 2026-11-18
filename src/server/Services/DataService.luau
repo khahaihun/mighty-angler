@@ -12,8 +12,8 @@ local Lock = require(script.Parent.DataStoreLockHelper)
 local Persistence = require(script.Parent.ProfilePersistenceService)
 local DataService = {}
 local SERVER_JOB_ID = if game.JobId ~= "" then game.JobId else ("Studio_" .. Util.NewUid())
-local clientRequestedInit: { [Player]: boolean } = {}
-setmetatable(clientRequestedInit, { __mode = "k" })
+local pendingInitial: { [Player]: number } = {}
+setmetatable(pendingInitial, { __mode = "k" })
 local profileLoadedCallbacks: { (Player, Types.PlayerProfile) -> () } = {}
 local serverShuttingDown = false
 
@@ -26,8 +26,33 @@ function DataService.SyncLeaderstats(player: Player)
 	ProfileMigrator.SyncLeaderstats(player, DataService.Get(player))
 end
 
+local function publishAccess(player: Player): (boolean, boolean, number)
+	local s = Persistence.Find(player)
+	local locked = Persistence.Locked(s)
+	local loading = not s or s.loading or s.profile == nil
+	if not s then return locked, loading, 0 end
+	local state = if loading then "Loading" elseif locked then "ReadOnly" else "Ready"
+	if s.accessState ~= state then
+		s.accessVersion += 1
+		if player:IsDescendantOf(Players) then
+			Net.FireClient(player, Net.ServerToClient.ProfileAccessChanged, {
+				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion,
+			})
+		end
+		s.accessState = state -- Chi cache sau khi gui thanh cong, de scheduler thu lai neu loi.
+	end
+	return locked, loading, s.accessVersion
+end
+
+local function flushInitial(player: Player)
+	if not DataService.Get(player) then publishAccess(player); return end
+	local count = pendingInitial[player] or 0
+	pendingInitial[player] = nil
+	for _ = 1, count do DataService.PushFullSnapshot(player) end
+end
+
 function DataService.IsTransactionLocked(player: Player, notifyToast: boolean?): boolean
-	local locked = Persistence.Locked(Persistence.Find(player))
+	local locked = publishAccess(player)
 	if locked and notifyToast then
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error", text = "Profile is in Safe Read-Only Mode (session lock busy or closing). Rejoin shortly to trade/rebirth!",
@@ -50,6 +75,7 @@ end
 local function acquireSessionAndLoad(player: Player)
 	local myToken = SERVER_JOB_ID .. "_" .. Util.NewUid()
 	local s = Persistence.Begin(player, myToken)
+	publishAccess(player)
 	local key = "Player_" .. tostring(s.userId)
 	local loadedData: any = nil
 	local confirmedLock, lockFailed, confirmedAt = false, true, 0
@@ -83,7 +109,8 @@ local function acquireSessionAndLoad(player: Player)
 		})
 	end
 	ProfileMigrator.SetupLeaderstats(player, profile)
-	if clientRequestedInit[player] then DataService.PushFullSnapshot(player) end
+	publishAccess(player)
+	flushInitial(player)
 	for _, cb in ipairs(profileLoadedCallbacks) do task.spawn(cb, player, profile) end
 end
 
@@ -92,6 +119,7 @@ function DataService.SaveProfile(player: Player, releaseLock: boolean?): string
 	local s = Persistence.Find(player)
 	if not s then return "Skipped" end
 	local result = Persistence.Save(s, false)
+	publishAccess(player)
 	if result == "LostLock" and player:IsDescendantOf(Players) then
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error", text = "Session moved to another server — switched to Read-Only Mode!",
@@ -101,7 +129,9 @@ function DataService.SaveProfile(player: Player, releaseLock: boolean?): string
 end
 
 function DataService.CloseProfile(player: Player): string
-	clientRequestedInit[player] = nil
+	pendingInitial[player] = nil
+	local s = Persistence.Find(player)
+	if s then s.closing = true; publishAccess(player) end
 	return Persistence.Close(player)
 end
 
@@ -137,17 +167,18 @@ end
 
 function DataService.PushFullSnapshot(player: Player)
 	local profile = DataService.Get(player)
-	if not profile then return end
+	if not profile or not player:IsDescendantOf(Players) then return end
+	local locked, loading, version = publishAccess(player)
 	Net.FireClient(player, Net.ServerToClient.StateSnapshot, {
 		profile = profile, serverNow = os.time(), studioFallback = Lock.IsStudioOfflineFallback(),
-		safeReadOnly = DataService.IsTransactionLocked(player, false),
+		safeReadOnly = locked, loading = loading, accessVersion = version,
 	})
 end
 
 function DataService.Init()
 	Net.OnServerEvent(Net.ClientToServer.RequestInitialState, function(player: Player)
-		clientRequestedInit[player] = true
-		if DataService.Get(player) or DataService.WaitForProfile(player, 8) then DataService.PushFullSnapshot(player) end
+		pendingInitial[player] = (pendingInitial[player] or 0) + 1
+		flushInitial(player)
 	end)
 	Players.PlayerAdded:Connect(acquireSessionAndLoad)
 	for _, player in ipairs(Players:GetPlayers()) do task.spawn(acquireSessionAndLoad, player) end
@@ -164,19 +195,22 @@ function DataService.Init()
 			accPush += 1
 			for _, s in ipairs(Persistence.All()) do
 				local profile, player = s.profile, s.player
-				if profile and player and not s.closing and not s.readOnly then
+				if player then
 					local ok, err = pcall(function(): boolean
-					profile.stats.playTimeSec += 1
-					if ProfileMigrator.RefreshUtcPlaytimeIfNewDay(profile) then
-						profile.playtimeTodaySec = 1
-						DataService.MarkDirty(player)
-					else profile.playtimeTodaySec += 1 end
-					if accPush >= 5 then
-						Net.FireClient(player, Net.ServerToClient.PlaytimeUpdated, {
-							playtimeTodaySec = profile.playtimeTodaySec, playtimeClaimedToday = profile.playtimeClaimedToday,
-						})
-					end
-					return true
+						publishAccess(player)
+						if profile and not s.closing and not s.readOnly then
+							profile.stats.playTimeSec += 1
+							if ProfileMigrator.RefreshUtcPlaytimeIfNewDay(profile) then
+								profile.playtimeTodaySec = 1
+								DataService.MarkDirty(player)
+							else profile.playtimeTodaySec += 1 end
+							if accPush >= 5 then
+								Net.FireClient(player, Net.ServerToClient.PlaytimeUpdated, {
+									playtimeTodaySec = profile.playtimeTodaySec, playtimeClaimedToday = profile.playtimeClaimedToday,
+								})
+							end
+						end
+						return true
 					end)
 					if not ok then Persistence.Quarantine(s, "RuntimeTick:" .. tostring(err)) end
 				end
