@@ -1,13 +1,15 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 10:38 bởi Antigravity
-- **Trạng thái hiện tại:** Đã hoàn thành bản khung v1.0 (`commit 118e101`) VÀ vừa lập xong **Đại Kế Hoạch Đại Tu 2.0 trong `PLAN.md`** *(Đang chờ người dùng đưa `PLAN.md` sang GPT/Codex review chéo rồi mới bắt đầu code Chặng A → Chặng D)*.
+- **Cập nhật lần cuối:** 2026-11-18 11:15 bởi Codex
+- **Trạng thái hiện tại:** Codex đã đối chiếu kế hoạch tại commit `65f81ff` với bản khung v1.0. Antigravity đọc [bản review Đại Tu 2.0](docs/REVIEW_DAI_TU_2.0.md) khi tiếp nhận ca. Phase 2 đang chờ chủ dự án duyệt các đề xuất.
 
 ---
 
 ## Đang chờ duyệt trước khi code Phase 2 [~]
-- [~] Đưa bản **Đại Kế Hoạch Đại Tu 2.0 (`PLAN.md`)** cho GPT / Codex kiểm tra chéo (công thức 5 chỉ số Cần câu + Cần Exclusive scaling + Enchant, cơ chế Hotbar cầm cần/khoe cá + Raycast nảy đất + AFK timeout `6.5s`, UI Lưới 3D `ViewportFrame` + Khóa cá/Bán lẻ/Đổi đồ, Nước `Terrain Water` + NPC R15 + Đập trứng/Aura).
-- [ ] Sau khi người dùng & GPT chốt nhận xét (nếu có chỉnh sửa bổ sung vào `PLAN.md`), bắt đầu thi công tuần tự **Chặng A → Chặng B → Chặng C → Chặng D**.
+
+- [x] Đã lưu kết quả review, dẫn chứng từ mã nguồn và các ca nghiệm thu theo chặng trong `docs/REVIEW_DAI_TU_2.0.md`.
+- [~] Chờ chủ dự án chốt các điểm còn mở, đặc biệt là hệ số Exclusive, số phận cá khóa khi Rebirth và hạn 6,5 giây cho Boss nhiều vòng.
+- [ ] Ghi các quyết định đã duyệt vào `PLAN.md`, sau đó bắt đầu Chặng A với ca thử câu trên cả năm đảo khi chuyển sang nước Terrain.
 
 ---
 
