@@ -7,7 +7,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Util = require(Shared:WaitForChild("Util"))
 local Net = require(Shared:WaitForChild("Net"))
-local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local ProfileMigrator = require(script.Parent.ProfileMigrator)
 local Lock = require(script.Parent.DataStoreLockHelper)
 local Persistence = require(script.Parent.ProfilePersistenceService)
@@ -121,17 +120,12 @@ function DataService.MarkDirty(player: Player)
 	if s and s.profile then s.revision += 1 end
 end
 
-function DataService.ResetProfileForDev(player: Player): Types.PlayerProfile?
+function DataService.ResetProfileForDev(player: Player): (Types.PlayerProfile?, string)
 	local s = Persistence.Find(player)
-	local cur = if s then s.profile else nil
-	if not RunService:IsStudio() or not s or not cur then return nil end
-	local fresh = GameConfig.CreateDefaultProfile()
-	fresh.saveSeq, fresh.activeSessionId, fresh.lockTimestamp = cur.saveSeq, s.token, cur.lockTimestamp
-	s.profile = fresh
-	DataService.MarkDirty(player)
-	DataService.SyncLeaderstats(player)
-	DataService.PushFullSnapshot(player)
-	return fresh
+	if not RunService:IsStudio() or not s then return nil, "Unavailable" end
+	local fresh, result = Persistence.Reset(s)
+	if fresh then DataService.SyncLeaderstats(player); DataService.PushFullSnapshot(player) end
+	return fresh, result
 end
 
 function DataService.OnProfileLoaded(callback: (Player, Types.PlayerProfile) -> ())

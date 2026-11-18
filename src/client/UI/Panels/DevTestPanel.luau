@@ -20,7 +20,7 @@ function DevTestPanel.Mount(rootGui: ScreenGui)
 	panel.Name = "StudioDevDrawer"
 	panel.AnchorPoint = Vector2.new(1, 0)
 	panel.Position = UDim2.new(1, -14, 0, 56)
-	panel.Size = UDim2.fromOffset(256, 308)
+	panel.Size = UDim2.fromOffset(256, 366)
 	panel.BackgroundColor3 = Theme.Colors.PanelBg
 	panel.Visible = false
 	panel.ZIndex = 70
@@ -40,7 +40,7 @@ function DevTestPanel.Mount(rootGui: ScreenGui)
 	header.Parent = panel
 
 	local gridHolder = Instance.new("Frame")
-	gridHolder.Size = UDim2.new(1, -16, 1, -42)
+	gridHolder.Size = UDim2.new(1, -16, 0, 252)
 	gridHolder.Position = UDim2.fromOffset(8, 36)
 	gridHolder.BackgroundTransparency = 1
 	gridHolder.ZIndex = 71
@@ -75,6 +75,24 @@ function DevTestPanel.Mount(rootGui: ScreenGui)
 		b.TextSize = 13
 		b.ZIndex = 72
 	end
+	local status = Instance.new("TextLabel")
+	status.Name = "DevResetStatus"
+	status.Position = UDim2.new(0, 8, 1, -62)
+	status.Size = UDim2.new(1, -16, 0, 54)
+	status.BackgroundTransparency = 1
+	status.Font = Theme.FontBody
+	status.TextSize = 12
+	status.TextWrapped = true
+	status.TextColor3 = Theme.Colors.Warning
+	status.Text = "Reset RAM: —\nPersistent: —"
+	status.ZIndex = 71
+	status.Parent = panel
+	Net.OnClientEvent(Net.ServerToClient.Toast, function(payload: any)
+		if type(payload) ~= "table" or type(payload.devReset) ~= "table" then return end
+		local result = payload.devReset
+		status.Text = string.format("Reset RAM: %s\nPersistent: %s (seq %d)",
+			if result.ramApplied then "Applied" else "Not applied", tostring(result.persistent), tonumber(result.saveSeq) or 0)
+	end)
 
 	local toggleBtn = Theme.CreateButton(
 		rootGui,

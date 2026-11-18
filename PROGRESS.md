@@ -1,7 +1,19 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 18:45 bởi Codex (thi công)
-- **Trạng thái hiện tại:** Code 1.2 đã được Kỹ sư trưởng chấp nhận. Mục **1.3** qua **26/26 schema**, 19/19 nhận khóa, 12/12 lifecycle và verify 6/6 exit 0. Bộ chung exit 1 chỉ còn Reset 1.4; đang thi công tiếp 1.4 → 1.5 theo chỉ đạo liên tục. **Chưa phát hành; Studio/hai server/điện thoại chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+- **Cập nhật lần cuối:** 2026-11-18 18:55 bởi Codex (thi công)
+- **Trạng thái hiện tại:** Mục 1.3 và vá slot 0 đã commit; mục **1.4** đạt 8/8 Reset, persistence 7/7. Toàn bộ bộ hồi quy và verify 6/6 đều **exit 0**. Đang tiếp ngay 1.5 theo chỉ đạo liên tục. Code 1.2 đã được chấp nhận; 1.3/1.4 chờ review. **Chưa phát hành; Studio/hai server/điện thoại chờ nghiệm thu.** [Kế hoạch V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md) · [Biên bản V3](docs/CODEX_CODE_AUDIT_V3.md)
+
+## Mục 1.4 — Reset cùng hàng đợi, kết quả RAM và lưu bền
+
+- [x] Nền gồm `bbce374` và vá review `d139bbf`; tiếp tục không dừng theo giao việc. Tái hiện 6 ca Reset đỏ trước sửa (`logs/phase14-red.log`).
+- [x] Persistence.Reset khóa giao dịch và chặn Reset đồng thời; trong hàng đợi UserId, xác nhận pending write trước khi đổi đối tượng, lấy seq mới nhất rồi chụp bản mặc định thành một thao tác ghi cố định. Không xác nhận được thao tác trước thì không đổi RAM. Đóng phiên trong lúc đợi thì hủy Reset, không cài lại người đã rời.
+- [x] Mỗi bước xác nhận/ghi Reset thử tối đa ba lần; giữ pending thao tác chưa chắc chắn để tự lưu tiếp khi API hồi phục. RAM-only không mở kho; phản hồi Saved/RAMOnly/Unconfirmed/Busy/NotApplied tách khỏi cờ ramApplied, không báo Success nếu chỉ đổi RAM hoặc chưa xác nhận ghi.
+- [x] DataService trả cả profile và trạng thái; DevTestService bỏ lần SaveProfile dư, phát kết quả riêng qua payload Toast hiện có. Bảng DEV thêm hai dòng RAM/Persistent, không tạo Remote ngoài manifest. Hình thức/bố trí thật trong Studio vẫn chờ nghiệm thu; test client kiểm handler và thuộc tính Text của module thật ở biên UI giả lập.
+- [x] `dev_reset` **8/8**: autosave chờ trước thay đối tượng, lỗi ghi sau thay RAM, RAM-only, pending cũ chưa rõ thì không thay, Reset đồng thời, trạng thái bảng DEV, rời lúc chờ và mất phản hồi. `data_persistence` **7/7**, ca Reset chuyển xanh; 19/19 acquisition, 12/12 lifecycle, 29/29 schema và cách ly đều đạt. Bộ chung **exit 0** (`logs/phase14-final.log`).
+- [x] Verify **6/6, exit 0** (`logs/phase14-verify.log`). Một lỗi nullable candidate được LSP phát hiện và sửa một lần bằng biến candidate không optional; log đầu `logs/phase14-verify-first.log`. Không có lỗi quá hai vòng. Mọi file mã game ≤350; năm file cam kết không đổi, <310.
+- [x] Sửa Persistence/DataService/DevTestService/DevTestPanel, thêm fixture client/test Reset và runner. Không sửa bản copy nguồn trong build, không API thật/publish. Studio/hai server/điện thoại/staging **chờ nghiệm thu**.
+- [x] 91/91 file mã game ≤350; build SHA-256 `44E6116E651E1A5DCADCA1EB7FD5090EEFB837D5B8D733360F28FC8559A1AFD8` sinh bằng verify, chưa Play Studio.
+- [~] Commit riêng mục này chứa bàn giao; tiếp ngay 1.5. Phần code Reset của Argon P0-3 nay có bằng chứng mô phỏng cùng mục 1.2; vẫn cần review và Engine trước ký nghiệm thu.
 
 ## Mục 1.3 — Xác thực hồ sơ và cô lập scheduler
 

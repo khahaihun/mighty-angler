@@ -8,7 +8,13 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `profile_schema` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `profile_schema`, `dev_reset` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+
+## Reset DEV — mục 1.4
+
+`-Suite dev_reset` chạy 8 ca qua handler thật, gồm giữ đối tượng cũ đến khi pending write được xác nhận, báo riêng RAM/lưu bền, lỗi API, RAM-only, Reset đồng thời và rời lúc chờ. `client_fixture` giả lập các biên Instance/Theme/Net để kiểm module DevTestPanel nhận kết quả và đổi Text; không chứng minh bố cục/render hay input của Roblox Engine.
+
+Sau 1.4, toàn bộ bộ hồi quy mặc định đạt exit 0: 19 acquisition, 12 lifecycle, 29 schema, 8 Reset, 7 persistence và cách ly Studio. Các kết quả đỏ ở mục lịch sử bên dưới được giữ để truy vết.
 
 ## Xác thực hồ sơ — mục 1.3
 

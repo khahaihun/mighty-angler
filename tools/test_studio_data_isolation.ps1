@@ -1,6 +1,6 @@
 param(
     [string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'),
-    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema')]
+    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema', 'dev_reset')]
     [string]$Suite = 'all'
 )
 
@@ -29,6 +29,7 @@ $modulePaths = @{
     EnchantAndBountyService = 'src/server/Services/EnchantAndBountyService.luau'
     CurrencyService = 'src/server/Services/CurrencyService.luau'
     DevTestService = 'src/server/Services/DevTestService.luau'
+    DevTestPanel = 'src/client/UI/Panels/DevTestPanel.luau'
     ShopAndItemsService = 'src/server/Services/ShopAndItemsService.luau'
     PotionAndBaitHelper = 'src/server/Services/PotionAndBaitHelper.luau'
     BaitConfig = 'src/shared/Config/BaitConfig.luau'
@@ -65,6 +66,7 @@ run("studio_data_isolation", function(src) require("../tests/studio_data_isolati
 run("session_acquisition", function(src) require("../tests/session_acquisition")(src) end)
 run("session_lifecycle", function(src) require("../tests/session_lifecycle")(src) end)
 run("profile_schema", function(src) require("../tests/profile_schema")(src) end)
+run("dev_reset", function(src) require("../tests/dev_reset")(src) end)
 run("data_persistence", function(src) require("../tests/data_persistence")(src) end)
 assert(failures == 0, string.format("%d suite(s) failed; see PASS/FAIL above", failures))
 '@)
