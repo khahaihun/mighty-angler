@@ -14,6 +14,7 @@ local Theme = require(script.Parent.Parent.Theme)
 local WindowFrame = require(script.Parent.Parent.Components.WindowFrame)
 local IslandsModal = require(script.Parent.Parent.Components.IslandsModal)
 local IndexGridSection = require(script.Parent.Parent.Components.IndexGridSection)
+local ViewportPool = require(script.Parent.Parent.Components.ViewportPool)
 
 local ProgressPanel = {}
 
@@ -202,6 +203,9 @@ function ProgressPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	built.AddTab("Quests", function() currentTab = "Quests"; ProgressPanel.Render() end)
 	built.AddTab("Index", function() currentTab = "Index"; ProgressPanel.Render() end)
 	built.AddTab("Trophies", function() currentTab = "Achievements"; ProgressPanel.Render() end)
+	built.OnVisibilityChanged(function(vis: boolean)
+		if not vis then ViewportPool.ClearFocus() end
+	end)
 	built.SetActiveTab(rebTab)
 	ProgressPanel.Render()
 	return built

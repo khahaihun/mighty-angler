@@ -9,6 +9,7 @@ export type BuiltWindow = {
 	body: ScrollingFrame,
 	SetVisible: (visible: boolean) -> (),
 	IsVisible: () -> boolean,
+	OnVisibilityChanged: (cb: (boolean) -> ()) -> (),
 	AddTab: (tabName: string, onSelect: () -> ()) -> TextButton,
 	SetActiveTab: (activeBtn: TextButton) -> (),
 }
@@ -57,6 +58,17 @@ function WindowFrame.Create(
 	title.Parent = header
 	Theme.AddTextStroke(title, 2)
 
+	local visCallbacks: { (boolean) -> () } = {}
+	local function setWindowVisible(v: boolean)
+		if root.Visible == v then
+			return
+		end
+		root.Visible = v
+		for _, cb in ipairs(visCallbacks) do
+			task.spawn(cb, v)
+		end
+	end
+
 	local closeBtn = Theme.CreateButton(
 		header,
 		"CloseButton",
@@ -65,7 +77,7 @@ function WindowFrame.Create(
 		UDim2.new(1, -41, 0.5, -18),
 		Theme.Colors.Danger,
 		function()
-			root.Visible = false
+			setWindowVisible(false)
 		end
 	)
 	closeBtn.ZIndex = 23
@@ -142,11 +154,12 @@ function WindowFrame.Create(
 		root = root,
 		tabBar = tabBar,
 		body = body,
-		SetVisible = function(v: boolean)
-			root.Visible = v
-		end,
+		SetVisible = setWindowVisible,
 		IsVisible = function(): boolean
 			return root.Visible
+		end,
+		OnVisibilityChanged = function(cb: (boolean) -> ())
+			table.insert(visCallbacks, cb)
 		end,
 		AddTab = addTab,
 		SetActiveTab = setActiveTab,

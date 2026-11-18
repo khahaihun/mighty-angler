@@ -164,11 +164,11 @@ Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành &
 ---
 
 ### 🎒 CHẶNG C: GIAO DIỆN Ô LƯỚI 3D (`VIEWPORTPOOL`), KHÓA CÁ, BÁN CHỌN LỌC, THẨM ĐỊNH & ĐỔI ĐỒ
-- [ ] **C1 — Lưới Thẻ 3D Tối Ưu (`ViewportPool.luau` + `ViewportCard.luau`) Cho `Bag`, `Shop`, `Pets` & `Index`:**
+- [x] **C1 — Lưới Thẻ 3D Tối Ưu (`ViewportPool.luau` + `ViewportCard.luau`) Cho `Bag`, `Shop`, `Pets` & `Index`:**
   - Tái sử dụng ô thẻ mượt trên mobile, hình 3D lớn chính giữa ô, nhãn bậc *Big/Giant/Titanic* & đột biến góc trên, cân nặng/giá tiền gọn dưới đáy, không dựng lại toàn lưới khi tiền thay đổi.
-- [ ] **C2 — Khóa Cá (`🔒 Lock`), Bán Chọn Lọc Nhiều Cá (`Multi-Select`), Bán Cá Cầm Tay & Bảo Vệ `Soulbound`:**
+- [x] **C2 — Khóa Cá (`🔒 Lock`), Bán Chọn Lọc Nhiều Cá (`Multi-Select`), Bán Cá Cầm Tay & Bảo Vệ `Soulbound`:**
   - Hoàn thiện mọi đường bán kiểm tra chặt `locked` và `soulbound` trước khi xóa khỏi túi, đồng bộ tức thì với ô ghim Hotbar và mô hình cá đang cầm trên tay.
-- [ ] **C3 — NPC Thẩm Định Cá (`Appraise`), Bảng Đổi Cá (`Fish Bounty`), Quà Online Cộng Dồn Ngày UTC & `Settings`:**
+- [x] **C3 — NPC Thẩm Định Cá (`Appraise`), Bảng Đổi Cá (`Fish Bounty`), Quà Online Cộng Dồn Ngày UTC & `Settings`:**
   - Hoàn thiện `Appraise`, 3 hợp đồng `Fish Bounty` (tiêu đúng `uid` nguyên tử 1 lần), hộp quà 9 mốc tính theo `playtimeTodaySec` (ngày UTC) và bảng `Settings` (`Auto-Lock` + `Low GFX` + `Mute`).
 
 ---
