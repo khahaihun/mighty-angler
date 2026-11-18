@@ -39,3 +39,16 @@ Chưa nghiệm thu Studio/hai máy chủ Roblox thật. Chưa kiểm hoàn chỉ
 `data_persistence.luau` dùng lại kho RAM và lịch coroutine của `session_fixture.luau`. Bảy ca kiểm hai phiên tranh khóa, thử lại lưu cuối khi lỗi tạm, phản hồi lưu muộn, hai đường đóng đồng thời, hồ sơ sai kiểu, nút Reset DEV trong lúc autosave và nộp lại cùng UID cá trước/sau đổi máy chủ.
 
 Ca Reset đi qua handler DEV và lịch autosave thật. Ca đổi cá đi qua handler Bounty thật, dùng cấu hình đảo/hợp đồng và kiểm Gems, Relic, thuốc, túi cùng ô ghim. Mỗi ca in `PASS persistence` hoặc `FAIL persistence` kèm giá trị sai. Lỗi hiện có ở mã game vẫn được tính FAIL. Toàn bộ giao dịch và máy chủ trong các ca này chạy trong mô phỏng.
+
+## Suite bảo vệ các mục V3 đã đạt theo mã
+
+Chạy `powershell -ExecutionPolicy Bypass -File tools/test_v3_regression.ps1` (Luau CLI).
+Suite riêng thực thi nguồn production không sửa: Trident/Bounty, bốn đường bán Gold,
+Appraise, công thức Trident, Titan, TrophyHelper + Rebirth server, trao Strength.
+Các biên Roblox/DataService/Net được giả lập; không có API request thật.
+Xem `docs/V3_REGRESSION_MATRIX.md` để phân biệt 23 ca VM với 21 ID kiểm toán và ca Studio chờ.
+
+Đối chứng âm tùy chọn: thêm `-ProbeMutation AppraiseFloor`, `StrengthTwice`,
+`TridentTrophy` hoặc `RebirthCap`. Mỗi lệnh phải **exit 1** vì assertion tương ứng;
+chỉ chuỗi nhúng trong build runner bị thay, không sửa nguồn game.
+Sau đó chạy không probe phải **exit 0**. Không đưa probe âm vào lệnh CI bắt buộc.
