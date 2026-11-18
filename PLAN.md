@@ -1,9 +1,11 @@
 # PLAN.md — MIGHTY ANGLER 2.0 (Major Game-Feel, Visual & Systems Overhaul)
 
-> **Nguồn sự thật duy nhất (Single Source of Truth)** của dự án tại `D:\Projects\mighty-angler`, đã qua **Hội Nghị Phản Biện Chéo 2 AI (Antigravity ↔ OpenAI Codex `gpt-6.2-astra`)**.
+> **Nguồn thiết kế gameplay (Single Source of Truth)** của dự án tại `D:\Projects\mighty-angler`, đã qua **Hội Nghị Phản Biện Chéo 2 AI (Antigravity ↔ OpenAI Codex `gpt-6.2-astra`)**. Quy tắc dưới đây là yêu cầu cần đạt, không phải bằng chứng mã hiện tại đã đạt.
 > - **Ngày cập nhật:** 2026-11-18
-> - **Trạng thái nền tảng:** Bản khung v1.0 (`commit 118e101`, **62 file `.luau`** trong `src/`, PASS 6/6) đang chạy ổn định. Tài liệu này quy định **Đại Kế Hoạch Đại Tu 2.0 (Phase 2 Overhaul)** lột xác toàn diện dự án thành **Game Roblox Simulator thực thụ** chuẩn **Fisch × Pets GO! × Arm Wrestle Simulator**.
-> - **Kỷ luật kỹ thuật bất biến:** Mọi file `.luau` **≤ 350 dòng** (5 file đang sát trần `331–336` dòng sẽ được tách bớt helper về `< 310` dòng ngay khi chạm tới), Server-Authoritative 100%, không xóa file tùy tiện, chạy `tools/verify_project.ps1` đạt `[PASS] 6/6` sau mỗi mục con.
+> - **Mốc lịch sử:** Bản khung v1.0 tại `118e101` có **62 file `.luau`**; số này không mô tả nguồn hiện tại. Đã triển khai mã Đại Tu 2.0 cho 4 Chặng A–D. Mốc đối chiếu `45dd21a` có **88 file mã game** theo bàn giao. PROGRESS cập nhật 17:45 ngày 18/11/2026 ghi code cách ly Studio đã được duyệt; bản vá tiếp mục 1.1 qua 16/16 ca mô phỏng, chờ review commit riêng; Studio/hai server thật chưa nghiệm thu, chưa làm mục 1.2.
+> - **Trạng thái nghiệm thu:** **Chưa duyệt phát hành.** V3 tại `8227545` có 21/44 mục đạt theo mã và 23/44 mục một phần, kèm phát hiện bổ sung. Bản vá Studio không đóng các lỗi khóa phiên/lưu cuối hay thay nghiệm thu hai server, hai client, ping 200 ms và điện thoại. Xem [matrix từng quy tắc](docs/SPEC_CODE_MATRIX.md), [PROGRESS mới nhất](PROGRESS.md) và [blueprint V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md).
+> - **Kỷ luật kỹ thuật bất biến:** Mọi file mã game `.luau` **≤ 350 dòng**, năm file `HudPanel`, `PetsService`, `ProgressPanel`, `BagPanel`, `FishingService` **< 310 dòng** (số `331–336` là mốc trước tách); Server-Authoritative, không xóa file tùy tiện, chạy `tools/verify_project.ps1` đạt `[PASS] 6/6` sau mỗi mục con. PASS tĩnh/build không đồng nghĩa hoàn tất gameplay hay được phát hành.
+> - **Cách đọc tài liệu:** PLAN giữ yêu cầu thiết kế; matrix ghi sai lệch/bằng chứng; PROGRESS đầu file ghi bàn giao mới nhất; blueprint V3 giao việc sửa và điều kiện ký, gồm quyết định tương thích cân nặng không Titan. Không tự coi mô tả thực hiện cũ hoặc dấu `[x]` lịch sử là đã nghiệm thu.
 
 ---
 
@@ -123,12 +125,13 @@ Gọi `B` là cây Cần thường có `order` cao nhất trong `profile.ownedRo
 
 ## 3. KIẾN TRÚC TÁCH FILE & TỐI ƯU HIỆU NĂNG (`≤ 350 DÒNG / FILE`, `< 310` CHO 5 FILE SÁT TRẦN)
 
-1. **Tách nhẹ 5 file đang sát trần (`331–336` dòng) ngay đầu chặng tương ứng:**
+1. **Yêu cầu tách 5 file từ nền trước đại tu (`331–336` dòng là số lịch sử), giữ cam kết hiện hành `< 310` dòng/file:**
    - `HudPanel.luau (336)` → chuyển phần Hotbar, nút Auto & Chọn mồi sang `HotbarAndBaitUi.luau` (giảm `HudPanel` xuống `< 230` dòng).
    - `PetsService.luau (336)` → chuyển phần dựng/diễn hoạt Pet sang `ClientPetRenderer.luau` trên Client.
    - `ProgressPanel.luau (333)` → tách tab Index 3D sang `IndexGridSection.luau`.
    - `BagPanel.luau (332)` → chuyển dựng ô thẻ sang `ViewportCard.luau` + `ViewportPool.luau` (giảm `BagPanel` xuống `< 250` dòng).
    - `FishingService.luau (331)` → tách bộ quản lý phiên & kiểm toán Minigame sang `FishingSessionManager.luau`.
+   - Các đích `< 230` cho HudPanel và `< 250` cho BagPanel bên trên là mục tiêu thiết kế chi tiết chưa đạt ở mốc `45dd21a` (268 và 307 dòng theo bàn giao); không dùng việc đạt trần `< 310` để đánh dấu hai mục tiêu này đã xong. Xem matrix mục kiến trúc.
 2. **Tối ưu FPS trên Mobile (`ClientPetRenderer` & `ViewportPool`):**
    - Server chỉ đồng bộ danh sách ID Pet đang đeo qua Attribute/Remote; `ClientPetRenderer` nội suy chuyển động mượt trên Client (giảm tần suất khi xa `> 85 studs` hoặc khi bật `Low GFX`).
    - `ViewportPool` chỉ cấp phát số thẻ vừa khung nhìn cuộn cộng 1 hàng đệm, tái sử dụng theo `uid`, không dựng lại toàn bộ lưới khi tiền nhảy số, chỉ xoay 1 thẻ đang chọn và dừng hoàn toàn khi đóng cửa sổ.
@@ -137,46 +140,46 @@ Gọi `B` là cây Cần thường có `order` cao nhất trong `profile.ownedRo
 
 ## 4. LỘ TRÌNH THI CÔNG 4 CHẶNG & CA NGHIỆM THU BẮT BUỘC
 
-Trạng thái: `[ ]` Chưa làm · `[~]` Đang làm · `[x]` Đã hoàn thành & PASS 6/6.
+Trạng thái: `[ ]` Chưa triển khai · `[~]` Đã có mã nhưng còn chờ sửa hoặc chưa nghiệm thu · `[x]` Đã đủ bằng chứng cho phạm vi ghi rõ. Các dấu `[x]` cũ của A1–D3 chỉ phản ánh thi công/PASS tĩnh, đã đổi thành `[~]` để khớp V3; chi tiết từng quy tắc ở matrix. Không chặng nào dưới đây được dùng làm quyết định phát hành.
 
 ### 🏝️ CHẶNG A: ĐẠI TU THẾ GIỚI 5 ĐẢO, NƯỚC SÓNG THẬT, XOÁY NƯỚC & NPC HỘI THOẠI
-- [x] **A1 — Nước Biển Sóng Thật (`Terrain:FillBlock` cục bộ) & Địa Hình 5 Đảo Đa Tầng Chi Tiết:**
+- [~] **A1 — Nước Biển Sóng Thật (`Terrain:FillBlock` cục bộ) & Địa Hình 5 Đảo Đa Tầng Chi Tiết:**
   - Cập nhật `verify_project.ps1` cho phép `Terrain:FillBlock` và phép so sánh `==` / `~=` với `Enum.Material.Water` nhưng chặn mọi phép gán `.Material = Enum.Material.Water` lên `BasePart`.
   - Đổ `Terrain Water` sóng thật đúng trong hộp hồ biển của 5 đảo (không gọi `Terrain:Clear()`), giữ `FishingWater` vô hình nằm đúng trong từng thư mục `Island_<id>` với mặt trên khớp mặt nước (loại khỏi Raycast vật cản), nâng cấp cảnh quan đa tầng 5 Đảo + Bệ `Enchant Altar`.
   - *Nghiệm thu ngay cuối A1:* Câu thành công trên **cả 5 đảo** ngay sau khi thay nước Terrain, và địa hình ngoài hộp tạo biển vẫn còn nguyên vẹn.
-- [x] **A2 — Hệ Thống Xoáy Nước Cá Hiếm Trên Biển (`WhirlpoolManager.luau`):**
+- [~] **A2 — Hệ Thống Xoáy Nước Cá Hiếm Trên Biển (`WhirlpoolManager.luau`):**
   - Xuất hiện ngẫu nhiên xoáy nước sủi bọt + cột sáng + đàn bóng cá bơi vòng dưới mặt nước; quăng trúng vùng xoáy nhân đôi hệ số Luck tổng và nhân đôi trọng số Boss.
-- [x] **A3 — Dàn 4 NPC Người Thật R15 (`NpcBuilder.luau`) & Khung Hội Thoại (`NpcDialogueModal.luau`):**
+- [~] **A3 — Dàn 4 NPC Người Thật R15 (`NpcBuilder.luau`) & Khung Hội Thoại (`NpcDialogueModal.luau`):**
   - Dựng 4 NPC R15 (Merchant, Shop/Crafter, Appraiser/Collector, Gym Coach) có cử động đứng thở/vẫy tay + hộp thoại đa lựa chọn; mở rồi đóng thoại Merchant giữ nguyên 100% túi cá.
   - *Nghiệm thu Chặng A:* Câu thành công trên cả 5 đảo ngay trên nước Terrain mới; địa hình ngoài vùng biển giữ nguyên; đóng/mở thoại NPC an toàn.
 
 ---
 
 ### 🎣 CHẶNG B: DỮ LIỆU AN TOÀN `V2`, HOTBAR CẦM ĐỒ/KHOE CÁ, VẬT LÝ NẢY ĐẤT, 5 CHỈ SỐ CẦN & EXCLUSIVE ROD
-- [x] **B1 — Khóa Phiên `DataService` (`Session Lock`), Migration `v2` & Tách `FishingSessionManager`:**
+- [~] **B1 — Khóa Phiên `DataService` (`Session Lock`), Migration `v2` & Tách `FishingSessionManager`:**
   - Nâng cấp `DataService` (khóa độc quyền `activeSessionId == SERVER_JOB_ID`, gia hạn khóa định kỳ, chờ `saveInFlight` trước khi nhả khóa, khóa giao dịch nếu thử 3 lần không lấy được khóa + `MigrateProfileToV2`) và quy tắc `Soulbound Trophy` khi Rebirth.
   - *Nghiệm thu B1:* Nộp cá tại Bounty rồi chuyển máy chủ ngay → cá đã nộp mất đúng 1 lần, phần thưởng giữ nguyên đúng 1 lần; thử khóa tải lỗi chặn giao dịch an toàn.
-- [x] **B2 — Custom Hotbar (`1..5`), Cầm Cá Khoe Hàng, Cụm Chọn Mồi Nhanh + Auto & Vật Lý Quăng Phao Nảy Đất:**
+- [~] **B2 — Custom Hotbar (`1..5`), Cầm Cá Khoe Hàng, Cụm Chọn Mồi Nhanh + Auto & Vật Lý Quăng Phao Nảy Đất:**
   - Ẩn Backpack mặc định; dựng `HotbarAndBaitUi.luau` + `HotbarAndCastController.luau`; giữ chuột nạp thanh lực *Cast Power* (4 chế độ Manual / Perfect / Auto Free / Auto Pro); Raycast điểm chạm đầu tiên (trúng cầu/đất nảy tưng bật về, trúng nước Terrain xét thưởng xoáy); dấu `!` cá đớp + cong cần + Camera zoom nhẹ; chấm điểm Minigame theo từng vòng `FishingMinigameStrike` đối chiếu đồng hồ Server (tách hạn bấm `7.5s / 9.5s / 11.5s` và hạn nhận gói `+0.40s` ân hạn mạng; nghiệm thu cả ở chế độ mô phỏng ping cao `200ms` trong Studio).
-- [x] **B3 — Bộ 5 Chỉ Số Cần Câu, Cân Bằng Lại Kg 5 Đảo, 3 Cần Exclusive (`115–130%`) & Bệ Xoay Dòng `Enchant Altar`:**
+- [~] **B3 — Bộ 5 Chỉ Số Cần Câu, Cân Bằng Lại Kg 5 Đảo, 3 Cần Exclusive (`115–130%`) & Bệ Xoay Dòng `Enchant Altar`:**
   - Nâng cấp `RodsConfig.luau` + 5 file Đảo, tách 3 đường nhận Cần Exclusive, hoàn thiện `EnchantsConfig.luau` + `EnchantAndBountyService.luau` (xoay 6 dòng Enchant bằng Relic/Gems kèm bảng `%` công khai & kiểm tra `PolicyService`).
 
 ---
 
 ### 🎒 CHẶNG C: GIAO DIỆN Ô LƯỚI 3D (`VIEWPORTPOOL`), KHÓA CÁ, BÁN CHỌN LỌC, THẨM ĐỊNH & ĐỔI ĐỒ
-- [x] **C1 — Lưới Thẻ 3D Tối Ưu (`ViewportPool.luau` + `ViewportCard.luau`) Cho `Bag`, `Shop`, `Pets` & `Index`:**
+- [~] **C1 — Lưới Thẻ 3D Tối Ưu (`ViewportPool.luau` + `ViewportCard.luau`) Cho `Bag`, `Shop`, `Pets` & `Index`:**
   - Tái sử dụng ô thẻ mượt trên mobile, hình 3D lớn chính giữa ô, nhãn bậc *Big/Giant/Titanic* & đột biến góc trên, cân nặng/giá tiền gọn dưới đáy, không dựng lại toàn lưới khi tiền thay đổi.
-- [x] **C2 — Khóa Cá (`🔒 Lock`), Bán Chọn Lọc Nhiều Cá (`Multi-Select`), Bán Cá Cầm Tay & Bảo Vệ `Soulbound`:**
+- [~] **C2 — Khóa Cá (`🔒 Lock`), Bán Chọn Lọc Nhiều Cá (`Multi-Select`), Bán Cá Cầm Tay & Bảo Vệ `Soulbound`:**
   - Hoàn thiện mọi đường bán kiểm tra chặt `locked` và `soulbound` trước khi xóa khỏi túi, đồng bộ tức thì với ô ghim Hotbar và mô hình cá đang cầm trên tay.
-- [x] **C3 — NPC Thẩm Định Cá (`Appraise`), Bảng Đổi Cá (`Fish Bounty`), Quà Online Cộng Dồn Ngày UTC & `Settings`:**
+- [~] **C3 — NPC Thẩm Định Cá (`Appraise`), Bảng Đổi Cá (`Fish Bounty`), Quà Online Cộng Dồn Ngày UTC & `Settings`:**
   - Hoàn thiện `Appraise`, 3 hợp đồng `Fish Bounty` (tiêu đúng `uid` nguyên tử 1 lần), hộp quà 9 mốc tính theo `playtimeTodaySec` (ngày UTC) và bảng `Settings` (`Auto-Lock` + `Low GFX` + `Mute`).
 
 ---
 
 ### 🐉 CHẶNG D: ĐẠI TU MÔ HÌNH 3D CHI TIẾT CAO, `CLIENTPETRENDERER`, ĐẬP TRỨNG, AURA & ÂM THANH
-- [x] **D1 — Thư Viện Mô Hình 3D Chi Tiết Cao (`FishModelBuilder`, `PetModelBuilder`, `RodAndWeightBuilder`) & `ClientPetRenderer`:**
+- [~] **D1 — Thư Viện Mô Hình 3D Chi Tiết Cao (`FishModelBuilder`, `PetModelBuilder`, `RodAndWeightBuilder`) & `ClientPetRenderer`:**
   - Dựng chi tiết 5 họ Cá (Thon, Kiếm, Đuối, Cá Mập, Thủy Quái Boss), 6 dòng Pet Chibi mắt long lanh và chuyển toàn bộ diễn hoạt bay của Pet sang Client.
-- [x] **D2 — Hiệu Ứng Đập Trứng (`EggHatchCutscene`), Overhead Rank Title, Hào Quang (`Aura`) & Cầm Tạ 3D Thật:**
+- [~] **D2 — Hiệu Ứng Đập Trứng (`EggHatchCutscene`), Overhead Rank Title, Hào Quang (`Aura`) & Cầm Tạ 3D Thật:**
   - Diễn hoạt đập trứng nứt vỏ nổ sáng (có nút `Skip`), gắn Danh hiệu & Aura theo mốc Strength/Rebirth, và gắn quả tạ đôi / đòn tạ 3D thật vào bàn tay nhân vật khi tập Gym.
-- [x] **D3 — Đại Tu Animation Toàn Thân, Âm Thanh Đa Lớp & Kiểm Định Tổng Thể:**
-  - Tinh chỉnh diễn hoạt toàn thân, lắp âm thanh nền sóng biển + bộ SFX chi tiết, kiểm tra hiệu năng khi túi đầy & nhiều Pet trên cầu tàu, đạt `[PASS] 6/6` sẵn sàng phát hành.
+- [~] **D3 — Đại Tu Animation Toàn Thân, Âm Thanh Đa Lớp & Kiểm Định Tổng Thể:**
+  - Tinh chỉnh diễn hoạt toàn thân, lắp âm thanh nền sóng biển + bộ SFX chi tiết, kiểm tra hiệu năng khi túi đầy & nhiều Pet trên cầu tàu. PASS 6/6 là điều kiện tĩnh/build; chỉ sẵn sàng phát hành khi đạt thêm toàn bộ điều kiện ký trong blueprint V3. Hiện chưa duyệt phát hành.
