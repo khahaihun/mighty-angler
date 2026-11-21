@@ -1,42 +1,46 @@
 # AGENTS.md — Mighty Angler v2 (Roblox Simulator)
 
-Hướng dẫn chuẩn cho **OpenAI Codex** (Kỹ sư trưởng) và **Antigravity** (Trợ lý thi công) khi cùng làm việc trên dự án tại `D:\Projects\mighty-angler`.
+Hướng dẫn chuẩn cho **Kỹ sư trưởng (Kiến trúc sư kỹ thuật & Review)** và **Trợ lý thi công** khi làm việc trên dự án tại `D:\Projects\mighty-angler`.
 
 ---
 
 ## 1. Phân định vai trò & Quyền hạn (Team Roles)
-- **OpenAI Codex — Kỹ Sư Trưởng & Tổng Kiến Trúc Sư (Lead Engineer & Principal Architect):**
-  - Nắm quyền quyết định cao nhất về kiến trúc hệ thống, logic Server-Authoritative, DataStore, bảo mật và trải nghiệm người chơi.
-  - Chịu trách nhiệm duyệt code (Code Review), kiểm toán định kỳ (Audit), nghiệm thu tính năng và ra quyết định phát hành (Production Sign-off).
-  - Chỉ đạo lộ trình các bản phát hành kế tiếp (Phase 3 / Update 1: Trading, Clan, World Boss,...).
-- **Antigravity — Trợ Lý Thi Công & Thực Thi Cục Bộ (Local Construction & Execution Agent):**
-  - Thực thi các lệnh kiểm định tự động (`tools/verify_project.ps1`), đóng gói place `.rbxlx` và chạy Rojo server trên máy Windows.
-  - Thi công chi tiết mã nguồn Luau, sửa lỗi, cập nhật tài liệu và tạo atomic commit theo chỉ đạo của Kỹ sư trưởng Codex.
-  - Báo cáo kết quả kiểm tra cục bộ trung thực, không bao che lỗi, đảm bảo 100% tuân thủ giới hạn file `<= 350` dòng.
+- **Antigravity — Kỹ Sư Trưởng, Kiến Trúc Sư Kỹ Thuật & Người Review Code (Lead Engineer & Technical Architect — cập nhật 22/11/2026 theo lệnh Chủ dự án):**
+  - Nắm vai trò kiến trúc kỹ thuật, review code, kiểm soát rủi ro DataStore/Server-Authoritative, dẫn dắt hướng đại tu mỹ thuật (Art Direction & Asset Pipeline) và nghiệm thu theo bằng chứng.
+  - Không tự ý sửa code, mua/đưa asset vào game, publish Roblox, xóa file hoặc đổi nhánh khi chưa có lệnh rõ ràng của Chủ dự án.
+  - Khi được Chủ dự án giao thi công, tuân thủ đầy đủ kiểm định tự động (`tools/verify_project.ps1`, các suite `tools/test_*.ps1`), giới hạn file `<= 350` dòng và quy trình nghiệm thu hai tầng.
+- **OpenAI Codex (lịch sử bàn giao đợt V3 ngày 18/11/2026):**
+  - Đã thực hiện kiểm toán V3, ban hành blueprint và tích hợp bộ kiểm thử VM đến mốc ứng viên `dd53d3a` / `20218b8` (xem `docs/V3_BAN_GIAO_NGHIEM_THU.md`).
 
 ---
 
 ## 2. Tổng quan dự án & Hiện trạng mã nguồn
 - **Tên dự án:** Mighty Angler (v2.0 Overhaul — Bản Launch 5 Đảo chuẩn Fisch × PS99 × Arm Wrestle)
-- **Thể loại:** Game Roblox Simulator (**Luau + Rojo**), giao diện Tiếng Anh chuẩn quốc tế, Nước biển `Terrain Water` sóng thật + NPC người thật R15 + Lưới 3D `ViewportFrame` + hỗ trợ `Assets Override` từ Toolbox.
-- **Trạng thái hiện tại:** Đã triển khai mã cho 4 Chặng (`A → D`), nhưng **chưa nghiệm thu đầy đủ và chưa duyệt phát hành**. Kiểm toán V3 tại `8227545` xác định **21/44 mục đạt theo mã, 23/44 mục còn một phần**, kèm các phát hiện bổ sung. Không dùng tên commit hoặc ghi chép cũ “xử lý 100%” làm kết luận nghiệm thu.
-- **Mốc nguồn đã đối chiếu:** `45dd21a` (`fix(data): isolate Studio leaderboard stores with regression coverage`): đã sửa cách ly hai bảng điểm Studio, mô phỏng đạt; PROGRESS cập nhật 17:45 ngày 18/11/2026 ghi **code mốc này đã được duyệt**, Studio/hai server thật vẫn chưa nghiệm thu. Cùng bàn giao đó ghi bản vá mục 1.1 đã qua 16/16 ca mô phỏng, đang chờ review commit riêng; chưa làm 1.2 và chưa duyệt phát hành. Khi nhận ca, đọc `git status` / `git log` và PROGRESS để phát hiện thay đổi mới hơn; không tự đóng toàn bộ lỗi khóa phiên/lưu cuối, migration, gameplay hoặc UI từ các kết quả này.
-- **Bằng chứng kiểm định đã lưu:** `PROGRESS.md` ghi 88 file mã game, tất cả ≤ 350 dòng, năm file cam kết < 310 và PASS 6/6 tại mốc bàn giao trên. Đây là kiểm định tĩnh/build, không thay thế thử hai server, hai client, ping 200 ms, điện thoại hoặc quyết định phát hành. Xem [matrix đặc tả–mã–phép thử](docs/SPEC_CODE_MATRIX.md) và [kế hoạch sửa V3](docs/superpowers/plans/2026-11-18-action-blueprint-v3.md).
+- **Thể loại:** Game Roblox Simulator (**Luau + Rojo**), giao diện Tiếng Anh chuẩn quốc tế, Nước biển `Terrain Water` sóng thật + NPC người thật R15 + Lưới 3D `ViewportFrame` + hỗ trợ `Assets Override` từ model 3D.
+- **Trạng thái hiện tại:** Đã có nền mã nguồn cho 4 Chặng (`A → D`) và bản ứng viên hợp nhất sau kiểm toán V3, nhưng **chưa nghiệm thu trên Roblox Engine thật và chưa duyệt phát hành**.
+- **Mốc nguồn đã đối chiếu:** Nhánh `codex/studio-data-isolation`, commit mã/test sạch `dd53d3a` và commit tài liệu bàn giao `20218b8`:
+  - Đã hợp nhất các bản vá mã cho 23/23 mục còn một phần của V3 (Đợt 1 dữ liệu đến hết 1.5 ở `8699970`, gameplay câu cá `3f43d35`, UI/Odds `ad013c4` + `9c93901`) và bộ hồi quy 21 mục cũ.
+  - **101/101 file `.luau`** mã game trong `src/` đều ≤ 350 dòng (dài nhất `CurrencyService` 342 dòng); 5 file cam kết đều `< 310` (`HudPanel` 275, `ProgressPanel` 268, `PetsService` 299, `FishingService` 288, `BagPanel` 307).
+  - **13/13** runner VM mặc định `tools/test_*.ps1` đạt `exit 0`, `tools/verify_project.ps1` đạt **PASS 6/6**, đối chiếu Source XML trong `build/mighty-angler-dev.rbxlx` khớp **101/101**.
+  - **Vẫn chờ nghiệm thu thực tế:** Play Solo (F5), Server & Clients (2 client + ping 200ms), 2 server trên Universe Staging tách biệt production, điện thoại thật và đối chiếu ID Gamepass thật.
+- **Hướng nâng cấp Mỹ thuật đang triển khai kế hoạch:** Làm lại **Đảo 1 (Sunny Shores)** trước theo gu B (hoạt hình đậm màu, bóng bẩy, dễ thương kiểu PS99 × Arm Wrestle), dùng Terrain tự nhiên dựng trực tiếp trong Studio + model 3D ngân sách `0đ` (duyệt trước từng món), cấu trúc mới **6 Trứng / 24 Pet** (5 Trứng Gold theo đảo + 1 Trứng Gem Exclusive duy nhất ở Đảo 1 có **Pet Exclusive scale theo Pet thường khỏe nhất**). Xem [Kế hoạch Mỹ thuật & Nâng cấp](docs/ART_DIRECTION_AND_REBUILD_PLAN.md).
 
 ---
 
 ## 3. Cấu trúc thư mục & Lệnh kiểm tra
 - `PLAN.md` — **Nguồn thiết kế gameplay**: thông số 5 đảo, quy tắc, kiến trúc file và lộ trình **4 Chặng A–D**; không phải chứng nhận đã hoàn thành.
-- `docs/SPEC_CODE_MATRIX.md` — Đối chiếu từng quy tắc thiết kế với module, phép thử và trạng thái có bằng chứng. Mọi mục chờ sửa dẫn về blueprint V3; không tự coi phép thử dự kiến là đã chạy.
-- `docs/superpowers/plans/2026-11-18-action-blueprint-v3.md` — Chỉ thị sửa lỗi, quyết định tương thích và điều kiện ký nghiệm thu/phát hành sau V3. Nếu khác cách diễn đạt cũ trong PLAN, đọc ghi chú đối chiếu trong matrix trước khi thi công; không tự sửa gameplay để làm tài liệu khớp mã lỗi.
+- `docs/ART_DIRECTION_AND_REBUILD_PLAN.md` — **Kế hoạch Mỹ thuật (Sunny Shores Pilot), Asset Pipeline 0đ & Cấu trúc 6 Trứng / 24 Pet (Exclusive Pet Scaling)** đã chốt cùng Chủ dự án ngày 22/11/2026.
+- `docs/V3_BAN_GIAO_NGHIEM_THU.md` & `docs/V3_REGRESSION_MATRIX.md` — Bằng chứng kiểm thử VM của bản ứng viên `dd53d3a` và checklist nghiệm thu chơi thật bắt buộc trước khi phát hành.
+- `docs/SPEC_CODE_MATRIX.md` — Đối chiếu từng quy tắc thiết kế với module, phép thử và trạng thái có bằng chứng (mốc kiểm toán lịch sử `45dd21a`, cần đọc cùng `V3_BAN_GIAO_NGHIEM_THU.md`).
+- `docs/superpowers/plans/2026-11-18-action-blueprint-v3.md` — Chỉ thị sửa lỗi, quyết định tương thích và điều kiện ký nghiệm thu/phát hành sau V3.
 - `docs/PLANNING_BRIEF.md` — Tài liệu tóm tắt bài học từ bản v1 cũ.
-- `PROGRESS.md` — Sổ bàn giao tiến độ dùng chung giữa Antigravity ↔ Codex.
+- `PROGRESS.md` — Sổ bàn giao tiến độ dùng chung.
 - `default.project.json` — Cấu hình ánh xạ Rojo (`src/shared` → `ReplicatedStorage/Shared`, `src/server` → `ServerScriptService/Server`, `src/client` → `StarterPlayerScripts/Client`).
-- `tools/` — Bộ công cụ kiểm định cục bộ gồm `rojo.exe` (7.7.1), `luau-lsp.exe` (1.70.1 + `globalTypes.d.luau`), `selene.exe` (0.32.0), `install_tools.ps1` và `verify_project.ps1`.
+- `tools/` — Bộ công cụ kiểm định cục bộ gồm `rojo.exe` (7.7.1), `luau-lsp.exe` (1.70.1 + `globalTypes.d.luau`), `selene.exe` (0.32.0), `install_tools.ps1`, `verify_project.ps1` và 13 script hồi quy `test_*.ps1`.
 - `build/mighty-angler-dev.rbxlx` — File place đóng gói sẵn để mở test trên Roblox Studio.
 - `run.bat` — Chạy 1-click trên Windows (chạy 6 bước kiểm tra + build `.rbxlx` + bật `rojo serve`).
 - `logs/app.log` — Nhật ký kiểm tra & lỗi khi build/sync.
-- `tests/README.md` — Hướng dẫn trình chạy hồi quy chung `tools/test_studio_data_isolation.ps1`, gồm `studio_data_isolation`, `session_acquisition` và `data_persistence`.
+- `tests/README.md` — Hướng dẫn bộ hồi quy Luau VM (`tools/test_studio_data_isolation.ps1` và các suite thành phần).
 - `.github/workflows/ci.yml` — GitHub Actions chạy kiểm định và hồi quy trên mỗi push và pull request, lưu log và bản build làm bằng chứng review.
 
 ### Quy trình trước và sau mỗi thay đổi
