@@ -65,15 +65,18 @@ local function addGlossyEyes(m: Model, root: BasePart, xSpread: number, yOff: nu
 end
 
 function FishModelBuilder.BuildFish(fishDef: Types.FishDef, mutation: string?, silhouette: boolean?): Model
-	if not silhouette then
-		local override = AssetRegistry.TryClone("Fish", fishDef.id, true)
-		if override and override.PrimaryPart then
-			return override
-		end
-	end
-
 	local isSil = (silhouette == true)
 	local mut = mutation or "None"
+	local mutDef = GameConfig.Mutations[mut]
+	local mutCol: Color3? = if mutDef and mut ~= "None" then mutDef.color else nil
+
+	local override = AssetRegistry.TryClone("Fish", fishDef.id, true)
+	if override and override.PrimaryPart then
+		override.Name = "Fish3D_" .. fishDef.id
+		AssetRegistry.ApplyModelVisuals(override, isSil, mut, mutCol)
+		return override
+	end
+
 	local c1 = if isSil then Color3.fromRGB(20, 24, 36) else fishDef.primaryColor
 	local c2 = if isSil then Color3.fromRGB(30, 36, 52) else fishDef.secondaryColor
 	local bellyCol = if isSil then c2 else c1:Lerp(Color3.fromRGB(250, 252, 255), 0.45)
@@ -172,18 +175,17 @@ function FishModelBuilder.PositionOrScaleModel(model: Model, targetCf: CFrame, u
 	if not root then
 		return
 	end
-	local invRoot = root.CFrame:Inverse()
-	local descendants = model:GetDescendants()
-	root.Size = root.Size * uniformScale
-	root.CFrame = targetCf
-
-	for _, inst in ipairs(descendants) do
-		if inst:IsA("BasePart") and inst ~= root then
-			local rel = invRoot * inst.CFrame
-			local scaledPos = rel.Position * uniformScale
-			local rotOnly = rel - rel.Position
-			inst.Size = inst.Size * uniformScale
-			inst.CFrame = targetCf * CFrame.new(scaledPos) * rotOnly
+	AssetRegistry.ScaleModelUniform(model, uniformScale)
+	local pivoted = pcall(function()
+		model:PivotTo(targetCf)
+	end)
+	if not pivoted then
+		local invRoot = root.CFrame:Inverse()
+		root.CFrame = targetCf
+		for _, inst in ipairs(model:GetDescendants()) do
+			if inst:IsA("BasePart") and inst ~= root then
+				inst.CFrame = targetCf * (invRoot * inst.CFrame)
+			end
 		end
 	end
 

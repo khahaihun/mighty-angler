@@ -100,15 +100,23 @@ function RodAndWeightBuilder.BuildCharacterRod(rodDef: Types.RodDef): (Model, Ba
 end
 
 function RodAndWeightBuilder.BuildRodPreview(rodDef: Types.RodDef): Model
+	local tilt = CFrame.new(0, -0.4, 0) * CFrame.Angles(math.rad(-28), math.rad(35), 0)
+	local override = AssetRegistry.TryClone("Rods", rodDef.id, true)
+	if override and override.PrimaryPart then
+		override.Name = "RodPreview_" .. rodDef.id
+		AssetRegistry.NormalizeForViewport(override, 4.6, tilt)
+		return override
+	end
+
 	local m, grip, _ = buildRodInternal(rodDef, true)
-	local tilt = CFrame.new(0, -0.4, 2.8) * CFrame.Angles(math.rad(-28), math.rad(35), 0)
+	local procTilt = CFrame.new(0, -0.4, 2.8) * CFrame.Angles(math.rad(-28), math.rad(35), 0)
 	local inv = grip.CFrame:Inverse()
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= grip then
-			d.CFrame = tilt * (inv * d.CFrame)
+			d.CFrame = procTilt * (inv * d.CFrame)
 		end
 	end
-	grip.CFrame = tilt
+	grip.CFrame = procTilt
 	return m
 end
 

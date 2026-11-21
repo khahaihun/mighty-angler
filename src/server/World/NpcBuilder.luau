@@ -8,6 +8,7 @@ local Types = require(Shared:WaitForChild("Types"))
 local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
 
 local PartFactory = require(script.Parent.PartFactory)
+local ManualIslandAdapter = require(script.Parent.ManualIslandAdapter)
 
 export type NpcRole = "Merchant" | "Shop" | "Collector" | "Coach"
 
@@ -56,14 +57,26 @@ local function createArticulatedNpc(
 	promptKind: string,
 	islandId: number
 )
-	local override = AssetRegistry.TryClone("Props", "Npc_" .. role, true)
+	local override = AssetRegistry.TryClone("Npcs", role, "RootOnly")
+		or AssetRegistry.TryClone("Props", "Npc_" .. role, "RootOnly")
 	if override and override.PrimaryPart then
+		override.Name = "Npc_" .. role
 		override:PivotTo(rootCf)
 		override:SetAttribute("IsAnimatedNpc", true)
 		override:SetAttribute("PhaseOffset", math.random() * 6.28)
 		override.Parent = parent
-		PartFactory.AddBillboard(override.PrimaryPart, displayName, subtitle, accentCol, 4.8)
-		PartFactory.AddPrompt(override.PrimaryPart, promptAction, displayName, 15, promptKind, {
+
+		local headPart = override:FindFirstChild("Head")
+		local billboardHost: BasePart = if headPart and headPart:IsA("BasePart")
+			then headPart
+			else override.PrimaryPart
+		local torsoPart = override:FindFirstChild("UpperTorso") or override:FindFirstChild("Torso")
+		local promptHost: BasePart = if torsoPart and torsoPart:IsA("BasePart")
+			then torsoPart
+			else override.PrimaryPart
+
+		PartFactory.AddBillboard(billboardHost, displayName, subtitle, accentCol, 3.6)
+		PartFactory.AddPrompt(promptHost, promptAction, displayName, 16, promptKind, {
 			IslandId = islandId,
 			NpcRole = role,
 		})
@@ -157,42 +170,53 @@ local function createArticulatedNpc(
 	})
 end
 
-function NpcBuilder.BuildIslandNpcs(islandFolder: Folder, islandDef: Types.IslandDef)
+function NpcBuilder.BuildIslandNpcs(islandFolder: Folder, islandDef: Types.IslandDef, manualIsland: Instance?)
 	local npcFolder = Instance.new("Folder")
 	npcFolder.Name = "IslandNpcs"
 	npcFolder.Parent = islandFolder
 
 	local c = islandDef.centerPosition
+	local merchantCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "NpcMerchant", CFrame.new(c + Vector3.new(-28, 0, 36.5)))
+	local shopCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "NpcShop", CFrame.new(c + Vector3.new(28, 0, 36.5)))
+	local collectorCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "NpcCollector", CFrame.new(c + Vector3.new(-11, 0, 48.2)))
+	local coachCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "NpcCoach", CFrame.new(c + Vector3.new(-36, 0, -10)) * CFrame.Angles(0, math.rad(-90), 0))
 
 	createArticulatedNpc(
 		npcFolder, "Merchant", "Captain Barnaby", "Fish Merchant • Sell & Inspect",
-		CFrame.new(c + Vector3.new(-28, 0, 36.5)),
+		merchantCf,
 		Color3.fromRGB(245, 186, 52), Color3.fromRGB(48, 68, 102), Color3.fromRGB(38, 56, 92), Color3.fromRGB(255, 218, 76),
 		"Talk to Merchant", "NpcMerchant", islandDef.id
 	)
 
 	createArticulatedNpc(
 		npcFolder, "Shop", "Master Kaito", "Rods, Bait, Gear & Enchants",
-		CFrame.new(c + Vector3.new(28, 0, 36.5)),
+		shopCf,
 		Color3.fromRGB(56, 148, 232), Color3.fromRGB(42, 52, 76), Color3.fromRGB(238, 244, 255), Color3.fromRGB(98, 224, 255),
 		"Talk to Crafter", "NpcShop", islandDef.id
 	)
 
-	PartFactory.Block(
-		npcFolder, "AppraiserDesk", Vector3.new(7.5, 3.2, 3.6),
-		CFrame.new(c + Vector3.new(-11, 1.6, 52)), Color3.fromRGB(136, 92, 58), Enum.Material.WoodPlanks
-	)
+	local deskOverride = AssetRegistry.TryClone("Buildings", "AppraiserDesk", true)
+	if deskOverride and deskOverride.PrimaryPart then
+		deskOverride.Name = "AppraiserDesk"
+		deskOverride:PivotTo(collectorCf * CFrame.new(0, 1.6, 3.8))
+		deskOverride.Parent = npcFolder
+	else
+		PartFactory.Block(
+			npcFolder, "AppraiserDesk", Vector3.new(7.5, 3.2, 3.6),
+			collectorCf * CFrame.new(0, 1.6, 3.8), Color3.fromRGB(136, 92, 58), Enum.Material.WoodPlanks
+		)
+	end
 
 	createArticulatedNpc(
 		npcFolder, "Collector", "Old Man Finn", "Appraiser & Fish Bounties",
-		CFrame.new(c + Vector3.new(-11, 0, 48.2)),
+		collectorCf,
 		Color3.fromRGB(82, 168, 118), Color3.fromRGB(92, 72, 56), Color3.fromRGB(218, 182, 106), Color3.fromRGB(122, 255, 186),
 		"Appraise / Bounties", "NpcCollector", islandDef.id
 	)
 
 	createArticulatedNpc(
 		npcFolder, "Coach", "Coach Atlas", "Strength & Rank Guide",
-		CFrame.new(c + Vector3.new(-36, 0, -10)) * CFrame.Angles(0, math.rad(-90), 0),
+		coachCf,
 		Color3.fromRGB(238, 78, 72), Color3.fromRGB(42, 46, 58), Color3.fromRGB(255, 212, 68), Color3.fromRGB(255, 118, 88),
 		"Talk to Coach", "NpcCoach", islandDef.id
 	)

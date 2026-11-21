@@ -6,8 +6,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
+local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
 
 local PartFactory = require(script.Parent.PartFactory)
+local ManualIslandAdapter = require(script.Parent.ManualIslandAdapter)
 
 local TerrainWaterBuilder = {}
 
@@ -117,12 +119,30 @@ local function buildLighthouse(parent: Instance, basePos: Vector3)
 	pLight.Parent = beacon
 end
 
-function TerrainWaterBuilder.BuildEnchantAltar(islandFolder: Folder, islandDef: Types.IslandDef)
+function TerrainWaterBuilder.BuildEnchantAltar(islandFolder: Folder, islandDef: Types.IslandDef, manualIsland: Instance?)
+	local altarCf = ManualIslandAdapter.GetMarkerCFrame(
+		manualIsland,
+		"EnchantAltar",
+		CFrame.new(islandDef.centerPosition + Vector3.new(42, 0, -36))
+	)
+	local pos = altarCf.Position
+
+	local override = AssetRegistry.TryClone("Buildings", "EnchantAltar", true)
+	if override and override.PrimaryPart then
+		override.Name = "EnchantAltar"
+		override:PivotTo(altarCf)
+		override.Parent = islandFolder
+		PartFactory.AddBillboard(override.PrimaryPart, "🔮 ENCHANT ALTAR", "Roll Exclusive Rod Enchants!", Color3.fromRGB(216, 132, 255), 5.6)
+		PartFactory.AddPrompt(override.PrimaryPart, "Enchant Exclusive Rod", "Ancient Altar", 14, "OpenEnchantAltar", {
+			IslandId = islandDef.id,
+		})
+		return
+	end
+
 	local altarModel = Instance.new("Model")
 	altarModel.Name = "EnchantAltar"
 	altarModel.Parent = islandFolder
 
-	local pos = islandDef.centerPosition + Vector3.new(42, 0, -36)
 	PartFactory.VerticalCylinder(altarModel, "AltarStep1", 0.8, 11.5, CFrame.new(pos + Vector3.new(0, 0.4, 0)), Color3.fromRGB(62, 56, 88), Enum.Material.Slate)
 	local ped = PartFactory.VerticalCylinder(altarModel, "AltarPedestal", 3.2, 5.4, CFrame.new(pos + Vector3.new(0, 2.2, 0)), Color3.fromRGB(84, 72, 122), Enum.Material.Slate)
 	PartFactory.VerticalCylinder(altarModel, "RuneRing", 0.35, 9.6, CFrame.new(pos + Vector3.new(0, 0.85, 0)), Color3.fromRGB(196, 108, 255), Enum.Material.Neon, false, 0.22)

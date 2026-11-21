@@ -40,14 +40,17 @@ local function WeldAllToPrimary(m: Model)
 end
 
 function PetModelBuilder.BuildPet(petDef: Types.PetDef, silhouette: boolean?, forWorldFollow: boolean?): Model
-	if not silhouette then
-		local override = AssetRegistry.TryClone("Pets", petDef.id, true)
-		if override and override.PrimaryPart then
-			return override
+	local isSil = (silhouette == true)
+	local override = AssetRegistry.TryClone("Pets", petDef.id, true)
+	if override and override.PrimaryPart then
+		override.Name = "Pet3D_" .. petDef.id
+		AssetRegistry.ApplyModelVisuals(override, isSil, nil, nil)
+		if forWorldFollow then
+			WeldAllToPrimary(override)
 		end
+		return override
 	end
 
-	local isSil = (silhouette == true)
 	local c1 = if isSil then Color3.fromRGB(22, 26, 38) else petDef.primaryColor
 	local c2 = if isSil then Color3.fromRGB(34, 40, 58) else petDef.secondaryColor
 	local isGlowing = (not isSil) and (petDef.rarity == "Mythic" or petDef.rarity == "Legendary")
@@ -106,8 +109,44 @@ function PetModelBuilder.BuildPet(petDef: Types.PetDef, silhouette: boolean?, fo
 		end
 	end
 
+	if not isSil and (petDef :: any).isExclusive == true then
+		-- Hào quang + vương miện hoàng kim cho Pet Exclusive (gu PS99)
+		addPart(m, body, Enum.PartType.Cylinder, Vector3.new(0.14, 2.35, 2.35), CFrame.new(0, 1.28, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 226, 92), Enum.Material.Neon)
+		addPart(m, body, Enum.PartType.Block, Vector3.new(0.75, 0.34, 0.75), CFrame.new(0, 1.05, -0.05) * CFrame.Angles(0, math.rad(45), 0), Color3.fromRGB(255, 214, 62), Enum.Material.Neon)
+		local sp = Instance.new("ParticleEmitter")
+		sp.Name = "ExclusiveSparkle"
+		sp:SetAttribute("ClientBudgetManaged", true)
+		sp.Color = ColorSequence.new(Color3.fromRGB(255, 232, 118), c2)
+		sp.LightEmission = 1
+		sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(1, 0) })
+		sp.Lifetime = NumberRange.new(0.6, 1.0)
+		sp.Rate = 6
+		sp.Speed = NumberRange.new(0.6, 1.4)
+		sp.Parent = body
+	end
+
 	if forWorldFollow then
 		WeldAllToPrimary(m)
+	end
+	return m
+end
+
+function PetModelBuilder.BuildEggPreview(eggDef: Types.EggDef): Model
+	local override = AssetRegistry.TryClone("Eggs", eggDef.id, true)
+	if override and override.PrimaryPart then
+		override.Name = "Egg3D_" .. eggDef.id
+		AssetRegistry.NormalizeForViewport(override, 2.75)
+		return override
+	end
+
+	local m = Instance.new("Model")
+	m.Name = "Egg3D_" .. eggDef.id
+	local shell = addPart(m, nil, Enum.PartType.Ball, Vector3.new(2.05, 2.60, 2.05), CFrame.new(), eggDef.eggColor, Enum.Material.SmoothPlastic)
+	m.PrimaryPart = shell
+	addPart(m, shell, Enum.PartType.Cylinder, Vector3.new(0.34, 2.14, 2.14), CFrame.new(0, -0.10, 0) * CFrame.Angles(0, 0, math.rad(90)), eggDef.accentColor, Enum.Material.Neon)
+	if (eggDef :: any).isExclusive == true then
+		addPart(m, shell, Enum.PartType.Cylinder, Vector3.new(0.16, 2.65, 2.65), CFrame.new(0, 1.42, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 224, 88), Enum.Material.Neon)
+		addPart(m, shell, Enum.PartType.Block, Vector3.new(0.72, 0.42, 0.72), CFrame.new(0, 1.38, 0) * CFrame.Angles(0, math.rad(45), 0), Color3.fromRGB(255, 212, 62), Enum.Material.Neon)
 	end
 	return m
 end

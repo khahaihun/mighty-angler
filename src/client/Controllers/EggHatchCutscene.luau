@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
+local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
 local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfig"))
 local PetModelBuilder = require(Shared:WaitForChild("ModelBuilders"):WaitForChild("PetModelBuilder"))
 
@@ -47,7 +48,15 @@ function EggHatchCutscene.Skip()
 	end
 end
 
-local function buildEgg3DModel(eggColor: Color3, accentColor: Color3): (Model, Part)
+local function buildEgg3DModel(eggId: string, eggColor: Color3, accentColor: Color3): Model
+	if eggId ~= "" then
+		local override = AssetRegistry.TryClone("Eggs", eggId, true)
+		if override and override.PrimaryPart then
+			AssetRegistry.NormalizeForViewport(override, 2.75)
+			return override
+		end
+	end
+
 	local m = Instance.new("Model")
 	local shell = Instance.new("Part")
 	shell.Shape = Enum.PartType.Ball
@@ -66,7 +75,7 @@ local function buildEgg3DModel(eggColor: Color3, accentColor: Color3): (Model, P
 	band.Material = Enum.Material.Neon
 	band.Anchored = true
 	band.Parent = m
-	return m, shell
+	return m
 end
 
 local function playHatchSequence(eggId: string, petId: string, sourceLabel: string)
@@ -98,7 +107,7 @@ local function playHatchSequence(eggId: string, petId: string, sourceLabel: stri
 		subLbl.Text = "Tap [SKIP] anytime to close"
 	end
 
-	local eggModel, shell = buildEgg3DModel(eggCol, accCol)
+	local eggModel = buildEgg3DModel(eggId, eggCol, accCol)
 	eggModel.Parent = vp
 
 	task.spawn(function()
@@ -106,13 +115,7 @@ local function playHatchSequence(eggId: string, petId: string, sourceLabel: stri
 		for _, deg in ipairs({ 18, -22, 26, -26, 0 }) do
 			if activeTicket ~= myTicket then return end
 			SoundAndFxController.PlaySfx("Click")
-			local tilt = CFrame.Angles(0, 0, math.rad(deg))
-			shell.CFrame = tilt
-			for _, d in ipairs(eggModel:GetChildren()) do
-				if d:IsA("BasePart") and d ~= shell then
-					d.CFrame = tilt * CFrame.Angles(0, 0, math.rad(90))
-				end
-			end
+			eggModel:PivotTo(CFrame.Angles(0, 0, math.rad(deg)))
 			task.wait(0.11)
 		end
 		if activeTicket ~= myTicket then return end

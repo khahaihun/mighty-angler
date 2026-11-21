@@ -69,8 +69,12 @@ local function tryBuildViaSharedBuilders(spec: CardModelSpec): Model?
 	elseif spec.kind == "Pet" and spec.modelRefData then
 		local pm = mbFolder:FindFirstChild("PetModelBuilder")
 		if pm and pm:IsA("ModuleScript") then
-			local builder = require(pm) :: any
-			return builder.BuildPet(spec.modelRefData, spec.silhouette == true)
+			return (require(pm) :: any).BuildPet(spec.modelRefData, spec.silhouette == true)
+		end
+	elseif spec.kind == "Egg" and spec.modelRefData then
+		local pm = mbFolder:FindFirstChild("PetModelBuilder")
+		if pm and pm:IsA("ModuleScript") then
+			return (require(pm) :: any).BuildEggPreview(spec.modelRefData)
 		end
 	elseif spec.kind == "Rod" and spec.modelRefData then
 		local rm = mbFolder:FindFirstChild("RodAndWeightBuilder")
