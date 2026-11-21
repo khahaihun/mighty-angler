@@ -65,7 +65,7 @@ export type IslandDef = {
 	gymStations: { GymStationDef },
 	fishPool: { FishDef },
 	goldEggId: string,
-	gemEggId: string,
+	gemEggId: string?,
 	hasComingSoonGate: boolean?,
 }
 
@@ -190,6 +190,18 @@ export type PetDef = {
 	mutationBonus: number,
 	primaryColor: Color3,
 	secondaryColor: Color3,
+	isExclusive: boolean?,
+	scaleFactor: number?,
+}
+
+export type EffectivePetStats = {
+	sellBonus: number,
+	strengthBonus: number,
+	luckBonus: number,
+	mutationBonus: number,
+	isExclusive: boolean,
+	scaleFactor: number,
+	scaledFromName: string?,
 }
 
 export type EggDef = {
@@ -201,6 +213,7 @@ export type EggDef = {
 	eggColor: Color3,
 	accentColor: Color3,
 	pets: { PetDef },
+	isExclusive: boolean?,
 }
 
 export type PetInstance = {

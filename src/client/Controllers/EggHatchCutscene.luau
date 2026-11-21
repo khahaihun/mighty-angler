@@ -133,7 +133,11 @@ local function playHatchSequence(eggId: string, petId: string, sourceLabel: stri
 		if titleLbl and subLbl then
 			titleLbl.Text = string.format("🌟 [%s] %s!", string.upper(petDef.rarity), petDef.name)
 			titleLbl.TextColor3 = rCol
-			subLbl.Text = string.format("+%d%% Gold  •  +%d%% Strength  •  +%d%% Luck", math.floor(petDef.sellBonus * 100), math.floor(petDef.strengthBonus * 100), math.floor(petDef.luckBonus * 100))
+			if petDef.isExclusive then
+				subLbl.Text = string.format("👑 EXCLUSIVE • Scales %d%% of your Strongest Pet!", math.floor((petDef.scaleFactor or 1.0) * 100 + 0.5))
+			else
+				subLbl.Text = string.format("+%d%% Gold  •  +%d%% Strength  •  +%d%% Luck", math.floor(petDef.sellBonus * 100 + 0.5), math.floor(petDef.strengthBonus * 100 + 0.5), math.floor(petDef.luckBonus * 100 + 0.5))
+			end
 		end
 
 		local t0 = os.clock()

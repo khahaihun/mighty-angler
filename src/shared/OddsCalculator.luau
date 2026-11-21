@@ -159,7 +159,11 @@ function OddsCalculator.ComputeLiveOdds(
 	for _, inst in ipairs(petsList) do
 		if type(inst) == "table" and eqSet[tostring(inst.uid)] then
 			local pDef = PetsConfig.PetsById[tostring(inst.petId)]
-			if pDef then petLuckAdd += pDef.luckBonus; petMutAdd += pDef.mutationBonus end
+			if pDef then
+				local eff = PetsConfig.GetEffectivePetStats(pDef, petsList)
+				petLuckAdd += eff.luckBonus
+				petMutAdd += eff.mutationBonus
+			end
 		end
 	end
 

@@ -152,7 +152,7 @@ local Island3: Types.IslandDef = {
 		},
 	},
 	goldEggId = "egg_swamp_gold",
-	gemEggId = "egg_swamp_gem",
+	gemEggId = nil,
 	hasComingSoonGate = false,
 }
 

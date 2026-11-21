@@ -59,7 +59,9 @@ local function rebuildTopToolbar()
 		local lines: { string } = {}
 		for _, odds in ipairs(OddsCalculator.ComputeEggOdds(egg)) do
 			local p, pct = odds.pet, odds.pct
-			table.insert(lines, string.format("• [%s] %s: Base %.1f%% → Effective %.1f%% (+%d%%G/+%d%%Str/+%d%%Lk)", p.rarity, p.name, pct, pct, math.floor(p.sellBonus * 100), math.floor(p.strengthBonus * 100), math.floor(p.luckBonus * 100)))
+			local eff = PetsConfig.GetEffectivePetStats(p, petsList)
+			local scaleTag = if eff.isExclusive then string.format(" [👑%d%% Best]", math.floor(eff.scaleFactor * 100 + 0.5)) else ""
+			table.insert(lines, string.format("• [%s] %s: %.1f%% (+%d%%G/+%d%%Str/+%d%%Lk)%s", p.rarity, p.name, pct, math.floor(eff.sellBonus * 100 + 0.5), math.floor(eff.strengthBonus * 100 + 0.5), math.floor(eff.luckBonus * 100 + 0.5), scaleTag))
 		end
 
 		local title = Instance.new("TextLabel")
@@ -143,21 +145,23 @@ function PetsPanel.Render()
 			local eqA, eqB = isUidEquipped(a.uid), isUidEquipped(b.uid)
 			if eqA ~= eqB then return eqA end
 			local dA, dB = PetsConfig.PetsById[a.petId], PetsConfig.PetsById[b.petId]
-			return (if dA then PetsConfig.GetPowerScore(dA) else 0) > (if dB then PetsConfig.GetPowerScore(dB) else 0)
+			return (if dA then PetsConfig.GetEffectivePowerScore(dA, petsList) else 0) > (if dB then PetsConfig.GetEffectivePowerScore(dB, petsList) else 0)
 		end)
 
 		for idx, inst in ipairs(sorted) do
 			local def = PetsConfig.PetsById[inst.petId]
 			if def then
+				local eff = PetsConfig.GetEffectivePetStats(def, petsList)
 				local equipped = isUidEquipped(inst.uid)
 				local rCol = Theme.RarityColors[def.rarity] or Theme.Colors.TextPrimary
+				local badgeTxt = if equipped then "★ EQUIPPED" elseif eff.isExclusive then string.format("👑 %d%% BEST", math.floor(eff.scaleFactor * 100 + 0.5)) else def.rarity
 				table.insert(specs, {
 					key = inst.uid, order = idx, title = def.name,
-					subtitle = string.format("+%d%%G • +%d%%Str • +%d%%Lk", math.floor(def.sellBonus * 100), math.floor(def.strengthBonus * 100), math.floor(def.luckBonus * 100)),
+					subtitle = string.format("+%d%%G • +%d%%Str • +%d%%Lk", math.floor(eff.sellBonus * 100 + 0.5), math.floor(eff.strengthBonus * 100 + 0.5), math.floor(eff.luckBonus * 100 + 0.5)),
 					footerText = if equipped then "UNEQUIP ★" else "EQUIP",
 					footerColor = if equipped then Theme.Colors.Warning else Theme.Colors.Primary,
 					strokeColor = rCol, bgColor = if equipped then Theme.Colors.CardOwned else Theme.Colors.CardBg,
-					topLeftBadge = if equipped then "★ EQUIPPED" else def.rarity, topLeftColor = rCol,
+					topLeftBadge = badgeTxt, topLeftColor = rCol,
 					cornerIcon = "🗑️", cornerColor = Theme.Colors.Danger,
 					modelSignature = "Pet_" .. def.id,
 					modelSpec = { kind = "Pet", primaryColor = def.primaryColor, secondaryColor = def.secondaryColor, modelRefData = def },
@@ -191,9 +195,9 @@ function PetsPanel.Render()
 				footerText = fTxt, footerColor = fCol,
 				strokeColor = if isSel then Theme.Colors.Gold else egg.eggColor,
 				bgColor = if isSel then Theme.Colors.CardOwned else Theme.Colors.CardBg,
-				topLeftBadge = "Isl." .. tostring(egg.islandId), topLeftColor = egg.accentColor,
+				topLeftBadge = if egg.isExclusive then "👑 EXCLUSIVE" else ("Isl." .. tostring(egg.islandId)), topLeftColor = egg.accentColor,
 				modelSignature = "Egg_" .. egg.id,
-				modelSpec = { kind = "Egg", primaryColor = egg.eggColor, secondaryColor = egg.accentColor },
+				modelSpec = { kind = "Egg", primaryColor = egg.eggColor, secondaryColor = egg.accentColor, modelRefData = egg },
 				onActivate = function()
 					focusedKey = "egg_" .. egg.id
 					if selectedEggId ~= egg.id then

@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
 local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Islands"))
+local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfig"))
 
 local PartFactory = require(script.Parent.PartFactory)
 local PropsBuilder = require(script.Parent.PropsBuilder)
@@ -59,10 +60,10 @@ function WorldBuilder.SetupLighting()
 	end
 end
 
-local function getDefaultEggCosts(islandId: number): (number, number)
-	local goldCosts = { 350, 3500, 32000, 260000, 1800000 }
-	local gemCosts = { 120, 160, 210, 270, 350 }
-	return goldCosts[islandId] or 500, gemCosts[islandId] or 150
+local function getDefaultEggCosts(islandDef: Types.IslandDef): (number, number)
+	local goldEgg = PetsConfig.EggsById[islandDef.goldEggId]
+	local gemEgg = if islandDef.gemEggId then PetsConfig.EggsById[islandDef.gemEggId] else nil
+	return if goldEgg then goldEgg.cost else 500, if gemEgg then gemEgg.cost else 250
 end
 
 function WorldBuilder.BuildIsland(
@@ -193,7 +194,7 @@ function WorldBuilder.BuildIsland(
 	PropsBuilder.BuildWoodenDock(islandFolder, c, theme.accentColor, manualIsland)
 	PropsBuilder.BuildMarketStalls(islandFolder, islandDef, manualIsland)
 	PropsBuilder.BuildGymZone(islandFolder, islandDef, manualIsland)
-	local goldEggCost, gemEggCost = getDefaultEggCosts(islandDef.id)
+	local goldEggCost, gemEggCost = getDefaultEggCosts(islandDef)
 	PropsBuilder.BuildEggPedestals(islandFolder, islandDef, goldEggCost, gemEggCost, manualIsland)
 	PropsBuilder.BuildPortals(islandFolder, islandDef, nextIsland, manualIsland)
 	if manualIsland then

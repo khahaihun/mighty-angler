@@ -224,7 +224,8 @@ local function handleEquipBest(player: Player)
 	table.sort(sorted, function(a: Types.PetInstance, b: Types.PetInstance): boolean
 		local defA = PetsConfig.PetsById[a.petId]
 		local defB = PetsConfig.PetsById[b.petId]
-		return (if defA then PetsConfig.GetPowerScore(defA) else 0) > (if defB then PetsConfig.GetPowerScore(defB) else 0)
+		return (if defA then PetsConfig.GetEffectivePowerScore(defA, profile.pets) else 0)
+			> (if defB then PetsConfig.GetEffectivePowerScore(defB, profile.pets) else 0)
 	end)
 
 	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
@@ -271,11 +272,12 @@ function PetsService.Init()
 			local petId = ownedByUid[uid]
 			local def = if petId then PetsConfig.PetsById[petId] else nil
 			if def then
+				local eff = PetsConfig.GetEffectivePetStats(def, profile.pets)
 				count += 1
-				sellAdd += def.sellBonus
-				strAdd += def.strengthBonus
-				luckAdd += def.luckBonus
-				mutAdd += def.mutationBonus
+				sellAdd += eff.sellBonus
+				strAdd += eff.strengthBonus
+				luckAdd += eff.luckBonus
+				mutAdd += eff.mutationBonus
 				if count >= maxSlots then
 					break
 				end

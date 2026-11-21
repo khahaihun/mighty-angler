@@ -54,9 +54,9 @@ FishingService.OnFishCaught(function(player: Player, fishDef, _mutation)
 			ShopAndItemsService.GrantPotion(player, pick, 1, true)
 		end
 		if math.random() <= 0.03 then
-			local gemEgg = PetsConfig.GemEggsByIsland[fishDef.islandId]
-			if gemEgg then
-				local bonusPet = Util.PickWeighted(gemEgg.pets, function(p)
+			local dropPool = PetsConfig.GetBossDropPool(fishDef.islandId)
+			if #dropPool > 0 then
+				local bonusPet = Util.PickWeighted(dropPool, function(p)
 					return p.weightChance
 				end)
 				PetsService.AwardPetDirect(player, bonusPet, "Boss Drop")

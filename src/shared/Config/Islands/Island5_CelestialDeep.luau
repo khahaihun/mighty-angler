@@ -152,7 +152,7 @@ local Island5: Types.IslandDef = {
 		},
 	},
 	goldEggId = "egg_celestial_gold",
-	gemEggId = "egg_celestial_gem",
+	gemEggId = nil,
 	hasComingSoonGate = true,
 }
 
