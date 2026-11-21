@@ -127,3 +127,14 @@ LiveOdds/PurchaseOddsSummary/OddsCalculator thật: trạng thái loading, snaps
 mất quyền rồi khôi phục không mất nút xem odds hoặc sinh prompt mua. Bộ init có14ca
 (13gốc+1giao thoa), không hạ assertion cũ. Fixture chỉ bổ sung biên signal/Players/Vector3.
 Xem `docs/V3_BAN_GIAO_NGHIEM_THU.md` cho13runner, hash/Source parity và kho staging.
+
+## Hồi quy Chặng 2A — Ổ cắm 3D, Manual Terrain & 6 Trứng / 24 Pet Exclusive Scaling (22/11/2026)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_art_pipeline_and_terrain.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
+```
+
+- `test_art_pipeline_and_terrain.ps1` (**24/24 PASS**): kiểm 9 thư mục `AssetRegistry` (gồm `Eggs/Npcs/Buildings`), tự xóa 100% `LuaSourceContainer` ẩn trong model clone, neo `RootOnly` giữ khớp tay chân NPC R15, giữ `Silhouette` & `Highlight` + `ClientBudgetManaged` emitter cho đột biến trên MeshPart, override preview Trứng/Cần câu và `ManualIslandAdapter` (`MightyWorldManual` + `IslandMarkers` + `FishingWater`).
+- `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
+- Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.

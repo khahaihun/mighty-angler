@@ -1,7 +1,32 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-18 bởi Codex (tích hợp/nghiệm thu tự động)
-- **Trạng thái hiện tại:** Nhánh dự án có bản ứng viên hợp nhất đến hết1.5 (`8699970`) cùng gameplay/UI/odds; mã kiểm sạch `dd53d3a`. Tất cả13 runner mặc định exit0, verify6/6, Source101/101; init14/14 (13gốc+1giao thoa LiveOdds/readOnly), schema29, Reset12, persistence7. Năm file cam kết<310. **Chưa duyệt phát hành; Studio chưa chạy vì quyền ứng dụng; Play Solo/hai client/hai server staging/điện thoại chờ nghiệm thu.** Xem [bàn giao cuối](docs/V3_BAN_GIAO_NGHIEM_THU.md) và [matrix21](docs/V3_REGRESSION_MATRIX.md).
+- **Cập nhật lần cuối:** 2026-11-22 00:57 bởi Antigravity (Kỹ sư trưởng — Ca treo đêm `/goal` hoàn tất Chặng 1 & Chặng 2A)
+- **Trạng thái hiện tại:** Đã hoàn tất trọn gói **Chặng 1 (Catalog duyệt Asset 0đ Sunny Shores)** và **Chặng 2A (Ổ cắm 3D + Chế độ Terrain dựng tay + Cấu trúc mới 6 Trứng / 24 Pet & Exclusive Pet Scaling)** trên nhánh `codex/studio-data-isolation` (chưa mua hay tự đưa bất kỳ asset ngoài nào vào game, chưa xóa file, chưa đổi nhánh, chưa publish Roblox). **102/102** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `ViewportCard.luau` 345 dòng), cả 5 file cam kết đều `< 310` dòng (`HudPanel: 275`, `ProgressPanel: 268`, `FishingService: 288`, `PetsService: 301`, `BagPanel: 307`). **15/15** bộ test VM `tools/test_*.ps1` đạt **`exit 0`**, `tools/verify_project.ps1` **PASS 6/6 (`exit 0`)**, đối chiếu Source XML trong `build/mighty-angler-dev.rbxlx` khớp **102/102** (SHA-256: `34C7B38B353ACDCE8BFDBFCF9364AF59A69DC1726FF8D0F5CC8B745A269F9B3F`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và duyệt từng món trong Catalog Asset đang chờ Chủ dự án.**
+
+## Ca đêm 22/11/2026 — Hoàn tất Chặng 1 & Chặng 2A (Sunny Shores Pilot Prep)
+
+- [x] **Mốc nền tài liệu (`ee3ded5`):** Ghi chốt [Kế hoạch Mỹ thuật & Nâng cấp](docs/ART_DIRECTION_AND_REBUILD_PLAN.md) và đồng bộ mốc hiện trạng thực tế trong `AGENTS.md` + `PLAN.md`.
+- [x] **Chặng 1 — Catalog đề xuất Asset 0 đồng cho Sunny Shores (`73837ce`):** Lập xong [SUNNY_SHORES_ASSET_CATALOG.md](docs/SUNNY_SHORES_ASSET_CATALOG.md) phủ đủ 7 nhóm (cây cối/đạo cụ, cầu tàu/quầy/hải đăng/bệ Enchant/cổng đảo, 4 NPC R15, 7 loài cá, 2 mẫu trứng + 8 pet, 3 máy Gym, cần câu đầu) từ nguồn miễn phí `0đ` an toàn (`Quaternius CC0`, `Kenney.nl CC0`, `KayKit CC0`, `Poly Pizza`, `Roblox × Synty Official ID 6933438443` + `R15 Rig Builder`), có hộp tích duyệt từng món, gợi ý Combo 3 gói nhanh nhất và quy tắc lọc sạch 100% Script ẩn. Chưa đưa bất kỳ asset nào vào `ReplicatedStorage.Assets`.
+- [x] **Chặng 2A-1 — Nâng cấp Ổ cắm 3D & Chế độ Terrain dựng tay (`c6b76a2`):**
+  - `AssetRegistry.luau`: mở rộng đủ 9 thư mục (thêm `Eggs`, `Npcs`, `Buildings`), tự động lọc bỏ 100% `LuaSourceContainer` ẩn trong model clone, hỗ trợ `RootOnly` cho NPC R15, thêm `ApplyModelVisuals` (giữ `Silhouette` tối màu & `Highlight` + `ParticleEmitter` gắn `ClientBudgetManaged = true` cho đột biến `Shiny/Golden/Cosmic` trên MeshPart), `ScaleModelUniform` (`Model:ScaleTo()` + fallback) và `NormalizeForViewport`.
+  - `NpcBuilder.luau`, `FishModelBuilder.luau`, `PetModelBuilder.luau`, `RodAndWeightBuilder.luau`, `EggHatchCutscene.luau`, `ViewportCard.luau`, `PropsBuilder.luau`, `TerrainWaterBuilder.luau`: sửa lỗi khóa cứng khớp NPC 3D (`RootOnly`), nối 3D override cho Trứng (bệ ngoài đảo + thẻ UI + cutscene đập trứng xoay `PivotTo`), nối 3D override cho Shop Rod Preview, thêm vòng hào quang/vương miện mặc định cho Pet & Trứng Exclusive.
+  - `ManualIslandAdapter.luau` + `WorldBuilder.luau` + `tools/generate_sunny_shores_terrain_draft.luau`: nhận diện đảo Terrain dựng tay tại `Workspace/MightyWorldManual/Island_<id>` cùng 16 điểm neo `IslandMarkers` (tự ẩn marker khi chạy thật, giữ nguyên địa hình Terrain + tạo hộp `FishingWater` vô hình đúng kích thước), kèm script Command Bar 1-click tạo phôi đảo Sunny Shores Terrain trong Studio.
+  - Bộ test VM mới `tools/test_art_pipeline_and_terrain.ps1`: **24/24 PASS (`exit 0`)**.
+- [x] **Chặng 2A-2 — Cơ cấu 6 Trứng / 24 Pet & Exclusive Pet Scaling (`7f526ea`):**
+  - `PetsConfig.luau` + `Types.luau` + `Island2..5` + `init.server.luau` + `WorldBuilder.luau`: chuyển sang **5 Trứng Gold theo đảo × 4 pet thường (`55% / 28% / 13% / 4%`) + 1 Trụ Trứng Gem Exclusive duy nhất đặt ở Hub Đảo 1 × 4 Pet Exclusive (`60% / 27% / 10% / 3%`, scale `100% / 115% / 130% / 150%` theo con Pet thường khỏe nhất đang sở hữu + sàn tối thiểu cho người mới + chống scale vòng tròn)**. Giữ nguyên `pet_tiki_spirit` (+10% Mutation), bảng ánh xạ ngược `LEGACY_PET_ALIASES` cho hồ sơ cũ và `PetsConfig.GetBossDropPool(islandId)` an toàn cho cả 5 đảo.
+  - `PetsService.luau` (`301 < 310` dòng), `OddsCalculator.luau`, `PetsPanel.luau`, `EggHatchCutscene.luau`: dùng chung `PetsConfig.GetEffectivePetStats` & `GetEffectivePowerScore` để Server `BuffAggregator`, `EquipBest`, `Live Odds` và thẻ UI khớp nhau 100%, giữ chặt `PolicyService` cho Trứng Gem Exclusive.
+  - Bộ test VM mới `tools/test_exclusive_pet_scaling.ps1`: **47/47 PASS (`exit 0`)**.
+- [x] **Kiểm định tổng thể sau cả 2 đợt:** `tools/verify_project.ps1` **PASS 6/6**, **15/15** runner `tools/test_*.ps1` đạt **`exit 0`** (gồm `test_live_odds` 19.200 rổ, `test_paid_random_transactions`, `test_v3_regression`, `test_studio_data_isolation`, `test_place_sources` 102/102 Source XML parity).
+- [ ] **Việc sáng mai Chủ dự án quyết & chạy thật:**
+  1. Mở [SUNNY_SHORES_ASSET_CATALOG.md](docs/SUNNY_SHORES_ASSET_CATALOG.md) tích duyệt những gói Asset `0đ` bạn ưng (gợi ý Combo 3 gói: Quaternius + Kenney + Roblox Official).
+  2. Mở `build/mighty-angler-dev.rbxlx` trong Roblox Studio — có thể dán chạy thử `tools/generate_sunny_shores_terrain_draft.luau` trong Command Bar để xem phôi đảo Terrain cong tự nhiên + bấm **Play (F5)** trải nghiệm bệ Trứng Exclusive Đảo 1 & checklist V3.
+  3. Hoàn thành 4 cột mốc nghiệm thu thật còn treo của V3: Play Solo (F5), 2 Client ping 200ms, 2 Server Staging tách Production và điện thoại thật.
+
+---
+
+## Mốc lịch sử trước đó (Bàn giao ứng viên V3 ngày 18/11/2026 bởi Codex)
+
+- **Trạng thái lịch sử mốc `dd53d3a` / `20218b8`:** Bản ứng viên hợp nhất đến hết 1.5 (`8699970`) cùng gameplay/UI/odds; 13/13 runner mặc định exit 0, verify 6/6, Source 101/101. Xem [bàn giao cuối](docs/V3_BAN_GIAO_NGHIEM_THU.md) và [matrix21](docs/V3_REGRESSION_MATRIX.md).
 
 ## Mục 1.5 — Một snapshot mỗi yêu cầu và cảnh báo quyền ghi
 
