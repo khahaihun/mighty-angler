@@ -88,6 +88,10 @@ return function(sources)
 		assert(profile, "profile loads when the store recovers")
 		equal(profile.gold, 888, "real save loaded")
 		equal(f.data.CanWritePersistent(p), true, "session writable after recovery")
+		profile.gold = 999 -- tien do sau khi hoi phuc phai duoc luu khi roi game
+		f.finish(f.remove(p))
+		equal(b.document.gold, 999, "final save after recovery is not skipped by the earlier failed cleanup")
+		equal(b.document.activeSessionId, nil, "lock released on leave after recovery")
 	end)
 
 	test("client is told once that the save is being retried, then that it is ready", function()

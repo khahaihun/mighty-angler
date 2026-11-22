@@ -93,7 +93,8 @@ local function acquireSessionAndLoad(player: Player)
 			if store then
 				local okLock, data, claimMayBeOwned = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
 				confirmedLock, loadedData, lockFailed = okLock, data, not okLock
-				if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0 end
+				-- Khoa da xac nhan: ket qua nha khoa loi cua vong truoc het hieu luc, khong duoc chan lan luu cuoi.
+				if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0; s.loadCloseResult = nil end
 				if not okLock and claimMayBeOwned then s.loadCloseResult = Lock.ReleaseToken(store, key, myToken) end
 			elseif Lock.IsStudioOfflineFallback() then lockFailed = false end
 		end)
