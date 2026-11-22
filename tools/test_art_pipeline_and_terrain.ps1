@@ -10,6 +10,8 @@ $petSrc = [IO.File]::ReadAllText((Join-Path $root 'src/shared/ModelBuilders/PetM
 $rodSrc = [IO.File]::ReadAllText((Join-Path $root 'src/shared/ModelBuilders/RodAndWeightBuilder.luau'))
 $manualSrc = [IO.File]::ReadAllText((Join-Path $root 'src/server/World/ManualIslandAdapter.luau'))
 $npcSrc = [IO.File]::ReadAllText((Join-Path $root 'src/server/World/NpcBuilder.luau'))
+$scenerySrc = [IO.File]::ReadAllText((Join-Path $root 'src/server/World/IslandScenery1_2.luau'))
+$draftSrc = [IO.File]::ReadAllText((Join-Path $root 'tools/generate_sunny_shores_terrain_draft.luau'))
 $suiteSrc = [IO.File]::ReadAllText((Join-Path $root 'tests/art_pipeline_and_terrain.luau'))
 
 $runner = @'
@@ -55,7 +57,11 @@ local NumberSequenceKeypoint = { new = function(t, v) return { Time = t, Value =
 local NumberSequence = { new = function(t) return t end }
 local NumberRange = { new = function(a, b) return { Min = a, Max = b } end }
 local Enum = {
-	Material = { SmoothPlastic = "SmoothPlastic", Neon = "Neon", Metal = "Metal", Foil = "Foil", Wood = "Wood", WoodPlanks = "WoodPlanks", Slate = "Slate" },
+	Material = {
+		SmoothPlastic = "SmoothPlastic", Neon = "Neon", Metal = "Metal", Foil = "Foil",
+		Wood = "Wood", WoodPlanks = "WoodPlanks", Slate = "Slate", Fabric = "Fabric",
+		Air = "Air", Water = "Water", Sand = "Sand", Grass = "Grass", LeafyGrass = "LeafyGrass", Rock = "Rock",
+	},
 	PartType = { Ball = "Ball", Block = "Block", Cylinder = "Cylinder" },
 	HumanoidDisplayDistanceType = { None = "None" },
 	HumanoidHealthDisplayType = { AlwaysOff = "AlwaysOff" },
@@ -214,6 +220,25 @@ end
 local Instance = { new = function(cls) return makeInstance(cls, cls) end }
 local ReplicatedStorage = makeInstance("Folder", "ReplicatedStorage")
 local Workspace = makeInstance("Folder", "Workspace")
+local terrainOps = {}
+local mockTerrain = {
+	WaterColor = Color3.fromRGB(0, 0, 0),
+	WaterReflectance = 0,
+	WaterTransparency = 0,
+	WaterWaveSize = 0,
+	WaterWaveSpeed = 0,
+	SetMaterialColor = function() end,
+	FillBlock = function(_, cf, size, mat)
+		table.insert(terrainOps, { kind = "Block", cf = cf, size = size, mat = mat })
+	end,
+	FillCylinder = function(_, cf, h, r, mat)
+		table.insert(terrainOps, { kind = "Cylinder", cf = cf, h = h, r = r, mat = mat })
+	end,
+	FillBall = function(_, pos, r, mat)
+		table.insert(terrainOps, { kind = "Ball", pos = pos, r = r, mat = mat })
+	end,
+}
+Workspace.Terrain = mockTerrain
 local SharedFolder = makeInstance("Folder", "Shared")
 SharedFolder.Parent = ReplicatedStorage
 local ConfigFolder = makeInstance("Folder", "Config")
@@ -295,6 +320,8 @@ $runner += "local function loadPetBuilder()`n" + $petSrc + "`nend`nloadedModules
 $runner += "local function loadRodBuilder()`n" + $rodSrc + "`nend`nloadedModules['RodAndWeightBuilder'] = loadRodBuilder()`n"
 $runner += "local function loadManualAdapter()`n" + $manualSrc + "`nend`nloadedModules['ManualIslandAdapter'] = loadManualAdapter()`n"
 $runner += "local function loadNpcBuilder()`n" + $npcSrc + "`nend`nloadedModules['NpcBuilder'] = loadNpcBuilder()`n"
+$runner += "local function loadScenery12()`n" + $scenerySrc + "`nend`nloadedModules['IslandScenery1_2'] = loadScenery12()`n"
+$runner += "local function runTerrainDraft()`n" + $draftSrc + "`nend`n"
 $runner += "local function loadSuite()`n" + $suiteSrc + "`nend`n"
 $runner += @'
 local runSuite = loadSuite()
@@ -305,10 +332,13 @@ runSuite({
 	RodAndWeightBuilder = loadedModules["RodAndWeightBuilder"],
 	ManualIslandAdapter = loadedModules["ManualIslandAdapter"],
 	NpcBuilder = loadedModules["NpcBuilder"],
+	IslandScenery1_2 = loadedModules["IslandScenery1_2"],
+	runTerrainDraft = runTerrainDraft,
 }, {
 	makeInstance = makeInstance,
 	Workspace = Workspace,
 	ReplicatedStorage = ReplicatedStorage,
+	terrainOps = terrainOps,
 })
 '@
 
