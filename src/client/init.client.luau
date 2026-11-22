@@ -1,7 +1,6 @@
 --!strict
 -- init.client.luau: Khoi dong Client UI responsive, ket noi Controllers, Hotbar/Raycast Cast & dong bo State tu Server
 
-local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -47,24 +46,29 @@ rootGui.Parent = playerGui
 local uiScale = Instance.new("UIScale")
 uiScale.Parent = rootGui
 
+-- Do vung dung duoc that bang mot ScreenGui rong cung che do inset voi rootGui: so do da tru thanh Roblox va
+-- vung khuyet (tai tho) dung mot lan, va khong co UIScale nen khong bi chinh ti le cua minh lam lech.
+local screenProbe = Instance.new("ScreenGui")
+screenProbe.Name = "MightyAnglerScreenProbe"
+screenProbe.ResetOnSpawn = false
+screenProbe.IgnoreGuiInset = rootGui.IgnoreGuiInset
+screenProbe.ScreenInsets = rootGui.ScreenInsets
+screenProbe.Parent = playerGui
+
 local function updateResponsiveScale()
-	local cam = Workspace.CurrentCamera
-	if not cam then
-		return
+	local usable = screenProbe.AbsoluteSize
+	if usable.X <= 0 or usable.Y <= 0 then
+		local cam = Workspace.CurrentCamera -- Chua co so do o khung hinh dau: tam dung ca man hinh.
+		if not cam then
+			return
+		end
+		usable = cam.ViewportSize
 	end
-	-- rootGui nam duoi thanh Roblox (IgnoreGuiInset = false) nen phai tru phan do khoi chieu cao dung duoc.
-	local vp = cam.ViewportSize
-	local insetTopLeft, insetBottomRight = GuiService:GetGuiInset()
-	uiScale.Scale = ResponsiveScale.Compute(
-		vp.X - insetTopLeft.X - insetBottomRight.X,
-		vp.Y - insetTopLeft.Y - insetBottomRight.Y
-	)
+	uiScale.Scale = ResponsiveScale.Compute(usable.X, usable.Y)
 end
 
-if Workspace.CurrentCamera then
-	updateResponsiveScale()
-	Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
-end
+updateResponsiveScale()
+screenProbe:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateResponsiveScale)
 
 StudioErrorReporter.Mount(rootGui)
 SoundAndFxController.Init(rootGui)

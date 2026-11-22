@@ -151,7 +151,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_ui_scale_and_theme.ps1
 - Màu: chữ chính và chữ phụ trên 4 nền đều có độ tương phản ≥ 4,5; nền mới sáng hơn nền cũ.
 - Nền chuyển sắc: dọc, trên giữ màu gốc, dưới chỉ đậm nhẹ; mọi nút `Theme.CreateButton` đều có.
 - Cỡ chữ: `Theme.FitText` đặt cỡ ưu tiên và sàn đúng; không file client nào còn `TextSize` hoặc `FitText` dưới `Theme.MIN_TEXT_SIZE` (13).
-- `init.client.luau` dùng `ResponsiveScale.Compute` và trừ `GetGuiInset`.
+- `init.client.luau` dùng `ResponsiveScale.Compute` trên số đo của một `ScreenGui` rỗng cùng chế độ inset với HUD, không tự trừ inset bằng tay.
 
 Bộ này chỉ kiểm con số. Nó không chứng minh chữ có vừa khung, `TextScaled` chọn cỡ nào, màu có đẹp hay bố cục có ổn trên máy thật: cần Device Emulator trong Studio và điện thoại thật.
 

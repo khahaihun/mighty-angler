@@ -173,7 +173,11 @@ return function(sources)
 	test("client_boot_uses_the_usable_screen_below_the_roblox_top_bar", function()
 		local boot = assert(sources["init.client.luau"], "missing init.client.luau")
 		assert(string.find(boot, "ResponsiveScale.Compute", 1, true), "boot must use ResponsiveScale.Compute")
-		assert(string.find(boot, "GetGuiInset", 1, true), "boot must subtract the Roblox top bar")
+		-- Do bang ScreenGui rong cung inset voi HUD: khong tu tru inset bang tay (de tru hai lan tren may co tai tho).
+		assert(string.find(boot, "screenProbe.AbsoluteSize", 1, true), "boot must measure the real usable area")
+		assert(string.find(boot, "screenProbe.IgnoreGuiInset = rootGui.IgnoreGuiInset", 1, true), "probe must share the HUD inset mode")
+		assert(string.find(boot, 'screenProbe:GetPropertyChangedSignal("AbsoluteSize")', 1, true), "scale must follow screen changes")
+		assert(not string.find(boot, "GetGuiInset", 1, true), "manual inset subtraction can double count the notch")
 		assert(not string.find(boot, "/ 680", 1, true), "old height formula still present")
 	end)
 
