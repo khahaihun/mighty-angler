@@ -83,17 +83,17 @@ local function acquireSessionAndLoad(player: Player)
 	local loadedData: any = nil
 	local confirmedLock, lockFailed, confirmedAt = false, true, 0
 	local profile: Types.PlayerProfile, quarantineReason: string? = nil :: any, nil
-	local round, waitingSince = 0, nil :: number?
+	local round, waitingSince, heldElsewhere = 0, nil :: number?, false
 	while true do
 		round += 1
-		loadedData, confirmedLock, lockFailed, confirmedAt = nil, false, true, 0
+		loadedData, confirmedLock, lockFailed, confirmedAt, heldElsewhere = nil, false, true, 0, false
 		s.loading = true
 		Lock.WithUserLock(s.userId, function()
 			if s.closed or s.closing then return end
 			local store = Lock.TryGetStore()
 			if store then
-				local okLock, data, claimMayBeOwned = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
-				confirmedLock, loadedData, lockFailed = okLock, data, not okLock
+				local okLock, data, claimMayBeOwned, busy = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
+				confirmedLock, loadedData, lockFailed, heldElsewhere = okLock, data, not okLock, busy
 				-- Khoa da xac nhan: ket qua nha khoa loi cua vong truoc het hieu luc, khong duoc chan lan luu cuoi.
 				if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0; s.loadCloseResult = nil end
 				if not okLock and claimMayBeOwned then s.loadCloseResult = Lock.ReleaseToken(store, key, myToken) end
@@ -116,7 +116,8 @@ local function acquireSessionAndLoad(player: Player)
 		local firstWait = waitingSince or os.clock()
 		waitingSince = firstWait
 		s.loading, s.lockWaiting = false, true
-		s.lockWaitLong = os.clock() - firstWait >= GameConfig.SESSION_LOCK_OUTAGE_NOTICE_SEC
+		-- Kho tra loi "khoa con han cua phien khac" thi khong phai su co kho: giu thong bao "server cu dang luu".
+		s.lockWaitLong = not heldElsewhere and os.clock() - firstWait >= GameConfig.SESSION_LOCK_OUTAGE_NOTICE_SEC
 		publishAccess(player)
 		task.wait(if round <= GameConfig.SESSION_LOCK_FAST_RETRIES then GameConfig.SESSION_LOCK_RETRY_SEC else GameConfig.SESSION_LOCK_RETRY_SLOW_SEC)
 		if not player:IsDescendantOf(Players) or s.closing or s.closed then return end
