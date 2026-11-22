@@ -133,7 +133,7 @@ function Fixture.server(sources, backend, job, placeId, options)
 		assert(string.sub(name, -10) == "_StudioDev", "leaderboard must remain isolated")
 		return { UpdateAsync = function(_, key, transform)
 			table.insert(backend.leaderWrites, { name = name, key = key, value = transform(nil) })
-		end }
+		end, GetSortedAsync = function() return { GetCurrentPage = function() return {} end } end }
 	end }
 	local services = {
 		Players = players, DataStoreService = dataStoreService,

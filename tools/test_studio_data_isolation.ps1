@@ -1,6 +1,6 @@
 param(
     [string]$LuauExe = (Join-Path $PSScriptRoot 'luau.exe'),
-    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema', 'dev_reset', 'initial_state', 'session_lock_retry')]
+    [ValidateSet('all', 'studio_data_isolation', 'session_acquisition', 'session_lifecycle', 'data_persistence', 'profile_schema', 'dev_reset', 'initial_state', 'session_lock_retry', 'global_leaderboard')]
     [string]$Suite = 'all'
 )
 
@@ -21,6 +21,7 @@ $modulePaths = @{
     GameConfig = 'src/shared/Config/GameConfig.luau'
     DataStoreLockHelper = 'src/server/Services/DataStoreLockHelper.luau'
     LiveOpsService = 'src/server/Services/LiveOpsService.luau'
+    GlobalLeaderboard = 'src/server/Services/GlobalLeaderboard.luau'
     DataService = 'src/server/Services/DataService.luau'
     ProfileWriteHelper = 'src/server/Services/ProfileWriteHelper.luau'
     ProfileValidator = 'src/server/Services/ProfileValidator.luau'
@@ -76,6 +77,7 @@ run("studio_data_isolation", function(src) require("../tests/studio_data_isolati
 run("session_acquisition", function(src) require("../tests/session_acquisition")(src) end)
 run("session_lifecycle", function(src) require("../tests/session_lifecycle")(src) end)
 run("session_lock_retry", function(src) require("../tests/session_lock_retry")(src) end)
+run("global_leaderboard", function(src) require("../tests/global_leaderboard")(src) end)
 run("profile_schema", function(src) require("../tests/profile_schema")(src) end)
 run("dev_reset", function(src) require("../tests/dev_reset")(src) end)
 run("initial_state", function(src) require("../tests/initial_state")(src) end)

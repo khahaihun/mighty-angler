@@ -1,10 +1,8 @@
 --!strict
--- LiveOpsService.luau: Su kien toan Server 30 phut + 2 Bang Xep Hang Top Strength & Top Gold tai Dao 1
+-- LiveOpsService.luau: Su kien toan Server 30 phut + 2 Bang Xep Hang toan cau Top Strength & Top Gold tai Dao 1 (du lieu: GlobalLeaderboard)
 
-local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -16,6 +14,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 
 local DataService = require(script.Parent.DataService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
+local GlobalLeaderboard = require(script.Parent.GlobalLeaderboard)
 local ShopAndItemsService = require(script.Parent.ShopAndItemsService)
 local PartFactory = require(script.Parent.Parent.World.PartFactory)
 
@@ -28,6 +27,8 @@ local lastEventId = ""
 
 local strengthLeaderList: Frame? = nil
 local goldLeaderList: Frame? = nil
+local strengthBoard = GlobalLeaderboard.New("MightyAngler_TopStr_v2")
+local goldBoard = GlobalLeaderboard.New("MightyAngler_TopGold_v2")
 
 local function buildEventBannerText(now: number): string
 	if activeEvent and eventEndsAt > now then
@@ -148,53 +149,19 @@ local function renderRows(listFrame: Frame?, entries: { { name: string, score: n
 end
 
 local function refreshLeaderboards()
-	local strEntries: { { name: string, score: number } } = {}
-	local goldEntries: { { name: string, score: number } } = {}
-
+	local strLive: { GlobalLeaderboard.LiveScore } = {}
+	local goldLive: { GlobalLeaderboard.LiveScore } = {}
 	for _, p in ipairs(Players:GetPlayers()) do
 		local prof = DataService.Get(p)
 		if prof then
-			table.insert(strEntries, { name = p.DisplayName, score = prof.strength })
-			table.insert(goldEntries, { name = p.DisplayName, score = prof.stats.goldEarned })
+			-- Phien khong giu khoa hop le van duoc hien thi nhung khong bao gio duoc ghi diem len kho toan cau.
+			local canWrite = DataService.CanWritePersistent(p)
+			table.insert(strLive, { player = p, score = prof.strength, canWrite = canWrite })
+			table.insert(goldLive, { player = p, score = prof.stats.goldEarned, canWrite = canWrite })
 		end
 	end
-
-	-- Chi cap nhat OrderedDataStore khi ho so da tai thanh cong va giu Session Lock hop le (khong bao gio ghi diem 0 cua che do Read-Only!)
-	if game.PlaceId > 0 then
-		pcall(function()
-			-- Studio da publish van phai cach ly diem DEV, cung quy tac voi kho ho so.
-			local storeSuffix = if RunService:IsStudio() then "_StudioDev" else ""
-			local strStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopStr_v2" .. storeSuffix)
-			local goldStore = DataStoreService:GetOrderedDataStore("MightyAngler_TopGold_v2" .. storeSuffix)
-			for _, p in ipairs(Players:GetPlayers()) do
-				local prof = DataService.Get(p)
-				if prof and DataService.CanWritePersistent(p) then
-					local newStr = math.floor(prof.totalStrength > 0 and math.max(prof.strength, 0) or prof.strength)
-					local newGold = math.floor(prof.stats.goldEarned)
-					if newStr > 0 then
-						strStore:UpdateAsync(tostring(p.UserId), function(oldVal: any)
-							return math.max(tonumber(oldVal) or 0, newStr)
-						end)
-					end
-					if newGold > 0 then
-						goldStore:UpdateAsync(tostring(p.UserId), function(oldVal: any)
-							return math.max(tonumber(oldVal) or 0, newGold)
-						end)
-					end
-				end
-			end
-		end)
-	end
-
-	table.sort(strEntries, function(a, b)
-		return a.score > b.score
-	end)
-	table.sort(goldEntries, function(a, b)
-		return a.score > b.score
-	end)
-
-	renderRows(strengthLeaderList, strEntries, Color3.fromRGB(255, 128, 92))
-	renderRows(goldLeaderList, goldEntries, Color3.fromRGB(255, 212, 68))
+	renderRows(strengthLeaderList, GlobalLeaderboard.Update(strengthBoard, strLive), Color3.fromRGB(255, 128, 92))
+	renderRows(goldLeaderList, GlobalLeaderboard.Update(goldBoard, goldLive), Color3.fromRGB(255, 212, 68))
 end
 
 function LiveOpsService.Init()
@@ -203,8 +170,8 @@ function LiveOpsService.Init()
 	local isl1 = if world then world:FindFirstChild("Island_1") else nil
 	if isl1 then
 		local c = IslandsRegistry.Get(1).centerPosition
-		strengthLeaderList = createLeaderboardBoard(isl1, c + Vector3.new(-24, 0, -28), "💪 TOP STRENGTH", Color3.fromRGB(255, 126, 86))
-		goldLeaderList = createLeaderboardBoard(isl1, c + Vector3.new(24, 0, -28), "🪙 TOP GOLD EARNED", Color3.fromRGB(255, 212, 68))
+		strengthLeaderList = createLeaderboardBoard(isl1, c + Vector3.new(-24, 0, -28), "🌍 TOP STRENGTH", Color3.fromRGB(255, 126, 86))
+		goldLeaderList = createLeaderboardBoard(isl1, c + Vector3.new(24, 0, -28), "🌍 TOP GOLD EARNED", Color3.fromRGB(255, 212, 68))
 	end
 
 	BuffAggregator.RegisterProvider(function(_player: Player, _profile: Types.PlayerProfile)
