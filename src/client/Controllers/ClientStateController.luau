@@ -168,7 +168,7 @@ function ClientStateController.Init(progressModRef: any)
 	Net.OnClientEvent(Net.ServerToClient.ProfileAccessChanged, function(payload: any)
 		if type(payload) ~= "table" then return end
 		local loading = payload.loading == true or (not hasInitialSnapshot and payload.safeReadOnly == false)
-		HudPanel.UpdateProfileAccess(payload.safeReadOnly ~= false, loading, tonumber(payload.accessVersion) or 0)
+		HudPanel.UpdateProfileAccess(payload.safeReadOnly ~= false, loading, tonumber(payload.accessVersion) or 0, payload.retrying == true)
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.CurrencyUpdated, function(payload: any)

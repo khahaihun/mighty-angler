@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local Util = require(Shared:WaitForChild("Util"))
 local Net = require(Shared:WaitForChild("Net"))
+local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 local ProfileMigrator = require(script.Parent.ProfileMigrator)
 local Lock = require(script.Parent.DataStoreLockHelper)
 local Persistence = require(script.Parent.ProfilePersistenceService)
@@ -31,12 +32,13 @@ local function publishAccess(player: Player): (boolean, boolean, number)
 	local locked = Persistence.Locked(s)
 	local loading = not s or s.loading or s.profile == nil
 	if not s then return locked, loading, 0 end
-	local state = if loading then "Loading" elseif locked then "ReadOnly" else "Ready"
+	local retrying = loading and s.lockWaiting
+	local state = if retrying then "Waiting" elseif loading then "Loading" elseif locked then "ReadOnly" else "Ready"
 	if s.accessState ~= state then
 		s.accessVersion += 1
 		if player:IsDescendantOf(Players) then
 			Net.FireClient(player, Net.ServerToClient.ProfileAccessChanged, {
-				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion,
+				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion, retrying = retrying,
 			})
 		end
 		s.accessState = state -- Chi cache sau khi gui thanh cong, de scheduler thu lai neu loi.
@@ -79,33 +81,48 @@ local function acquireSessionAndLoad(player: Player)
 	local key = "Player_" .. tostring(s.userId)
 	local loadedData: any = nil
 	local confirmedLock, lockFailed, confirmedAt = false, true, 0
-	Lock.WithUserLock(s.userId, function()
-		if s.closed or s.closing then return end
-		local store = Lock.TryGetStore()
-		if store then
-			local okLock, data, claimMayBeOwned = Lock.AcquireLockWithRetries(player, store, key, myToken)
-			confirmedLock, loadedData, lockFailed = okLock, data, not okLock
-			if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0 end
-			if not okLock and claimMayBeOwned then s.loadCloseResult = Lock.ReleaseToken(store, key, myToken) end
-		elseif Lock.IsStudioOfflineFallback() then lockFailed = false end
-	end)
-	if not player:IsDescendantOf(Players) or s.closing or s.closed then
-		if confirmedLock then releaseLoadedToken(s, key) end
-		s.loading = false
-		return
+	local profile: Types.PlayerProfile, quarantineReason: string? = nil :: any, nil
+	local round = 0
+	while true do
+		round += 1
+		loadedData, confirmedLock, lockFailed, confirmedAt = nil, false, true, 0
+		s.loading = true
+		Lock.WithUserLock(s.userId, function()
+			if s.closed or s.closing then return end
+			local store = Lock.TryGetStore()
+			if store then
+				local okLock, data, claimMayBeOwned = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
+				confirmedLock, loadedData, lockFailed = okLock, data, not okLock
+				-- Khoa da xac nhan: ket qua nha khoa loi cua vong truoc het hieu luc, khong duoc chan lan luu cuoi.
+				if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0; s.loadCloseResult = nil end
+				if not okLock and claimMayBeOwned then s.loadCloseResult = Lock.ReleaseToken(store, key, myToken) end
+			elseif Lock.IsStudioOfflineFallback() then lockFailed = false end
+		end)
+		if not player:IsDescendantOf(Players) or s.closing or s.closed then
+			if confirmedLock then releaseLoadedToken(s, key) end
+			s.loading = false
+			return
+		end
+		profile, quarantineReason = ProfileMigrator.SanitizeLoadedProfile(loadedData)
+		if quarantineReason ~= nil then
+			if confirmedLock then releaseLoadedToken(s, key) end
+			lockFailed = true
+		end
+		if not player:IsDescendantOf(Players) or s.closing or s.closed then s.loading = false; return end
+		if not lockFailed or quarantineReason ~= nil then break end
+		-- Khoa dang ban hoac kho loi: KHONG dua ho so trang cho nguoi choi; cho roi tu thu lai.
+		-- loading=false trong luc cho de nguoi choi roi di duoc dong phien ngay, khong phai doi het vong cho.
+		s.loading, s.lockWaiting = false, true
+		publishAccess(player)
+		task.wait(if round <= GameConfig.SESSION_LOCK_FAST_RETRIES then GameConfig.SESSION_LOCK_RETRY_SEC else GameConfig.SESSION_LOCK_RETRY_SLOW_SEC)
+		if not player:IsDescendantOf(Players) or s.closing or s.closed then return end
 	end
-	local profile, quarantineReason = ProfileMigrator.SanitizeLoadedProfile(loadedData)
-	if quarantineReason ~= nil then
-		if confirmedLock then releaseLoadedToken(s, key) end
-		lockFailed = true
-	end
-	if not player:IsDescendantOf(Players) or s.closing or s.closed then s.loading = false; return end
 	profile.activeSessionId = if lockFailed then nil else myToken
 	profile.lockTimestamp = confirmedAt
-	s.profile, s.confirmedAt, s.readOnly, s.loading = profile, confirmedAt, lockFailed, false
+	s.profile, s.confirmedAt, s.readOnly, s.loading, s.lockWaiting = profile, confirmedAt, lockFailed, false, false
 	if lockFailed then
 		Net.FireClient(player, Net.ServerToClient.Toast, {
-			kind = "Error", text = "DataStore session busy or offline! Safe Read-Only Mode active to protect your main save.",
+			kind = "Error", text = "Your save could not be read safely. Safe Read-Only Mode is active to protect it.",
 		})
 	end
 	ProfileMigrator.SetupLeaderstats(player, profile)

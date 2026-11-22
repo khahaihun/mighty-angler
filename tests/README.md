@@ -8,11 +8,11 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `session_lock_retry`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
 
 ## Snapshot và trạng thái quyền ghi — mục 1.5
 
-`-Suite initial_state` chạy 13 ca qua DataService, CurrencyService và LiveOps thật cùng HudPanel/ClientStateController/ProfileAccessBanner thật tại biên Engine giả lập. Kiểm một snapshot đầy đủ mỗi yêu cầu trước/sát/sau 8s, read-only khi tải muộn, rời lúc tải, mất lease/mất chủ và chặn tiền/bảng điểm. Người đứng yên cũng được báo khi TTL hết, Tick mất chủ hoặc RuntimeTick cách ly, không gửi lặp mỗi giây; lỗi gửi access được thử lại. Số phiên bản bảo vệ thứ tự event/snapshot; Ready chưa đủ để ẩn Loading nếu profile đầu chưa tới.
+`-Suite initial_state` chạy 13 ca qua DataService, CurrencyService và LiveOps thật cùng HudPanel/ClientStateController/ProfileAccessBanner thật tại biên Engine giả lập. Kiểm một snapshot đầy đủ mỗi yêu cầu trước/sát/sau 8s, băng "đang thử lại" và không gửi snapshot trắng khi kho lỗi lúc tải, rời lúc tải, mất lease/mất chủ và chặn tiền/bảng điểm. Người đứng yên cũng được báo khi TTL hết, Tick mất chủ hoặc RuntimeTick cách ly, không gửi lặp mỗi giây; lỗi gửi access được thử lại. Số phiên bản bảo vệ thứ tự event/snapshot; Ready chưa đủ để ẩn Loading nếu profile đầu chưa tới.
 
 Kết quả cuối Đợt 1: **19 acquisition / 12 lifecycle / 29 schema / 12 Reset / 13 init / 7 persistence**, cùng cách ly Studio đều đạt, lệnh chung exit 0. `client_fixture` chỉ chứng minh các handler/thuộc tính UI, không chứng minh layout, render, input hay hành vi Roblox Engine. Play Solo, Server & Clients, hai server, điện thoại và staging vẫn chờ nghiệm thu. Xem PROGRESS để lấy commit và SHA của place.
 
@@ -138,6 +138,14 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_art_pipeline_and_terrain.ps1` (**24/24 PASS**): kiểm 9 thư mục `AssetRegistry` (gồm `Eggs/Npcs/Buildings`), tự xóa 100% `LuaSourceContainer` ẩn trong model clone, neo `RootOnly` giữ khớp tay chân NPC R15, giữ `Silhouette` & `Highlight` + `ClientBudgetManaged` emitter cho đột biến trên MeshPart, override preview Trứng/Cần câu và `ManualIslandAdapter` (`MightyWorldManual` + `IslandMarkers` + `FishingWater`).
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
+
+## Khoá hồ sơ đang bận — Bước 2 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite session_lock_retry
+```
+
+`tests/session_lock_retry.luau` chạy `DataService`, `DataStoreLockHelper` và `ProfilePersistenceService` thật trên kho và đồng hồ giả lập. 6 ca: đổi server (B chờ A lưu lần cuối rồi nạp hồ sơ thật, không cần vào lại), server cũ chết (B chỉ nhận khoá sau khi hết hạn 120 giây), kho lỗi kéo dài rồi hồi phục, client được báo "đang thử lại" đúng một lần, rời game lúc đang chờ, hồ sơ hỏng không thử lại. Trong mọi ca, phiên đang chờ không có hồ sơ nào trong RAM. Bộ này không chứng minh thời gian thực tế của Roblox DataStore; đổi server trên 2 server Staging vẫn chờ nghiệm thu.
 
 ## Quyền Gamepass và Group — Bước 1 sau review
 

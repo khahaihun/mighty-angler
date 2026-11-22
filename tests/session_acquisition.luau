@@ -3,6 +3,9 @@ local function equal(actual, expected, label)
 	assert(actual == expected, string.format("%s: expected %s, got %s", label, tostring(expected), tostring(actual)))
 end
 
+-- Vong lay khoa dau tien: 3 lan claim cach nhau 1.5s + toi da 2 lan cho don dep 0.5s; sau do phien o trang thai cho thu lai.
+local FIRST_ROUND = 4.5
+
 return function(sources)
 	local failures, passed = 0, 0
 	local function test(name, run)
@@ -57,7 +60,7 @@ return function(sources)
 		equal(f.data.CanWritePersistent(nextPlayer), true, "queue exception releases same-UserId queue")
 	end)
 
-	test("load failures stay read-only after bounded acquisition retries", function()
+	test("load failures stay locked without a blank profile after the first bounded round", function()
 		local b = Fixture.backend()
 		local f = Fixture.server(sources, b, "A")
 		local claims, cleanup = 0, 0
@@ -65,11 +68,12 @@ return function(sources)
 			if kind == "claim" then claims += 1 else cleanup += 1 end
 			error("temporary datastore failure")
 		end
-		local p, load = f.add(101)
-		f.finish(load)
+		local p = f.add(101)
+		f.advance(FIRST_ROUND)
 		equal(claims, 3, "acquire attempt bound")
 		equal(cleanup, 3, "uncertain cleanup attempt bound")
 		equal(b.document, nil, "failed requests never changed stored business data")
+		equal(f.data.Get(p), nil, "failed load never hands out a blank profile")
 		equal(f.data.CanWritePersistent(p), false, "failed load blocked")
 		equal(f.data.SaveProfile(p), "Skipped", "failed load never overwrites")
 	end)
@@ -81,8 +85,9 @@ return function(sources)
 			f.afterUpdate = function(kind, response)
 				if kind == "claim" then response[field] = "unconfirmed-response" end
 			end
-			local p, load = f.add(101)
-			f.finish(load)
+			local p = f.add(101)
+			f.advance(FIRST_ROUND + 30)
+			equal(f.data.Get(p), nil, "unconfirmed response never installs a profile")
 			equal(f.data.CanWritePersistent(p), false, "returned confirmation required")
 			equal(f.data.SaveProfile(p), "Skipped", "unconfirmed response cannot save")
 		end)
@@ -93,10 +98,11 @@ return function(sources)
 		local a, other = Fixture.server(sources, b, "A"), Fixture.server(sources, b, "B")
 		local pA = a.add(101)
 		local tokenA = b.document.activeSessionId
-		local pB, loadB = other.add(101)
-		other.finish(loadB)
+		local pB = other.add(101)
+		other.advance(FIRST_ROUND)
 		equal(a.data.CanWritePersistent(pA), true, "A keeps permission")
 		equal(other.data.CanWritePersistent(pB), false, "B cannot acquire live A lease")
+		equal(other.data.Get(pB), nil, "B is not given a blank profile")
 		equal(b.document.activeSessionId, tokenA, "A owner unchanged")
 		equal(#b.calls, 4, "known refusal uses three claims and no extra release")
 		equal(other.data.SaveProfile(pB), "Skipped", "B cannot overwrite")
@@ -109,9 +115,9 @@ return function(sources)
 		local b = Fixture.backend()
 		local f = Fixture.server(sources, b, "A")
 		f.afterUpdate = function(kind) if kind == "claim" then error("claim acknowledgement lost") end end
-		local p, load = f.add(101)
-		f.finish(load)
-		equal(f.data.CanWritePersistent(p), false, "uncertain completed load stays read-only")
+		local p = f.add(101)
+		f.advance(FIRST_ROUND)
+		equal(f.data.CanWritePersistent(p), false, "uncertain load stays locked")
 		equal(b.document.activeSessionId, nil, "uncertain claim cleaned before failed load finishes")
 		equal(#b.calls, 4, "three claims followed by one token cleanup")
 		f.remove(p)
@@ -129,8 +135,8 @@ return function(sources)
 		local f = Fixture.server(sources, b, "A")
 		f.failGuidAt = 3
 		f.afterUpdate = function(kind) if kind == "claim" then error("claim acknowledgement lost") end end
-		local p, load = f.add(101)
-		f.finish(load)
+		local p = f.add(101)
+		f.advance(FIRST_ROUND)
 		equal(f.data.CanWritePersistent(p), false, "setup exception after uncertain write stays locked")
 		equal(b.document.activeSessionId, nil, "setup exception cannot strand previous uncertain claim")
 		equal(#b.calls, 2, "one sent claim then one cleanup")
