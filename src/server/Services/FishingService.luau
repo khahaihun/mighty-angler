@@ -21,6 +21,7 @@ local ShopAndItemsService = require(script.Parent.ShopAndItemsService)
 local FishingRoller = require(script.Parent.FishingRoller)
 local FishingCastState = require(script.Parent.FishingCastState)
 local FishingSessionManager = require(script.Parent.FishingSessionManager)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 
 local RodVisuals = require(script.Parent.Parent.World.RodVisuals)
 local PetAndFishVisuals = require(script.Parent.Parent.World.PetAndFishVisuals)
@@ -243,9 +244,14 @@ function FishingService.Init()
 	local function bindCharacter(player: Player, char: Model)
 		task.spawn(function()
 			local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
-			if hum and hum:IsA("Humanoid") then
-				if hum.Health <= 0 then FishingService.CancelSession(player, false, "Died")
-				else hum.Died:Connect(function() FishingService.CancelSession(player, false, "Died") end) end
+			if RemoteRateLimiter.IsActive(player) and hum and hum:IsA("Humanoid") then
+				if hum.Health <= 0 then
+					FishingService.CancelSession(player, false, "Died")
+				else
+					hum.Died:Connect(function()
+						if RemoteRateLimiter.IsActive(player) then FishingService.CancelSession(player, false, "Died") end
+					end)
+				end
 			end
 			task.wait(0.15)
 			ShopAndItemsService.SyncCharacterHandVisuals(player)
@@ -258,26 +264,26 @@ function FishingService.Init()
 	end)
 
 	ShopAndItemsService.OnHotbarSlotChanged(function(player: Player, slot: number)
-		if slot ~= 1 then
+		if RemoteRateLimiter.IsActive(player) and slot ~= 1 then
 			FishingCastState.SetAuto(player, false)
 			FishingSessionManager.CloseSessionOnce(player, nil, "Unequip", false)
 		end
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.FishingChargeStart, function(p: Player)
+	RemoteRateLimiter.Connect(Net.ClientToServer.FishingChargeStart, function(p: Player)
 		local profile = DataService.Get(p)
 		if profile and profile.equippedHotbarSlot == 1 and not FishingSessionManager.Get(p) then FishingCastState.StartCharge(p) end
 	end)
-	Net.OnServerEvent(Net.ClientToServer.FishingCast, function(p: Player) FishingService.StartCast(p, { castMode = "Auto", hitWater = true }) end)
-	Net.OnServerEvent(Net.ClientToServer.FishingCastWithAim, function(p: Player, payload: any) FishingService.StartCast(p, payload) end)
-	Net.OnServerEvent(Net.ClientToServer.FishingCancel, function(p: Player)
+	RemoteRateLimiter.Connect(Net.ClientToServer.FishingCast, function(p: Player) FishingService.StartCast(p, { castMode = "Auto", hitWater = true }) end)
+	RemoteRateLimiter.Connect(Net.ClientToServer.FishingCastWithAim, FishingService.StartCast)
+	RemoteRateLimiter.Connect(Net.ClientToServer.FishingCancel, function(p: Player)
 		FishingCastState.SetAuto(p, false)
 		FishingService.CancelSession(p, false, "ManualCancel")
 	end)
-	Net.OnServerEvent(Net.ClientToServer.FishingMinigameStrike, function(p: Player, sid: any, r: any, elapsed: any)
+	RemoteRateLimiter.Connect(Net.ClientToServer.FishingMinigameStrike, function(p: Player, sid: string, r: number, elapsed: number)
 		FishingSessionManager.HandleStrike(p, sid, r, elapsed, finalizeFishAward)
 	end)
-	Net.OnServerEvent(Net.ClientToServer.SetAutoFish, function(p: Player, rawEnable: any, requestId: any)
+	RemoteRateLimiter.Connect(Net.ClientToServer.SetAutoFish, function(p: Player, rawEnable: boolean, requestId: number)
   local profile = DataService.Get(p)
   local active = rawEnable == true and profile ~= nil
   local accepted = FishingCastState.ApplyRequest(p, active, requestId)

@@ -9,6 +9,7 @@ local Util = require(Shared:WaitForChild("Util"))
 
 local DataService = require(script.Parent.DataService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 
 local CurrencyService = {}
 
@@ -18,8 +19,6 @@ local bagMutatedHooks: { (Player, Types.PlayerProfile) -> () } = {}
 function CurrencyService.OnStatIncremented(callback: (Player, string, number) -> ())
 	table.insert(statChangedHooks, callback)
 end
-
-local lastBagSyncAt: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 
 function CurrencyService.OnBagMutated(callback: (Player, Types.PlayerProfile) -> ())
 	table.insert(bagMutatedHooks, callback)
@@ -322,29 +321,17 @@ function CurrencyService.ToggleLockFish(player: Player, uid: string)
 end
 
 function CurrencyService.Init()
-	Net.OnServerEvent(Net.ClientToServer.SellAllFish, CurrencyService.SellAllFish)
-	Net.OnServerEvent(Net.ClientToServer.SellHeldFish, CurrencyService.SellHeldFish)
-	Net.OnServerEvent(Net.ClientToServer.SellSingleFish, function(player: Player, rawUid: any)
-		if type(rawUid) == "string" then
-			CurrencyService.SellSingleFish(player, rawUid)
-		end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.SellSelectedFish, function(player: Player, rawList: any)
-		if type(rawList) == "table" then
-			CurrencyService.SellSelectedFish(player, rawList)
-		end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.RequestBagSync, function(player: Player)
+	RemoteRateLimiter.Connect(Net.ClientToServer.SellAllFish, CurrencyService.SellAllFish)
+	RemoteRateLimiter.Connect(Net.ClientToServer.SellHeldFish, CurrencyService.SellHeldFish)
+	RemoteRateLimiter.Connect(Net.ClientToServer.SellSingleFish, CurrencyService.SellSingleFish)
+	RemoteRateLimiter.Connect(Net.ClientToServer.SellSelectedFish, CurrencyService.SellSelectedFish)
+	RemoteRateLimiter.Connect(Net.ClientToServer.RequestBagSync, function(player: Player)
 		local profile = DataService.Get(player)
-		if not profile or os.clock() - (lastBagSyncAt[player] or -1) < 1 then return end
-		lastBagSyncAt[player] = os.clock()
-		Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
-	end)
-	Net.OnServerEvent(Net.ClientToServer.ToggleLockFish, function(player: Player, rawUid: any)
-		if type(rawUid) == "string" then
-			CurrencyService.ToggleLockFish(player, rawUid)
+		if profile then
+			Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
 		end
 	end)
+	RemoteRateLimiter.Connect(Net.ClientToServer.ToggleLockFish, CurrencyService.ToggleLockFish)
 end
 
 return CurrencyService

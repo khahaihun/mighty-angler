@@ -15,6 +15,7 @@ local PerkService = require(script.Parent.PerkService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
 local PetBuffs = require(script.Parent.PetBuffs)
 local CurrencyService = require(script.Parent.CurrencyService)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 
 local PetsService = {}
 
@@ -275,11 +276,11 @@ function PetsService.Init()
 		PetsService.SyncVisualsAndClient(player)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.HatchEgg, function(p: Player, id: any) if type(id) == "string" then PetsService.HandleHatchEgg(p, id) end end)
-	Net.OnServerEvent(Net.ClientToServer.EquipPet, function(p: Player, u: any) if type(u) == "string" then handleEquipPet(p, u) end end)
-	Net.OnServerEvent(Net.ClientToServer.UnequipPet, function(p: Player, u: any) if type(u) == "string" then handleUnequipPet(p, u) end end)
-	Net.OnServerEvent(Net.ClientToServer.EquipBestPets, handleEquipBest)
-	Net.OnServerEvent(Net.ClientToServer.DeletePet, function(p: Player, u: any) if type(u) == "string" then handleDeletePet(p, u) end end)
+	RemoteRateLimiter.Connect(Net.ClientToServer.HatchEgg, PetsService.HandleHatchEgg)
+	RemoteRateLimiter.Connect(Net.ClientToServer.EquipPet, handleEquipPet)
+	RemoteRateLimiter.Connect(Net.ClientToServer.UnequipPet, handleUnequipPet)
+	RemoteRateLimiter.Connect(Net.ClientToServer.EquipBestPets, handleEquipBest)
+	RemoteRateLimiter.Connect(Net.ClientToServer.DeletePet, handleDeletePet)
 end
 
 return PetsService

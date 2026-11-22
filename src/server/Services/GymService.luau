@@ -14,6 +14,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
 local CurrencyService = require(script.Parent.CurrencyService)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 local PlayerVisuals = require(script.Parent.Parent.World.PlayerVisuals)
 
 local GymService = {}
@@ -123,7 +124,7 @@ local function movePlayerToBestGymStation(player: Player, profile: Types.PlayerP
 end
 
 function GymService.Init()
-	Net.OnServerEvent(Net.ClientToServer.GymRep, function(player: Player)
+	RemoteRateLimiter.Connect(Net.ClientToServer.GymRep, function(player: Player)
 		local now = os.clock()
 		local last = lastManualRepAt[player] or 0
 		if now - last < GameConfig.GYM_MANUAL_COOLDOWN_SEC then
@@ -133,9 +134,10 @@ function GymService.Init()
 		performStationRep(player, false)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.SetAutoTrain, function(player: Player, rawEnable: any)
-		local want = (rawEnable == true)
-		if want and not PerkService.CanAutoTrain(player) then
+	RemoteRateLimiter.Connect(Net.ClientToServer.SetAutoTrain, function(player: Player, want: boolean)
+		local canTrain = not want or PerkService.CanAutoTrain(player)
+		if not RemoteRateLimiter.IsActive(player) then return end
+		if not canTrain then
 			autoTrainActive[player] = false
 			Net.FireClient(player, Net.ServerToClient.Toast, {
 				kind = "Info",
@@ -169,10 +171,11 @@ function GymService.Init()
 		while true do
 			task.wait(GameConfig.GYM_AUTO_INTERVAL_SEC)
 			for player, enabled in pairs(autoTrainActive) do
-				if enabled and PerkService.CanAutoTrain(player) then
-					performStationRep(player, true)
-				elseif enabled then
-					autoTrainActive[player] = false
+				if enabled then
+					local canTrain = PerkService.CanAutoTrain(player)
+					if autoTrainActive[player] and RemoteRateLimiter.IsActive(player) then
+						if canTrain then performStationRep(player, true) else autoTrainActive[player] = false end
+					end
 				end
 			end
 		end
