@@ -8,7 +8,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `session_lock_retry`, `global_leaderboard`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `session_lock_retry`, `global_leaderboard`, `profile_schema`, `profile_compatibility`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
 
 ## Snapshot và trạng thái quyền ghi — mục 1.5
 
@@ -138,6 +138,16 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_art_pipeline_and_terrain.ps1` (**24/24 PASS**): kiểm 9 thư mục `AssetRegistry` (gồm `Eggs/Npcs/Buildings`), tự xóa 100% `LuaSourceContainer` ẩn trong model clone, neo `RootOnly` giữ khớp tay chân NPC R15, giữ `Silhouette` & `Highlight` + `ClientBudgetManaged` emitter cho đột biến trên MeshPart, override preview Trứng/Cần câu và `ManualIslandAdapter` (`MightyWorldManual` + `IslandMarkers` + `FishingWater`).
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
+
+## Tương thích hồ sơ cũ — Bước 4 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite profile_compatibility
+```
+
+`tests/profile_compatibility.luau` giữ danh sách trường đã đóng băng của từng phiên bản hồ sơ (`FROZEN`). Khi đổi cấu trúc hồ sơ trong `GameConfig.CreateDefaultProfile`: tăng `GameConfig.PROFILE_SCHEMA_VERSION`, thêm `FROZEN[phiên bản mới]`, không sửa danh sách cũ. 7 ca: trường hiện tại khớp danh sách đóng băng; số phiên bản dùng chung cho mặc định/validator/migrator; hồ sơ phiên bản 2 thật nạp và lưu được; thêm trường không tăng phiên bản thì hồ sơ cũ bị khoá và bộ đóng băng bắt được; thêm trường có tăng phiên bản thì hồ sơ cũ được nâng cấp; server cũ không ghi đè hồ sơ bản mới hơn; hồ sơ đúng phiên bản hiện tại mà thiếu trường vẫn bị cách ly. Hai ca "tương lai" chạy mã thật với `GameConfig` được vá thêm một trường ngay trong test.
+
+CI (`.github/workflows/ci.yml`) chạy `verify_project.ps1` rồi mọi `tools/test_*.ps1`.
 
 ## Bảng xếp hạng toàn cầu — Bước 3 sau review
 

@@ -67,13 +67,24 @@ jobs:
             Tee-Object -FilePath logs/verify-console.log
           exit $LASTEXITCODE
 
-      - name: Run Studio isolation, session acquisition and data persistence regressions
+      - name: Run every regression runner (tools/test_*.ps1)
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: |
           $PSNativeCommandUseErrorActionPreference = $false
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/test_studio_data_isolation.ps1 2>&1 |
-            Tee-Object -FilePath logs/regressions.log
-          exit $LASTEXITCODE
+          $runners = @(Get-ChildItem -LiteralPath tools -Filter 'test_*.ps1' -File | Sort-Object Name)
+          if ($runners.Count -eq 0) { throw 'No tools/test_*.ps1 runner found' }
+          $failed = @()
+          foreach ($runner in $runners) {
+            "===== $($runner.Name) =====" | Tee-Object -FilePath logs/regressions.log -Append
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runner.FullName 2>&1 |
+              Tee-Object -FilePath logs/regressions.log -Append
+            $code = $LASTEXITCODE
+            "===== $($runner.Name) exit $code =====" | Tee-Object -FilePath logs/regressions.log -Append
+            if ($code -ne 0) { $failed += $runner.Name }
+          }
+          "RUNNERS total=$($runners.Count) failed=$($failed.Count) $($failed -join ', ')" |
+            Tee-Object -FilePath logs/regressions.log -Append
+          if ($failed.Count -gt 0) { exit 1 }
 
       - name: Save logs and Roblox place
         if: ${{ !cancelled() }}

@@ -12,7 +12,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 
 local ProfileMigrator = {}
 
-local CURRENT_SCHEMA_VERSION = 2
+local CURRENT_SCHEMA_VERSION = GameConfig.PROFILE_SCHEMA_VERSION
 
 local fishByIdCache: { [string]: Types.FishDef } = {}
 for _, isl in ipairs(IslandsRegistry.List) do

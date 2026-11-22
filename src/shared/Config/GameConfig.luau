@@ -114,9 +114,14 @@ GameConfig.PlaytimeGifts = {
 	{ slot = 9, reqSec = 5400, label = "1x Enchant Relic", rewardKind = "Relic", amount = 1 },
 } :: { PlaytimeGiftDef }
 
+-- Noi DUY NHAT khai bao so phien ban du lieu ho so (ProfileValidator va ProfileMigrator deu doc tu day).
+-- Moi lan them/bot/doi kieu mot truong trong CreateDefaultProfile PHAI tang so nay len 1 va them danh sach
+-- truong cua phien ban moi vao tests/profile_compatibility.luau; neu khong, ho so cu se bi khoa (quarantine).
+GameConfig.PROFILE_SCHEMA_VERSION = 2
+
 function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 	return {
-		dataVersion = 2,
+		dataVersion = GameConfig.PROFILE_SCHEMA_VERSION,
 		activeSessionId = nil,
 		lockTimestamp = 0,
 		saveSeq = 0,

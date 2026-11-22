@@ -109,7 +109,7 @@ return function(sources)
 		{ "wrong version type", function(p) p.dataVersion = "2" end },
 		{ "missing v2 stats", function(p) p.stats = nil end },
 		{ "invalid legacy present field", function(p) p.dataVersion = 1; p.stats.playTimeSec = false end },
-		{ "future version", function(p) p.dataVersion = 3 end },
+		{ "future version", function(p) p.dataVersion += 1 end },
 	}
 	for _, case in ipairs(cases) do
 		test(case[1] .. " quarantined before writes", function()
