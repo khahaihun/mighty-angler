@@ -21,6 +21,7 @@ local ClientPetRenderer = require(script.Controllers.ClientPetRenderer)
 local EggHatchCutscene = require(script.Controllers.EggHatchCutscene)
 local TutorialController = require(script.Controllers.TutorialController)
 
+local ResponsiveScale = require(script.UI.ResponsiveScale)
 local WindowFrame = require(script.UI.Components.WindowFrame)
 local NpcDialogueModal = require(script.UI.Components.NpcDialogueModal)
 local HudPanel = require(script.UI.Panels.HudPanel)
@@ -45,19 +46,29 @@ rootGui.Parent = playerGui
 local uiScale = Instance.new("UIScale")
 uiScale.Parent = rootGui
 
+-- Do vung dung duoc that bang mot ScreenGui rong cung che do inset voi rootGui: so do da tru thanh Roblox va
+-- vung khuyet (tai tho) dung mot lan, va khong co UIScale nen khong bi chinh ti le cua minh lam lech.
+local screenProbe = Instance.new("ScreenGui")
+screenProbe.Name = "MightyAnglerScreenProbe"
+screenProbe.ResetOnSpawn = false
+screenProbe.IgnoreGuiInset = rootGui.IgnoreGuiInset
+screenProbe.ScreenInsets = rootGui.ScreenInsets
+screenProbe.Parent = playerGui
+
 local function updateResponsiveScale()
-	local cam = Workspace.CurrentCamera
-	if not cam then
-		return
+	local usable = screenProbe.AbsoluteSize
+	if usable.X <= 0 or usable.Y <= 0 then
+		local cam = Workspace.CurrentCamera -- Chua co so do o khung hinh dau: tam dung ca man hinh.
+		if not cam then
+			return
+		end
+		usable = cam.ViewportSize
 	end
-	local vp = cam.ViewportSize
-	uiScale.Scale = math.clamp(math.min(vp.X / 1180, vp.Y / 680), 0.62, 1.08)
+	uiScale.Scale = ResponsiveScale.Compute(usable.X, usable.Y)
 end
 
-if Workspace.CurrentCamera then
-	updateResponsiveScale()
-	Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
-end
+updateResponsiveScale()
+screenProbe:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateResponsiveScale)
 
 StudioErrorReporter.Mount(rootGui)
 SoundAndFxController.Init(rootGui)

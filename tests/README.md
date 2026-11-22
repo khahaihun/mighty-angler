@@ -139,6 +139,22 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
 
+## Tỉ lệ giao diện, cỡ chữ và màu — Bước 7 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_ui_scale_and_theme.ps1
+```
+
+`tests/ui_scale_and_theme.luau` chạy mã thật của `src/client/UI/ResponsiveScale.luau` và `src/client/UI/Theme.luau`; `Instance`, `Color3`, `ColorSequence` là giả lập. Runner nạp mọi file trong `src/client/` để quét cỡ chữ. 10 ca:
+
+- Tỉ lệ: 5 cỡ điện thoại nằm ngang (đã trừ thanh Roblox 58 px) đều chứa trọn cửa sổ 650×465 và khung HUD 1072×480; không máy nào nhỏ hơn công thức cũ và ít nhất 3 máy to hơn rõ; máy tính bàn, laptop, tablet giữ nguyên; màn hình rất thấp hoặc để dọc thì thu nhỏ thay vì tràn; màn hình lớn hơn không bao giờ cho giao diện nhỏ hơn.
+- Màu: chữ chính và chữ phụ trên 4 nền đều có độ tương phản ≥ 4,5; nền mới sáng hơn nền cũ.
+- Nền chuyển sắc: dọc, trên giữ màu gốc, dưới chỉ đậm nhẹ; mọi nút `Theme.CreateButton` đều có.
+- Cỡ chữ: `Theme.FitText` đặt cỡ ưu tiên và sàn đúng; không file client nào còn `TextSize` hoặc `FitText` dưới `Theme.MIN_TEXT_SIZE` (13).
+- `init.client.luau` dùng `ResponsiveScale.Compute` trên số đo của một `ScreenGui` rỗng cùng chế độ inset với HUD, không tự trừ inset bằng tay.
+
+Bộ này chỉ kiểm con số. Nó không chứng minh chữ có vừa khung, `TextScaled` chọn cỡ nào, màu có đẹp hay bố cục có ổn trên máy thật: cần Device Emulator trong Studio và điện thoại thật.
+
 ## Sửa theo review trên PR #5 — quăng tay trong thời gian chờ, băng lỗi kho kéo dài
 
 ```powershell

@@ -1,7 +1,67 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
 - **Cập nhật lần cuối:** 2026-11-22 bởi Devin (sửa theo review + kiểm định Windows trên PR #5, sau Bước 6 của kế hoạch sửa sau review toàn dự án)
-- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** , **Bước 3: bảng xếp hạng top toàn cầu** , **Bước 4: một số phiên bản dữ liệu + CI chạy đủ runner** , **Bước 5: tối ưu mạng/CPU** và **Bước 6: biển bao quanh đảo, bầu trời, mây, tia nắng** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`, cộng một nhánh **sửa theo review** ở đỉnh chuỗi. **109/109** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `CurrencyService.luau` 350; `ViewportCard` 345; `PerkService` 343). **18/18** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **109/109** (SHA-256 `1B60C6220CC9B2420DE5B7CB3FD4E3F2A61C2158AFFFC0927F13D04523B5F7A1`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** , **Bước 3: bảng xếp hạng top toàn cầu** , **Bước 4: một số phiên bản dữ liệu + CI chạy đủ runner** , **Bước 5: tối ưu mạng/CPU** , **Bước 6: biển bao quanh đảo, bầu trời, mây, tia nắng**, một nhánh **sửa theo review** và **Bước 7: giao diện cho điện thoại, màu sáng hơn, nền chuyển sắc** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`. **110/110** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `CurrencyService.luau` 350; `ViewportCard` 346; `PerkService` 343). **19/19** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **110/110** (SHA-256 `55E333BA091953E71BEBE9C4244C3B0520E6A3B8E0391C820A10091356F8FFA5`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+
+## Bằng chứng chạy tự động trong Roblox Studio thật — đỉnh #7 `dd5f606` (ghi lại 22/11/2026)
+
+Nguồn: comment của Chủ dự án trên PR #6, do Devin bản local chạy trên máy Chủ dự án. Devin trên VM **không tự chạy được Studio**; mục này chép lại số liệu được báo, không phải kết quả VM. **Bước 7 (`b937fa5`) chưa có trong lần chạy này.**
+
+- **Cách chạy:** Studio 0.748 trên Windows, commit `dd5f606` (gồm #1–#7). Một plugin tạm gọi `StudioTestService:ExecutePlayModeAsync` (Play Solo thật, đủ server + client) trên place dựng từ nguồn kèm script kiểm tra; không sửa mã game, plugin đã gỡ sau khi chạy.
+- **Windows cho hai commit mới:** `57c9c07` và `dd5f606` đều `verify_project.ps1` PASS 6/6, 18/18 runner `exit 0`, Source XML 109/109. (Hai dòng "chưa chạy trên Windows" ở mục sửa theo review bên dưới được đóng bằng kết quả này.)
+
+**Kịch bản A — 5 đảo thủ tục: 30/30 kiểm tra đạt.** Output server và client 0 lỗi, 0 cảnh báo.
+
+- **Thời gian dựng** (chế độ Edit): `WorldBuilder.BuildAll` 0,08 giây, riêng `OceanBuilder.Build` 0,04–0,05 giây. 357.106 ô Terrain, 22 `SeaFloor`, 10 `HorizonSea`.
+- **Mặt biển liền:** bắn tia xuống Terrain tại 420 điểm (dọc z=300 suốt chuỗi đảo, từ hồ câu Đảo 1 ra khơi, giữa Đảo 1–2, dải nước bên trong tường): tất cả là Water ở đúng Y = 9,70, không rãnh, không bậc. 54 điểm trong nền Đảo 1 không có nước Terrain.
+- **Tường và trời:** đủ 4 tường ở cả 5 đảo; có Sky, SunRays, Clouds; Low GFX tắt rồi bật lại SunRays và Clouds đúng.
+- **Bước 5 trên Engine thật:** tag `MightyAnimatedNpc` tới client 20/20, NPC gần nhất có `Waist.C0` đổi theo thời gian. 5 lượt quăng qua remote thật: túi phía client ghép bằng `BagDelta` khớp server, 0 lần lệch; 5/5 lần quăng lại ngay bị từ chối với `CastCooldown`.
+- **Độ nặng khung hình** (cùng phiên, cùng góc máy; mức so sánh là sau khi gỡ biển, mây, tia nắng, chỉ còn 5 hồ câu):
+
+| Góc máy | Tam giác trước → sau | Lệnh vẽ trước → sau | Bật Low GFX |
+|---|---|---|---|
+| Bờ hồ Đảo 1 nhìn ra khơi | 34.565 → 147.637 | 62 → 203 | 147.189 / 196 |
+| Toàn cảnh từ trên cao | 42.675 → 136.299 | 62 → 180 | 136.263 / 173 |
+
+  Biển làm số tam giác tăng khoảng 3,2–4,3 lần và lệnh vẽ khoảng 3 lần. Low GFX gần như không giảm vì chỉ tắt mây và tia nắng. **FPS chưa đo được** (cửa sổ Studio chạy nền bị giới hạn 15 FPS), nên ảnh hưởng trên điện thoại vẫn **chờ nghiệm thu máy thật**. Núm chỉnh rẻ nhất nếu điện thoại bị nặng: `TERRAIN_MARGIN` trong `OceanBuilder`.
+
+**Kịch bản B — Đảo 1 dựng tay: 29/30.** Chạy `tools/generate_sunny_shores_terrain_draft.luau` ở chế độ Edit rồi Play.
+
+- **Đạt:** nhận đảo dựng tay, 4 NPC đứng đúng marker (lệch 0), marker ẩn khi chạy, spawn đứng trên cỏ, câu được cá (túi khớp, cooldown 2/2), Output 0 lỗi.
+- **Không đạt: có vành trống giữa đảo và biển.** Phôi dọn sạch hộp X ±130, Z −97..193 nhưng đảo nhỏ hơn hộp đó, còn biển dừng ở mép hộp đúng như `OceanLayout.ManualBox` thiết kế. Giữa hai bên không có Terrain:
+
+| Hướng | Đoạn đo | Khoảng trống |
+|---|---|---|
+| Tây | z=0 | x = −128..−94 (36 studs) |
+| Đông | z=114 | x = 112..128 (18 studs) |
+| Nam | x=0 | z = 184..192 (10 studs) |
+| Bắc | x=0 | liền |
+
+  Tường mặc định ở x = ±106 nằm giữa vành trống phía Tây/Đông.
+- **Hướng xử lý đã thống nhất:** việc này thuộc **làn mỹ thuật**. Ca mỹ thuật sửa phôi (lót đáy cát và đổ nước tới mép hộp trước khi đắp đảo, hoặc đặt `OceanHole` trong `IslandMarkers`). **Không sửa `OceanBuilder`.** Mục này còn mở cho tới khi phôi được sửa và chạy lại Kịch bản B.
+
+## Bước 7 sau review — Giao diện cho điện thoại, màu sáng hơn, nền chuyển sắc (Devin, 22/11/2026)
+
+Chỉ sửa `src/client/**` (không đụng file thuộc làn mỹ thuật). Không thêm asset ngoài. **Chưa ai nhìn kết quả trên màn hình**: mọi thứ dưới đây mới qua test VM về con số, không phải về hình ảnh.
+
+- [x] **Tỉ lệ giao diện theo màn hình** — module thuần mới `src/client/UI/ResponsiveScale.luau`, `init.client.luau` gọi `ResponsiveScale.Compute`.
+  - Trước: `clamp(min(rộng/1180, cao/680), 0,62, 1,08)` tính trên cả màn hình, kể cả phần thanh Roblox phía trên mà HUD không dùng được. Điện thoại nằm ngang (rộng mà thấp) gần như luôn rơi về sàn 0,62.
+  - Nay: tính trên vùng dùng được thật, đo bằng một `ScreenGui` rỗng (`MightyAnglerScreenProbe`) có cùng chế độ inset với HUD; chiều cao thiết kế 480 thay cho 680. *Sửa theo Devin Review trên PR #8:* bản đầu tự lấy `Camera.ViewportSize` trừ `GuiService:GetGuiInset()`; trên máy có tai thỏ cách đó có thể trừ vùng khuyết hai lần làm giao diện nhỏ hơn cần thiết, và trên VM không kiểm được API nào đã tính vùng khuyết. Đo trực tiếp thì không còn phụ thuộc câu hỏi đó. Cột 7 nút bên trái cao 336 và cửa sổ cao nhất 465 đều vừa trong 480.
+  - Kết quả tính (thanh Roblox 58 px): iPhone 14 `0,62 → 0,69`; iPhone Pro Max `0,63 → 0,78`; Android 915×412 `0,62 → 0,74`; Android 800×360 `0,62 → 0,63`; iPhone SE giữ `0,62` (bị giới hạn bởi chiều ngang). Máy tính bàn và tablet không đổi.
+  - Màn hình rất thấp hoặc rất hẹp (dưới khoảng 300 px cao, hoặc để dọc): giao diện thu nhỏ tiếp để cửa sổ 650×465 không tràn ra ngoài, thay vì giữ 0,62 rồi bị cắt. Sàn cuối cùng là 0,45.
+- [x] **Cỡ chữ tối thiểu 13** (`Theme.MIN_TEXT_SIZE`; trước có 22 chỗ cỡ 11–12).
+  - Nút ngắn (Lock, Pin, Sell, Next, Turn in, Gems...) đặt thẳng cỡ 13.
+  - Chữ có độ dài thay đổi (tên/giá trên thẻ 3D, ô hotbar, dòng mồi, hai dòng gợi ý dưới thanh tiền, mô tả trong Shop/Pets/Enchant/Progress/Settings) dùng `Theme.FitText(label, 13, cỡ_cũ)`: ưu tiên cỡ 13, khung không đủ chỗ thì Roblox tự co lại nhưng không nhỏ hơn cỡ cũ. Mục đích là không chỗ nào khó đọc hơn hoặc bị cắt nhiều hơn trước.
+  - Nới khung cho vừa cỡ mới: thẻ 3D (khung hình 74 → 70 cao, dòng phụ 15 → 18), ô chi tiết Shop (72 → 80), thẻ Gifts/Settings (58 → 68, dòng mô tả được xuống 2 dòng và không còn chạy xuống dưới nút bên phải).
+- [x] **Màu sáng hơn** — nền bảng, nền trong, nền thẻ trong `Theme.Colors` chuyển từ xanh đen sang xanh dương đậm hơn và sáng hơn; chữ phụ `TextMuted` sáng lên theo. Test kiểm độ tương phản chữ/nền ≥ 4,5 cho cả 8 cặp (thấp nhất hiện là 4,76).
+- [x] **Nền chuyển sắc** — `Theme.AddGradient` (UIGradient dọc: trên giữ màu gốc, dưới đậm hơn một chút) áp cho mọi nút tạo bằng `Theme.CreateButton`, khung và thanh tiêu đề của mọi cửa sổ, và thẻ 3D.
+- [x] **Test mới:** `tests/ui_scale_and_theme.luau` + `tools/test_ui_scale_and_theme.ps1` (10 ca, mã thật của `ResponsiveScale` và `Theme`). Đã thử đổi lại chiều cao thiết kế 680, đặt lại một cỡ chữ 11, và đặt nền thẻ quá sáng: mỗi lần đều có ca đỏ.
+- [x] **Kiểm định (Linux, lệnh tương đương `verify_project.ps1`):** Luau LSP `exit 0`, Selene 0/0, Rojo build, 19/19 runner `exit 0`, 110 file `.luau` đều ≤ 350 dòng; 5 file cam kết đều < 310 (`HudPanel` 275, `ProgressPanel` 268, `PetsService` 285, `FishingService` 293, `BagPanel` 307). Chưa chạy trên Windows.
+- [ ] **Chờ nghiệm thu Studio (Device Emulator) và điện thoại thật** — đây là phần chính của bước này:
+  1. Chọn iPhone SE, iPhone 14, một máy Android và iPad trong Device Emulator: HUD không đè nhau, mở từng cửa sổ (Bag, Shop, Pets, Progress, Islands, Enchants, Gifts) không tràn màn hình.
+  2. Chữ trên thẻ 3D, ô hotbar và dòng gợi ý có to hơn không, có chỗ nào bị cắt hoặc nhảy cỡ khó chịu không (`TextScaled` có thể chọn cỡ khác nhau giữa các thẻ có tên dài ngắn khác nhau).
+  3. Màu nền mới và nền chuyển sắc có hợp gu B không; chữ trên nút có bị tối ở nửa dưới không (UIGradient nhuộm cả chữ của nút).
+  4. Nếu Chủ dự án muốn chữ to hẳn trên điện thoại thì cần bố cục riêng cho điện thoại (ít cột hơn, cửa sổ toàn màn hình); bước này chưa làm việc đó.
 
 ## Sửa theo review + kiểm định Windows trên PR #5 (Devin, 22/11/2026)
 
@@ -27,7 +87,7 @@ Sau bảng trên, #6 có thêm commit `57c9c07` (sửa theo Devin Review) và nh
 - [x] **Băng "Retrying" khi kho dữ liệu lỗi kéo dài.** Chờ quá `SESSION_LOCK_OUTAGE_NOTICE_SEC` (= `SESSION_LOCK_EXPIRE_SEC` 120 giây + 30 giây đệm = 150 giây) mà vẫn chưa nạp được hồ sơ thì khoá cũ chắc chắn đã hết hạn, nên băng đổi sang: "Roblox's data service is having trouble right now. Your saved progress is safe. / We keep retrying automatically — you can wait here or come back later." Server gửi `ProfileAccessChanged` **đúng một lần** khi chuyển giai đoạn (thêm cờ `outage`), không gửi lặp mỗi vòng thử. Nạp được hồ sơ thì cờ tự xoá.
   - Test: thêm ca kho lỗi kéo dài vào `tests/session_lock_retry.luau` và mở rộng ca băng thử lại trong `tests/initial_state.luau`. Đã thử tắt cờ trên server: cả hai ca đều đỏ.
   - *Sửa theo Devin Review trên PR #7:* mốc 150 giây chỉ đúng khi khoá cũ thật sự hết hạn. Nếu server cũ còn sống và vẫn gia hạn khoá, kho dữ liệu vẫn trả lời bình thường nhưng bản đầu vẫn báo "dịch vụ dữ liệu Roblox trục trặc". Nay `DataStoreLockHelper.AcquireLockWithRetries` trả thêm giá trị thứ tư `heldElsewhere` (kho đã trả lời, khoá còn hạn của phiên khác); gặp trường hợp này băng giữ câu "server cũ có thể đang lưu". Chỉ khi yêu cầu tới kho thất bại mới báo sự cố. Thêm ca test server cũ gia hạn khoá suốt 400 giây (`session_lock_retry` giờ 8 ca); chạy trên mã cũ thì đỏ.
-- [x] **Chia làn với ca mỹ thuật:** đã trả lời trên PR #5. Chuỗi này không sửa các file thuộc làn mỹ thuật từ đây trở đi. **Bước 8** (pet hiếm bỏ Neon toàn thân, cảnh trí Đảo 1–2) nằm trọn trong làn mỹ thuật (`ModelBuilders/PetModelBuilder`, `IslandScenery1_2`) nên **tạm dừng**, đề nghị giao cho ca mỹ thuật. Còn lại: Bước 7 (giao diện điện thoại, chỉ đụng `src/client/**`), StyLua sau cùng.
+- [x] **Chia làn với ca mỹ thuật:** đã trả lời trên PR #5. Chuỗi này không sửa các file thuộc làn mỹ thuật từ đây trở đi. **Bước 8** (pet hiếm bỏ Neon toàn thân, cảnh trí Đảo 1–2) nằm trọn trong làn mỹ thuật (`ModelBuilders/PetModelBuilder`, `IslandScenery1_2`) nên **tạm dừng**, đề nghị giao cho ca mỹ thuật. Còn lại: StyLua sau cùng (Bước 7 đã làm ở mục trên).
 - [x] **Kiểm định (Linux, lệnh tương đương `verify_project.ps1`):** Luau LSP `exit 0`, Selene 0/0, Rojo build, 18/18 runner `exit 0`, 109 file `.luau` đều ≤ 350 dòng; 5 file cam kết đều < 310 (`HudPanel` 275, `ProgressPanel` 268, `PetsService` 285, `FishingService` 293, `BagPanel` 307).
 - [ ] **Chờ nghiệm thu Studio:** (1) cảm giác quăng tay liên tục: bấm giữ ngay sau khi kéo cá xong, thanh lực phải tự chạy sau khoảng nửa giây; trên điện thoại thử bằng chạm; (2) ngắt mạng DataStore trong Studio (hoặc tắt API Services) hơn 150 giây để xem băng đổi câu chữ.
 

@@ -186,10 +186,11 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 	root.ZIndex = 22
 	root.Parent = parent
 	Theme.AddCorner(root, 12)
+	Theme.AddGradient(root)
 	local stroke = Theme.AddStroke(root, Theme.Colors.StrokeLight, 2)
 
 	local vp = Instance.new("ViewportFrame")
-	vp.Size = UDim2.new(1, -12, 0, 74)
+	vp.Size = UDim2.new(1, -12, 0, 70)
 	vp.Position = UDim2.fromOffset(6, 18)
 	vp.BackgroundColor3 = Color3.fromRGB(16, 22, 36)
 	vp.BackgroundTransparency = 0.25
@@ -206,11 +207,11 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 	vp.CurrentCamera = cam
 
 	local badge = Instance.new("TextLabel")
-	badge.Size = UDim2.new(0.72, 0, 0, 16)
-	badge.Position = UDim2.fromOffset(6, 3)
+	badge.Size = UDim2.new(0.72, 0, 0, 18)
+	badge.Position = UDim2.fromOffset(6, 1)
 	badge.BackgroundTransparency = 1
 	badge.Font = Theme.FontTitle
-	badge.TextSize = 11
+	Theme.FitText(badge, 13, 11)
 	badge.TextXAlignment = Enum.TextXAlignment.Left
 	badge.TextColor3 = Theme.Colors.Gold
 	badge.ZIndex = 25
@@ -222,7 +223,7 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 	cornerBtn.Position = UDim2.new(1, -28, 0, 4)
 	cornerBtn.BackgroundColor3 = Color3.fromRGB(28, 36, 58)
 	cornerBtn.Font = Theme.FontTitle
-	cornerBtn.TextSize = 12
+	cornerBtn.TextSize = 13
 	cornerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	cornerBtn.ZIndex = 26
 	cornerBtn.Visible = false
@@ -231,10 +232,10 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 
 	local titleLbl = Instance.new("TextLabel")
 	titleLbl.Size = UDim2.new(1, -10, 0, 18)
-	titleLbl.Position = UDim2.fromOffset(5, 93)
+	titleLbl.Position = UDim2.fromOffset(5, 89)
 	titleLbl.BackgroundTransparency = 1
 	titleLbl.Font = Theme.FontTitle
-	titleLbl.TextSize = 12
+	Theme.FitText(titleLbl, 13, 12)
 	titleLbl.TextTruncate = Enum.TextTruncate.AtEnd
 	titleLbl.TextColor3 = Theme.Colors.TextPrimary
 	titleLbl.ZIndex = 24
@@ -242,11 +243,11 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 	Theme.AddTextStroke(titleLbl, 1.3)
 
 	local subLbl = Instance.new("TextLabel")
-	subLbl.Size = UDim2.new(1, -10, 0, 15)
-	subLbl.Position = UDim2.fromOffset(5, 110)
+	subLbl.Size = UDim2.new(1, -10, 0, 18)
+	subLbl.Position = UDim2.fromOffset(5, 107)
 	subLbl.BackgroundTransparency = 1
 	subLbl.Font = Theme.FontBody
-	subLbl.TextSize = 11
+	Theme.FitText(subLbl, 13, 11)
 	subLbl.TextTruncate = Enum.TextTruncate.AtEnd
 	subLbl.TextColor3 = Theme.Colors.TextMuted
 	subLbl.ZIndex = 24
@@ -264,7 +265,7 @@ function ViewportCard.CreateEmpty(parent: Instance): PooledCard
 	footerLbl.Size = UDim2.fromScale(1, 1)
 	footerLbl.BackgroundTransparency = 1
 	footerLbl.Font = Theme.FontTitle
-	footerLbl.TextSize = 11
+	Theme.FitText(footerLbl, 13, 11)
 	footerLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
 	footerLbl.ZIndex = 25
 	footerLbl.Parent = footerPill

@@ -18,7 +18,8 @@ function ClientFixture.new(sources, studio, extra)
 			end,
 			FireServer = function(...) table.insert(f.requests, table.pack(...)) end },
 		Theme = { Colors = colors, FontTitle = "Title", FontBody = "Body",
-			AddCorner = blank, AddStroke = blank, AddTextStroke = blank,
+			AddCorner = blank, AddStroke = blank, AddTextStroke = blank, AddGradient = blank,
+			FitText = function(label, size) label.TextSize = size end,
 			CreateButton = function(_, name, _, _, _, _, callback)
 				local b = { callback = callback }; f.buttons[name] = b; return b
 			end },

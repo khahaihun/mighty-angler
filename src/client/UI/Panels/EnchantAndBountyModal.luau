@@ -78,7 +78,7 @@ local function addCardText(card: Frame, title: string, sub: string, col: Color3,
 	s.Position = UDim2.fromOffset(12, 28)
 	s.BackgroundTransparency = 1
 	s.Font = Theme.FontBody
-	s.TextSize = 12
+	Theme.FitText(s, 13, 12)
 	s.TextWrapped = true
 	s.TextXAlignment = Enum.TextXAlignment.Left
 	s.TextColor3 = Theme.Colors.TextMuted
@@ -180,7 +180,7 @@ function EnchantAndBountyModal.Render()
 					selectedTridentIdx = (selectedTridentIdx % #unlockedBosses) + 1
 					EnchantAndBountyModal.Render()
 				end)
-				cyc.TextSize = 12; cyc.ZIndex = 24
+				cyc.TextSize = 13; cyc.ZIndex = 24
 			end
 
 			local canTradeTrident = (ex.id ~= "RelicTrident") or (pickedBoss ~= nil)
@@ -232,7 +232,7 @@ function EnchantAndBountyModal.Render()
 		local gBtn = Theme.CreateButton(topCard, "RollGemBtn", gemTxt, UDim2.fromOffset(118, 36), UDim2.new(1, -128, 0.5, -18), if gemAllowed then Theme.Colors.Gems else Color3.fromRGB(78, 84, 104), function()
 			if gemAllowed then Net.FireServer(Net.ClientToServer.RollEnchant, selectedExclRod, true) end
 		end)
-		gBtn.TextSize = 12; gBtn.ZIndex = 24
+		gBtn.TextSize = 13; gBtn.ZIndex = 24
 
 		local oddsList = OddsCalculator.ComputeEnchantOdds(curEnchId)
 		for idx, item in ipairs(oddsList) do
@@ -269,7 +269,7 @@ function EnchantAndBountyModal.Render()
 					selectedBountyIdx[bDef.id] = (pickIdx % #matches) + 1
 					EnchantAndBountyModal.Render()
 				end)
-				cycBtn.TextSize = 12; cycBtn.ZIndex = 24
+				cycBtn.TextSize = 13; cycBtn.ZIndex = 24
 			end
 
 			local btnTxt = if not candidate then "NEED FISH" elseif isTrophy then "GIVE TROPHY" else "TURN IN"
@@ -279,7 +279,7 @@ function EnchantAndBountyModal.Render()
 					Net.FireServer(Net.ClientToServer.TurnInBounty, bDef.id, candidate.uid)
 				end
 			end)
-			tBtn.TextSize = 12; tBtn.ZIndex = 24
+			tBtn.TextSize = 13; tBtn.ZIndex = 24
 		end
 	end
 end
