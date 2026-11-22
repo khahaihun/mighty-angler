@@ -3,6 +3,43 @@
 - **Cập nhật lần cuối:** 2026-11-22 bởi Devin (sửa theo review + kiểm định Windows trên PR #5, sau Bước 6 của kế hoạch sửa sau review toàn dự án)
 - **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** , **Bước 3: bảng xếp hạng top toàn cầu** , **Bước 4: một số phiên bản dữ liệu + CI chạy đủ runner** , **Bước 5: tối ưu mạng/CPU** , **Bước 6: biển bao quanh đảo, bầu trời, mây, tia nắng**, một nhánh **sửa theo review** và **Bước 7: giao diện cho điện thoại, màu sáng hơn, nền chuyển sắc** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`. **110/110** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `CurrencyService.luau` 350; `ViewportCard` 346; `PerkService` 343). **19/19** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **110/110** (SHA-256 `94D36F677BA2C272C884278C72D2183E58FEB95F7BA69745B2BF59767D0FAEDF`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
 
+## Bằng chứng chạy tự động trong Roblox Studio thật — đỉnh #7 `dd5f606` (ghi lại 22/11/2026)
+
+Nguồn: comment của Chủ dự án trên PR #6, do Devin bản local chạy trên máy Chủ dự án. Devin trên VM **không tự chạy được Studio**; mục này chép lại số liệu được báo, không phải kết quả VM. **Bước 7 (`b937fa5`) chưa có trong lần chạy này.**
+
+- **Cách chạy:** Studio 0.748 trên Windows, commit `dd5f606` (gồm #1–#7). Một plugin tạm gọi `StudioTestService:ExecutePlayModeAsync` (Play Solo thật, đủ server + client) trên place dựng từ nguồn kèm script kiểm tra; không sửa mã game, plugin đã gỡ sau khi chạy.
+- **Windows cho hai commit mới:** `57c9c07` và `dd5f606` đều `verify_project.ps1` PASS 6/6, 18/18 runner `exit 0`, Source XML 109/109. (Hai dòng "chưa chạy trên Windows" ở mục sửa theo review bên dưới được đóng bằng kết quả này.)
+
+**Kịch bản A — 5 đảo thủ tục: 30/30 kiểm tra đạt.** Output server và client 0 lỗi, 0 cảnh báo.
+
+- **Thời gian dựng** (chế độ Edit): `WorldBuilder.BuildAll` 0,08 giây, riêng `OceanBuilder.Build` 0,04–0,05 giây. 357.106 ô Terrain, 22 `SeaFloor`, 10 `HorizonSea`.
+- **Mặt biển liền:** bắn tia xuống Terrain tại 420 điểm (dọc z=300 suốt chuỗi đảo, từ hồ câu Đảo 1 ra khơi, giữa Đảo 1–2, dải nước bên trong tường): tất cả là Water ở đúng Y = 9,70, không rãnh, không bậc. 54 điểm trong nền Đảo 1 không có nước Terrain.
+- **Tường và trời:** đủ 4 tường ở cả 5 đảo; có Sky, SunRays, Clouds; Low GFX tắt rồi bật lại SunRays và Clouds đúng.
+- **Bước 5 trên Engine thật:** tag `MightyAnimatedNpc` tới client 20/20, NPC gần nhất có `Waist.C0` đổi theo thời gian. 5 lượt quăng qua remote thật: túi phía client ghép bằng `BagDelta` khớp server, 0 lần lệch; 5/5 lần quăng lại ngay bị từ chối với `CastCooldown`.
+- **Độ nặng khung hình** (cùng phiên, cùng góc máy; mức so sánh là sau khi gỡ biển, mây, tia nắng, chỉ còn 5 hồ câu):
+
+| Góc máy | Tam giác trước → sau | Lệnh vẽ trước → sau | Bật Low GFX |
+|---|---|---|---|
+| Bờ hồ Đảo 1 nhìn ra khơi | 34.565 → 147.637 | 62 → 203 | 147.189 / 196 |
+| Toàn cảnh từ trên cao | 42.675 → 136.299 | 62 → 180 | 136.263 / 173 |
+
+  Biển làm số tam giác tăng khoảng 3,2–4,3 lần và lệnh vẽ khoảng 3 lần. Low GFX gần như không giảm vì chỉ tắt mây và tia nắng. **FPS chưa đo được** (cửa sổ Studio chạy nền bị giới hạn 15 FPS), nên ảnh hưởng trên điện thoại vẫn **chờ nghiệm thu máy thật**. Núm chỉnh rẻ nhất nếu điện thoại bị nặng: `TERRAIN_MARGIN` trong `OceanBuilder`.
+
+**Kịch bản B — Đảo 1 dựng tay: 29/30.** Chạy `tools/generate_sunny_shores_terrain_draft.luau` ở chế độ Edit rồi Play.
+
+- **Đạt:** nhận đảo dựng tay, 4 NPC đứng đúng marker (lệch 0), marker ẩn khi chạy, spawn đứng trên cỏ, câu được cá (túi khớp, cooldown 2/2), Output 0 lỗi.
+- **Không đạt: có vành trống giữa đảo và biển.** Phôi dọn sạch hộp X ±130, Z −97..193 nhưng đảo nhỏ hơn hộp đó, còn biển dừng ở mép hộp đúng như `OceanLayout.ManualBox` thiết kế. Giữa hai bên không có Terrain:
+
+| Hướng | Đoạn đo | Khoảng trống |
+|---|---|---|
+| Tây | z=0 | x = −128..−94 (36 studs) |
+| Đông | z=114 | x = 112..128 (18 studs) |
+| Nam | x=0 | z = 184..192 (10 studs) |
+| Bắc | x=0 | liền |
+
+  Tường mặc định ở x = ±106 nằm giữa vành trống phía Tây/Đông.
+- **Hướng xử lý đã thống nhất:** việc này thuộc **làn mỹ thuật**. Ca mỹ thuật sửa phôi (lót đáy cát và đổ nước tới mép hộp trước khi đắp đảo, hoặc đặt `OceanHole` trong `IslandMarkers`). **Không sửa `OceanBuilder`.** Mục này còn mở cho tới khi phôi được sửa và chạy lại Kịch bản B.
+
 ## Bước 7 sau review — Giao diện cho điện thoại, màu sáng hơn, nền chuyển sắc (Devin, 22/11/2026)
 
 Chỉ sửa `src/client/**` (không đụng file thuộc làn mỹ thuật). Không thêm asset ngoài. **Chưa ai nhìn kết quả trên màn hình**: mọi thứ dưới đây mới qua test VM về con số, không phải về hình ảnh.
