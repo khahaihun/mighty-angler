@@ -139,6 +139,16 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
 
+## Biển và bầu trời — Bước 6 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_ocean_and_sky.ps1
+```
+
+Chạy mã thật của `OceanLayout`, `OceanBuilder`, `SkyBuilder` và `TerrainWaterBuilder.BuildLagoonWater`; `Terrain:FillBlock`, Instance và Lighting là giả lập (5 ca): các ô nước phủ kín vùng biển trừ nền đảo, không chồng nhau và nằm trên lưới voxel 4 studs; Part không quá 2048 studs; biển nối các đảo, phủ hồ câu, mặt nước bằng đúng mặt hồ câu, nền đảo khô; không ghi Terrain và không đặt đáy biển vào trong đảo dựng tay (kể cả khi dùng marker `OceanHole`); Sky/SunRays/Clouds chỉ tạo một lần và không thay Sky có sẵn.
+
+Suite này **không** chứng minh hình ảnh: sóng, màu nước, chỗ nối chân trời, mây và tia nắng phải nhìn trong Studio.
+
 ## Tối ưu mạng/CPU — Bước 5 sau review
 
 ```powershell

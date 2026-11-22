@@ -40,6 +40,14 @@ function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)
 	if bloom and bloom:IsA("PostEffect") then
 		bloom.Enabled = not lowGfx
 	end
+	local rays = Lighting:FindFirstChildOfClass("SunRaysEffect")
+	if rays then
+		rays.Enabled = not lowGfx
+	end
+	local clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds")
+	if clouds then
+		clouds.Enabled = not lowGfx
+	end
 	applyClientParticleBudget()
 end
 
