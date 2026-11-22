@@ -16,7 +16,7 @@ local function node(name, parent)
 end
 
 local function fixture(sources, studio, placeId, failedStore)
-	local opens, writes, stores, threads = {}, {}, {}, {}
+	local opens, writes, reads, stores, threads = {}, {}, {}, {}, {}
 	local writable = { UserId = 101, DisplayName = "Writable" }
 	local readOnly = { UserId = 102, DisplayName = "ReadOnly" }
 	local missing = { UserId = 103, DisplayName = "Missing" }
@@ -42,6 +42,14 @@ local function fixture(sources, studio, placeId, failedStore)
 				if nextValue ~= nil then data[key] = nextValue end
 				return nextValue
 			end
+			function store:GetSortedAsync(_, pageSize)
+				table.insert(reads, { name = name })
+				local rows = {}
+				for key, value in pairs(data) do table.insert(rows, { key = key, value = value }) end
+				table.sort(rows, function(a, b) return a.value > b.value end)
+				for index = #rows, pageSize + 1, -1 do rows[index] = nil end
+				return { GetCurrentPage = function() return rows end }
+			end
 			stores[name] = store
 		end
 		return stores[name]
@@ -52,7 +60,13 @@ local function fixture(sources, studio, placeId, failedStore)
 	local shared = node("Shared")
 	local services = {
 		DataStoreService = dataStoreService,
-		Players = { GetPlayers = function() return { writable, readOnly, missing } end },
+		Players = { GetPlayers = function() return { writable, readOnly, missing } end,
+			GetPlayerByUserId = function(_, userId)
+				for _, player in ipairs({ writable, readOnly, missing }) do
+					if player.UserId == userId then return player end
+				end
+				return nil
+			end },
 		RunService = { IsStudio = function() return studio end },
 		ReplicatedStorage = { WaitForChild = function() return shared end },
 		Workspace = { FindFirstChild = function() return nil end },
@@ -100,8 +114,8 @@ local function fixture(sources, studio, placeId, failedStore)
 	equal(helper.TryGetStore(), firstStore, "profile cache")
 	local liveOps = env.require(node("LiveOpsService"))
 	liveOps.Init() -- uses real initial refresh; world/UI creation intentionally absent
-	local function refresh()
-		for _ = 1, 4 do -- actual loop refreshes each 20 seconds
+	local function refresh(rounds)
+		for _ = 1, 4 * (rounds or 1) do -- actual loop refreshes each 20 seconds
 			local ok, err = coroutine.resume(threads[1])
 			assert(ok, tostring(err))
 		end
@@ -113,7 +127,7 @@ local function fixture(sources, studio, placeId, failedStore)
 		end
 		return count
 	end
-	return { opens = opens, writes = writes, stores = stores, profiles = profiles,
+	return { opens = opens, writes = writes, reads = reads, stores = stores, profiles = profiles,
 		writable = writable, readOnly = readOnly, helper = helper, refresh = refresh,
 		productionRequests = productionRequests }
 end
@@ -131,8 +145,6 @@ local function verifyRouting(sources, studio, placeId, suffix)
 			{ "DataStore", "MightyAngler_Profile_v2" .. suffix },
 			{ "OrderedDataStore", "MightyAngler_TopStr_v2" .. suffix },
 			{ "OrderedDataStore", "MightyAngler_TopGold_v2" .. suffix },
-			{ "OrderedDataStore", "MightyAngler_TopStr_v2" .. suffix },
-			{ "OrderedDataStore", "MightyAngler_TopGold_v2" .. suffix },
 		}
 		equal(#f.opens, #expected, "all actual open calls")
 		for i, call in ipairs(expected) do
@@ -140,7 +152,8 @@ local function verifyRouting(sources, studio, placeId, suffix)
 			equal(f.opens[i].name, call[2], "store name " .. i)
 		end
 		equal(f.helper.GetActiveStoreLabel(), "MightyAngler_Profile_v2" .. suffix, "profile label matches open")
-		equal(#f.writes, 4, "initial and periodic Strength/Gold writes")
+		equal(#f.writes, 2, "one Strength and one Gold write; the unchanged score is not rewritten 20s later")
+		equal(#f.reads, 2, "each global top read once; not re-read 20s later")
 	end
 	if studio then equal(f.productionRequests(), 0, "Studio production store requests") end
 	print(string.format("PASS routing studio=%s placeId=%d productionRequests=%d (all stores simulated)",
@@ -158,21 +171,25 @@ local function verifyRecords(f, suffix)
 	equal(str["103"], 888, "unloaded Strength unchanged")
 	equal(gold["103"], 888, "unloaded Gold unchanged")
 	local p = f.profiles[f.writable]
+	local recordWrites = #f.writes
+	f.refresh(6)
+	equal(#f.writes, recordWrites, "two idle minutes cost no leaderboard writes")
 	p.strength, p.stats.goldEarned = 5, 10
-	f.refresh()
+	f.refresh(3)
 	equal(str["101"], 125, "lower Strength keeps record")
 	equal(gold["101"], 250, "lower Gold keeps record")
 	p.strength, p.stats.goldEarned = 400, 800
-	f.refresh()
+	f.refresh(3)
+	equal(#f.writes, recordWrites + 2, "a higher score is written once per board")
 	equal(str["101"], 400, "higher Strength raises record")
 	equal(gold["101"], 800, "higher Gold raises record")
 	local writeCount = #f.writes
 	p.strength, p.stats.goldEarned = 0, 0
-	f.refresh()
+	f.refresh(3)
 	equal(#f.writes, writeCount, "zero scores skipped")
 	f.profiles[f.writable] = nil
 	f.profiles[f.readOnly] = nil
-	f.refresh()
+	f.refresh(3)
 	equal(#f.writes, writeCount, "no writable profiles skipped")
 	if suffix == "_StudioDev" then
 		equal(f.productionRequests(), 0, "all Studio record tests avoid production names")

@@ -8,7 +8,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1
 
 Cần `tools/luau.exe`. Ca này dùng **Luau CLI 0.747** từ [bản phát hành chính thức](https://github.com/luau-lang/luau/releases/tag/0.747), gói `luau-windows.zip`. Chỉ giải nén `luau.exe` vào `tools/`; không cài hệ thống. SHA-256 của executable đã dùng: `FF0ACF7D2DF9D38E30C85EE9FE698EFD756A920496C84EA848B74D0E2082E958`. Binary được Git bỏ qua theo quy tắc có sẵn. Có thể truyền đường dẫn CLI bằng `-LuauExe`.
 
-Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `session_lock_retry`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
+Lệnh trên chạy `studio_data_isolation`, `session_acquisition`, `session_lifecycle`, `session_lock_retry`, `global_leaderboard`, `profile_schema`, `dev_reset`, `initial_state` và `data_persistence`. Các bộ còn lại vẫn chạy nếu một bộ lỗi. Cuối cùng lệnh trả mã lỗi nếu bất kỳ bộ nào FAIL. CI vẫn chạy toàn bộ bằng lệnh mặc định; có thể chạy riêng một bộ bằng `-Suite <tên bộ>` để khoanh vùng khi sửa.
 
 ## Snapshot và trạng thái quyền ghi — mục 1.5
 
@@ -138,6 +138,14 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_art_pipeline_and_terrain.ps1` (**24/24 PASS**): kiểm 9 thư mục `AssetRegistry` (gồm `Eggs/Npcs/Buildings`), tự xóa 100% `LuaSourceContainer` ẩn trong model clone, neo `RootOnly` giữ khớp tay chân NPC R15, giữ `Silhouette` & `Highlight` + `ClientBudgetManaged` emitter cho đột biến trên MeshPart, override preview Trứng/Cần câu và `ManualIslandAdapter` (`MightyWorldManual` + `IslandMarkers` + `FishingWater`).
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
+
+## Bảng xếp hạng toàn cầu — Bước 3 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite global_leaderboard
+```
+
+`tests/global_leaderboard.luau` chạy `GlobalLeaderboard` thật với `OrderedDataStore`, `Players` và `RunService` giả lập. 9 ca: top gồm người ở server khác, xếp giảm dần, tối đa 8 dòng và không trùng dòng của người đang online; chỉ ghi khi điểm tăng, tối đa 1 lần mỗi 3 nhịp, không hạ kỷ lục; đọc 1 lần mỗi 5 nhịp; phiên không giữ khoá không được ghi; một người ghi lỗi không chặn người khác; đọc lỗi giữ danh sách cũ rồi tự hồi phục; tra tên; hai bảng độc lập; place chưa publish không mở kho. `-Suite studio_data_isolation` vẫn kiểm đường đi qua `LiveOpsService` thật (tên kho `_StudioDev`, quyền ghi). Bộ này không chứng minh `GetSortedAsync` hay hạn mức thật của Roblox.
 
 ## Khoá hồ sơ đang bận — Bước 2 sau review
 

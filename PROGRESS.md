@@ -1,7 +1,18 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-22 bởi Devin (Bước 2 của kế hoạch sửa sau review toàn dự án)
-- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** và **Bước 2: không còn hồ sơ trắng khi khoá đang bận** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`. **103/103** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `ViewportCard.luau` 345; `PerkService` 343). **16/16** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **103/103** (SHA-256 `FBE03375C83C94F77EAD952DFA693651EDA37F235E63030EA510E3CFFB726DEF`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+- **Cập nhật lần cuối:** 2026-11-22 bởi Devin (Bước 3 của kế hoạch sửa sau review toàn dự án)
+- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** và **Bước 3: bảng xếp hạng top toàn cầu** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`. **104/104** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `ViewportCard.luau` 345; `PerkService` 343). **16/16** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **104/104** (SHA-256 `59C95406B7B41A73D40D2D3798DBA9C5732E617E2E730EE304A1D185ECC75B2B`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+
+## Bước 3 sau review — Bảng xếp hạng top toàn cầu, chỉ ghi khi điểm tăng (Devin, 22/11/2026)
+
+- [x] **Bảng trên Đảo 1 giờ là top toàn cầu thật** (Chủ dự án chọn "Top toàn cầu"). Trước đây cứ 20 giây server ghi 2 lần cho mỗi người chơi lên `OrderedDataStore` nhưng không bao giờ đọc lại, nên bảng chỉ xếp người cùng server. Module mới `src/server/Services/GlobalLeaderboard.luau` (159 dòng) đọc top 8 bằng `GetSortedAsync`, gộp với điểm đang có của người trong server (lấy điểm cao hơn, không trùng dòng), rồi `LiveOpsService` vẽ lên bảng. Tiêu đề bảng đổi thành "🌍 TOP STRENGTH" / "🌍 TOP GOLD EARNED".
+- [x] **Bớt tốn quota.** Chỉ ghi khi điểm tăng so với lần ghi trước, mỗi người tối đa 1 lần/bảng/60 giây; đứng yên thì không ghi. Đọc top mỗi 100 giây/bảng; kho chỉ mở một lần. Người chơi vẫn thấy điểm của mình cập nhật mỗi 20 giây vì điểm trong server được gộp trực tiếp.
+- [x] **Lỗi từng phần không lan.** Mỗi lần ghi, mỗi lần đọc và mỗi bảng có `pcall` riêng: một người ghi lỗi không chặn người khác; đọc lỗi thì giữ danh sách cũ và thử lại ở nhịp kế tiếp; một bảng không mở được kho không làm trắng bảng kia.
+- [x] **Giữ nguyên luật cũ:** chỉ phiên giữ khoá hợp lệ (`CanWritePersistent`) mới được ghi; điểm 0 không ghi; kỷ lục dùng `max` nên không bao giờ hạ; Studio dùng kho `_StudioDev`; place chưa publish không mở kho. Tên kho không đổi (`MightyAngler_TopStr_v2`, `MightyAngler_TopGold_v2`) nên kỷ lục đã có vẫn dùng được.
+- [x] **Tên người chơi ở server khác** lấy bằng `Players:GetNameFromUserIdAsync` (là username, không phải tên hiển thị), nhớ lại sau lần đầu; tra không được thì hiện "Player <id>".
+- [x] **Test:** bộ mới `tests/global_leaderboard.luau` **9/9**; `tests/studio_data_isolation.luau` sửa kỳ vọng (1 lần mở/kho, 2 lần ghi đầu, 2 phút đứng yên không ghi thêm). Tổng `test_studio_data_isolation.ps1`: SESSION 19, LIFECYCLE 12, LOCK_RETRY 6, LEADERBOARD 9, SCHEMA 30, RESET 12, INITIAL 14, PERSISTENCE 7.
+- [x] **Kiểm định (Linux, lệnh tương đương `verify_project.ps1`):** Luau LSP `exit 0`, Selene 0/0, Rojo build, 16/16 runner `exit 0`, `git diff --check` đạt; `LiveOpsService` 259 → 226 dòng.
+- [ ] **Chờ nghiệm thu:** `GetSortedAsync` và hạn mức thật của Roblox, bảng hiển thị trong Studio, và 2 server Staging thấy điểm của nhau. Bộ test dùng kho giả lập.
 
 ## Bước 2 sau review — Khoá hồ sơ đang bận thì chờ và tự thử lại, không đưa hồ sơ trắng (Devin, 22/11/2026)
 
