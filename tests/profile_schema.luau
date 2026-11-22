@@ -169,6 +169,23 @@ return function(sources)
 		assert(b.documents.Player_102.saveSeq >= 3, "healthy player's saves continue")
 		assert(#f.warnings > 0, "isolated failure recorded")
 	end)
+	test("one exception inside the persistence tick does not stop autosave for the server", function()
+		local b, f = setup()
+		local player = f.add(101)
+		local persistence = f.loadModule("ProfilePersistenceService")
+		local realTick, thrown = persistence.Tick, 0
+		persistence.Tick = function()
+			if thrown < 3 then thrown += 1; error("injected tick failure") end
+			return realTick()
+		end
+		f.data.Get(player).gold = 55
+		f.data.MarkDirty(player)
+		f.advance(130)
+		equal(thrown, 3, "tick failures were injected")
+		equal(f.data.CanWritePersistent(player), true, "lease still renewed after tick failures")
+		equal(b.document.gold, 55, "autosave still runs after tick failures")
+		assert(#f.warnings >= 3, "tick failures recorded")
+	end)
 	print(string.format("SCHEMA_SUITE passed=%d failed=%d", passed, failed))
 	assert(failed == 0, "profile schema suite failed")
 end

@@ -191,7 +191,8 @@ function DataService.Init()
 		local accPush = 0
 		while not serverShuttingDown do
 			task.wait(1)
-			Persistence.Tick()
+			local tickOk, tickErr = pcall(function(): boolean Persistence.Tick(); return true end)
+			if not tickOk then warn("[DataService] Persistence tick error:", tostring(tickErr)) end
 			accPush += 1
 			for _, s in ipairs(Persistence.All()) do
 				local profile, player = s.profile, s.player
