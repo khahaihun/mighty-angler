@@ -172,6 +172,7 @@ local function runSuite(mods: {
 	local spawnedNpcs = islandFolder:FindFirstChild("IslandNpcs")
 	local spawnedMerchant = if spawnedNpcs then spawnedNpcs:FindFirstChild("Npc_Merchant") else nil
 	check("npc_override_spawned", spawnedMerchant ~= nil)
+	check("npc_tagged_for_client_animation", spawnedMerchant:GetAttribute("Tag_MightyAnimatedNpc") == true)
 	local sHrp = spawnedMerchant:FindFirstChild("HumanoidRootPart")
 	local sArm = spawnedMerchant:FindFirstChild("LeftUpperArm")
 	check("npc_root_only_anchoring", sHrp.Anchored == true and sArm.Anchored == false, "NPC limbs must remain unanchored")

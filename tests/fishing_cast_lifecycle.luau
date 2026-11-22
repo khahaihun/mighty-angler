@@ -16,7 +16,7 @@ return function(sources)
  local eventNames=setmetatable({},{__index=function(_,k) return k end})
  local net={ServerToClient=eventNames,ClientToServer=eventNames,
   FireClient=function(_,event,payload) table.insert(events,{event=event,payload=payload}) end}
- local config={FISHING_MAX_WATER_DIST=80,AUTO_FISH_FREE_RECAST_SEC=1.1,AUTO_FISH_PRO_RECAST_SEC=.45,MINIGAME_MAX_WIDTH=.68}
+ local config={FISHING_MAX_WATER_DIST=80,AUTO_FISH_FREE_RECAST_SEC=1.1,AUTO_FISH_PRO_RECAST_SEC=.45,MANUAL_CAST_MIN_INTERVAL_SEC=.45,MINIGAME_MAX_WIDTH=.68}
  local water={Size=vec(200,2,200),Position=vec(0,-1,0),IsA=function(_,c) return c=="BasePart" end}
  local wall={GetAttribute=function() return true end}
  local island={FindFirstChild=function(_,k) if k=="FishingWater" then return water end end,GetChildren=function() return {wall} end}
@@ -70,6 +70,9 @@ return function(sources)
  end
  assert(awards==3,"one fish for each 1/2/3 round session")
  pro=true; state.Close(p,"pro","Timeout"); now+=.449; assert(not state.CanAutoCast(p)); now+=.0011; assert(state.CanAutoCast(p))
+ state.Close(p,"manual","Win"); assert(events[#events].payload.manualReadyAt==now+.45,"client is told when manual casting reopens")
+ assert(not state.CanManualCast(p),"manual cast waits after a session closes")
+ now+=.449; assert(not state.CanManualCast(p)); now+=.0011; assert(state.CanManualCast(p),"manual cast reopens after the minimum interval")
  state.Close(p,"cancel","Unequip"); now+=2; assert(not state.CanAutoCast(p),"unequip stops auto")
  for _,reason in ipairs({"IslandChange","Rebirth","Died"}) do
   state.SetAuto(p,true); state.Close(p,"transition",reason); now+=2
@@ -115,5 +118,11 @@ return function(sources)
  loaded(p); assert(died and added)
  state.SetAuto(p,true); died(); now+=2; assert(state.CanAutoCast(p),"actual Humanoid.Died keeps ON")
  added(p.Character); assert(state.CanAutoCast(p),"server CharacterAdded does not erase ON")
+ -- Real cast handler: an auto-clicker re-casting by hand right after a catch is refused; Auto-Fish intent survives.
+ locked=false; profile.equippedHotbarSlot=1; state.SetAuto(p,true); state.Close(p,"spam","Win")
+ handlers.FishingCastWithAim(p,{castMode="Manual",hitWater=true,targetPos=vec(0,0,20),holdRatio=.55})
+ assert(manager.Get(p)==nil,"manual cast inside the cooldown opens no session")
+ assert(events[#events].event=="FishingStateReset" and events[#events].payload.reason=="CastCooldown","client is reset, not left hanging")
+ assert(events[#events].payload.autoEnabled==true,"manual cooldown refusal keeps Auto-Fish ON")
  print("PASS fishing rays/first hit/Auto, server 1/2/3 rounds at 200ms, atomic close and Free/Pro cooldown")
 end

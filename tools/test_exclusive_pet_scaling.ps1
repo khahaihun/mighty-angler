@@ -158,6 +158,8 @@ runSuite({
 	setProfile = function(p) currentProfile = p end,
 	getProfile = function() return currentProfile end,
 	equipBest = function() handlers["EquipBestPets"](playerObj) end,
+	unequip = function(uid) handlers["UnequipPet"](playerObj, uid) end,
+	deletePet = function(uid) handlers["DeletePet"](playerObj, uid) end,
 })
 '@
 

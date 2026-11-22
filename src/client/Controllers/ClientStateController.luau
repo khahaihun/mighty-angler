@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
+local BagDelta = require(Shared:WaitForChild("BagDelta"))
 local OddsCalculator = require(Shared:WaitForChild("OddsCalculator"))
 local PurchaseOddsSummary = require(Shared:WaitForChild("PurchaseOddsSummary"))
 local PurchaseOddsController = require(script.Parent.PurchaseOddsController)
@@ -34,6 +35,7 @@ local rodEnchantsCache: { [string]: string } = {}
 local relicsCache = 0
 local unlockedIslandsCache: { [string]: boolean } = { ["1"] = true }
 local fishBagCache: { any } = {}
+local lastBagSyncAt = -1
 local gearLvCache = 0
 local petsCache: { any } = {}
 local equippedPetsCache: { string } = {}
@@ -181,8 +183,13 @@ function ClientStateController.Init(progressModRef: any)
 	end)
 
 	Net.OnClientEvent(Net.ServerToClient.BagUpdated, function(payload: any)
-		if type(payload) == "table" and type(payload.fishBag) == "table" then
-			fishBagCache = payload.fishBag
+		if type(payload) == "table" then
+			local bag, inSync = BagDelta.Apply(fishBagCache, payload)
+			fishBagCache = bag
+			if not inSync and os.clock() - lastBagSyncAt >= 1 then
+				lastBagSyncAt = os.clock()
+				Net.FireServer(Net.ClientToServer.RequestBagSync) -- lech so ca: xin lai nguyen tui
+			end
 			HudPanel.UpdateBagCount(#fishBagCache); BagPanel.UpdateFishBag(fishBagCache); HotbarAndBaitUi.SyncBag(fishBagCache); syncEnchantModal()
 			if progressModRef then progressModRef.SyncBagAndHotbar(fishBagCache, nil) end
 		end

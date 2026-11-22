@@ -43,9 +43,14 @@ GameConfig.PERFECT_CAST_LUCK_ADD = 0.25
 GameConfig.PERFECT_CAST_LURE_ADD = 0.15
 GameConfig.AUTO_FISH_FREE_RECAST_SEC = 1.10
 GameConfig.AUTO_FISH_PRO_RECAST_SEC = 0.45
+-- Quang tay khong duoc nhanh hon Auto-Fish Pro: thoi gian cho toi thieu sau khi mot luot cau ket thuc.
+GameConfig.MANUAL_CAST_MIN_INTERVAL_SEC = 0.45
 GameConfig.STRENGTH_MAX_SPEED_BONUS = 0.20
 GameConfig.STRENGTH_MAX_BAR_BONUS = 0.25
 GameConfig.MINIGAME_MAX_WIDTH = 0.68
+
+-- Tag CollectionService Server gan len NPC co hoat anh; Client chi theo doi cac model mang tag nay.
+GameConfig.ANIMATED_NPC_TAG = "MightyAnimatedNpc"
 
 -- Thong so tap Gym
 GameConfig.GYM_MANUAL_COOLDOWN_SEC = 0.42

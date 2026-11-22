@@ -242,6 +242,43 @@ return function(sources)
 		checkReward(other.data.Get(rejoin), "duplicate after rejoin")
 	end)
 
+	test("bag_updates_send_only_the_change", function()
+		local b = Fixture.backend()
+		local a = Fixture.server(sources, b, "A", nil, gameplayOptions())
+		a.loadModule("CurrencyService").Init()
+		local p, load = a.add(101)
+		a.finish(load)
+		local profile = a.data.Get(p)
+		local function fish(uid)
+			return { uid = uid, fishId = "sunset_barracuda", weight = 18, mutation = "None", sellValue = 99, originalValue = 99,
+				sizeTier = "Normal", locked = false, soulbound = false, midasBonus = 1 }
+		end
+		profile.fishBag = { fish("fish-1"), fish("fish-2"), fish("fish-3") }
+		local function bagMessages()
+			local list = {}
+			for _, message in ipairs(a.messages) do
+				if message.event == "BagUpdated" then table.insert(list, message.payload) end
+			end
+			return list
+		end
+		a.finish(a.fireRemote("ToggleLockFish", p, "fish-2"))
+		local sent = bagMessages()
+		equal(#sent, 1, "one bag message for one lock toggle")
+		equal(sent[1].fishBag, nil, "lock toggle does not resend the whole bag")
+		equal(#sent[1].updated, 1, "only the changed fish is sent")
+		equal(sent[1].updated[1].uid, "fish-2", "changed fish uid"); equal(sent[1].updated[1].locked, true, "new lock state")
+		equal(sent[1].count, 3, "server bag size sent so the client can detect a missed update")
+		-- Client thay lech so ca thi xin lai nguyen tui; Server tra nguyen tui nhung khong qua 1 lan/giay.
+		a.finish(a.fireRemote("RequestBagSync", p))
+		a.finish(a.fireRemote("RequestBagSync", p))
+		sent = bagMessages()
+		equal(#sent, 2, "second resync inside one second is ignored")
+		equal(#sent[2].fishBag, 3, "resync carries the whole bag")
+		a.advance(1.1)
+		a.finish(a.fireRemote("RequestBagSync", p))
+		equal(#bagMessages(), 3, "resync allowed again after one second")
+	end)
+
 	print(string.format("PERSISTENCE_SUITE passed=%d failed=%d", passed, failed))
 	assert(failed == 0, "data persistence suite failed")
 end

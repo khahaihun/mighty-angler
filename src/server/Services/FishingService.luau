@@ -96,7 +96,8 @@ local function finalizeFishAward(player: Player, sess: FishingSessionManager.Cas
 	PetAndFishVisuals.SpawnCaughtFishLeap(player, sess.waterPos, fishDef, mutName)
 	RodVisuals.ClearBobber(player)
 
-	Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
+	-- Chi gui con ca vua cau; Client tu noi vao tui (xem Shared/BagDelta).
+	Net.FireClient(player, Net.ServerToClient.BagUpdated, { added = { entry }, count = #profile.fishBag })
 	Net.FireClient(player, Net.ServerToClient.FishingCatchResult, {
 		sessionId = sess.sessionId, success = true, uid = entry.uid, fishId = fishDef.id, fishName = fishDef.name,
 		rarity = fishDef.rarity, sizeTier = sizeTier, weight = weight, mutation = mutName,
@@ -143,6 +144,10 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 		if not FishingCastState.CanAutoCast(player) then FishingCastState.Reply(player); return end
 		if profile.equippedHotbarSlot ~= 1 then FishingCastState.SetAuto(player, false); FishingCastState.Reply(player); return end
 	elseif profile.equippedHotbarSlot ~= 1 then
+		return
+	elseif not FishingCastState.CanManualCast(player) then
+		FishingCastState.TakeCharge(player)
+		FishingCastState.Reset(player, "CastCooldown")
 		return
 	end
 

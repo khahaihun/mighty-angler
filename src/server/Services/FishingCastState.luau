@@ -10,6 +10,7 @@ local enabled: { [Player]: boolean } = {}
 local charges: { [Player]: number } = {}
 local intentIds: { [Player]: number } = {}
 local readyAt: { [Player]: number } = {}
+local manualReadyAt: { [Player]: number } = {}
 
 function FishingCastState.Reply(player: Player, _requestId: any?)
  Net.FireClient(player, Net.ServerToClient.FishingAutoState, {
@@ -21,6 +22,7 @@ function FishingCastState.SetAuto(player: Player, active: boolean)
 end
 function FishingCastState.ShouldResume(reason: string): boolean
  return reason == "Win" or reason == "Miss" or reason == "Timeout" or reason == "Died" or reason == "IslandChange" or reason == "Rebirth"
+  or reason == "CastCooldown"
 end
 function FishingCastState.ApplyRequest(player: Player, active: boolean, requestId: any): boolean
  if type(requestId) ~= "number" or requestId ~= math.floor(requestId) or requestId < 1 or requestId > 1e9 then return false end
@@ -45,16 +47,20 @@ end
 function FishingCastState.CanAutoCast(player: Player): boolean
  return enabled[player] == true and Workspace:GetServerTimeNow() >= (readyAt[player] or 0)
 end
+function FishingCastState.CanManualCast(player: Player): boolean
+ return Workspace:GetServerTimeNow() >= (manualReadyAt[player] or 0)
+end
 function FishingCastState.Close(player: Player, sessionId: string, reason: string)
  local delay = if PerkService.HasGamepass(player, "AutoFish") then GameConfig.AUTO_FISH_PRO_RECAST_SEC else GameConfig.AUTO_FISH_FREE_RECAST_SEC
  readyAt[player] = Workspace:GetServerTimeNow() + delay
+ manualReadyAt[player] = Workspace:GetServerTimeNow() + GameConfig.MANUAL_CAST_MIN_INTERVAL_SEC
  charges[player] = nil
  if not FishingCastState.ShouldResume(reason) then enabled[player] = false end
  Net.FireClient(player, Net.ServerToClient.FishingSessionClosed, {
-  sessionId = sessionId, reason = reason, readyAt = readyAt[player], autoEnabled = enabled[player] == true, requestId = intentIds[player] or 0,
+  sessionId = sessionId, reason = reason, readyAt = readyAt[player], manualReadyAt = manualReadyAt[player], autoEnabled = enabled[player] == true, requestId = intentIds[player] or 0,
  })
 end
 function FishingCastState.Forget(player: Player)
- enabled[player] = nil; charges[player] = nil; readyAt[player] = nil; intentIds[player] = nil
+ enabled[player] = nil; charges[player] = nil; readyAt[player] = nil; manualReadyAt[player] = nil; intentIds[player] = nil
 end
 return FishingCastState

@@ -23,7 +23,12 @@ function PetsService.OnPetHatched(callback: (Player, Types.PetDef) -> ())
 	table.insert(hatchHooks, callback)
 end
 
+-- Nho san tong buff Pet theo ho so; moi thay doi Pet deu di qua sanitizeEquippedList nen bi xoa o do.
+type PetBuffCache = { maxSlots: number, petCount: number, equipped: { string }, equippedCount: number, buff: BuffAggregator.BonusContribution }
+local petBuffCache: { [Types.PlayerProfile]: PetBuffCache } = setmetatable({}, { __mode = "k" }) :: any
+
 local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile): { [string]: string }
+	petBuffCache[profile] = nil
 	local ownedByUid: { [string]: string } = {}
 	for _, inst in ipairs(profile.pets) do
 		ownedByUid[inst.uid] = inst.petId
@@ -220,12 +225,17 @@ local function handleEquipBest(player: Player)
 		return
 	end
 
+	-- Tinh diem moi loai Pet dung mot lan roi moi sap xep (truoc day tinh lai trong tung phep so sanh).
+	local scoreByPetId: { [string]: number } = {}
+	for _, inst in ipairs(profile.pets) do
+		if scoreByPetId[inst.petId] == nil then
+			local def = PetsConfig.PetsById[inst.petId]
+			scoreByPetId[inst.petId] = if def then PetsConfig.GetEffectivePowerScore(def, profile.pets) else 0
+		end
+	end
 	local sorted = table.clone(profile.pets)
 	table.sort(sorted, function(a: Types.PetInstance, b: Types.PetInstance): boolean
-		local defA = PetsConfig.PetsById[a.petId]
-		local defB = PetsConfig.PetsById[b.petId]
-		return (if defA then PetsConfig.GetEffectivePowerScore(defA, profile.pets) else 0)
-			> (if defB then PetsConfig.GetEffectivePowerScore(defB, profile.pets) else 0)
+		return scoreByPetId[a.petId] > scoreByPetId[b.petId]
 	end)
 
 	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
@@ -262,6 +272,11 @@ end
 function PetsService.Init()
 	BuffAggregator.RegisterProvider(function(player: Player, profile: Types.PlayerProfile)
 		local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
+		local cached = petBuffCache[profile]
+		if cached and cached.maxSlots == maxSlots and cached.petCount == #profile.pets
+			and cached.equipped == profile.equippedPetUids and cached.equippedCount == #profile.equippedPetUids then
+			return cached.buff
+		end
 		local ownedByUid: { [string]: string } = {}
 		for _, inst in ipairs(profile.pets) do
 			ownedByUid[inst.uid] = inst.petId
@@ -284,7 +299,12 @@ function PetsService.Init()
 			end
 		end
 
-		return { sellAdd = sellAdd, strengthAdd = strAdd, luckAdd = luckAdd, mutationAdd = mutAdd }
+		local buff = { sellAdd = sellAdd, strengthAdd = strAdd, luckAdd = luckAdd, mutationAdd = mutAdd }
+		petBuffCache[profile] = {
+			maxSlots = maxSlots, petCount = #profile.pets,
+			equipped = profile.equippedPetUids, equippedCount = #profile.equippedPetUids, buff = buff,
+		}
+		return buff
 	end)
 
 	DataService.OnProfileLoaded(function(player: Player)
