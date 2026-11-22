@@ -75,5 +75,119 @@ return function(sources)
 		assert(source:find('GetPropertyChangedSignal("Scale")', 1, true))
 		assert(source:find('GetPropertyChangedSignal("AbsoluteSize")', 1, true))
 	end)
+	local function node(name)
+		return setmetatable({ Name = name, WaitForChild = function(self, key) return self[key] end }, {
+			__index = function(_, key) return node(key) end,
+		})
+	end
+	local handlers, instances, cache = {}, {}, {}
+	local names = setmetatable({}, { __index = function(_, key) return key end })
+	local function tuple(...) return { ... } end
+	local env = {
+		script = node("NotificationBadge"),
+		game = { GetService = function() return node("Service") end },
+		Color3 = { fromRGB = tuple, new = tuple }, Vector3 = { new = tuple },
+		Vector2 = { new = tuple }, UDim = { new = tuple }, UDim2 = { new = tuple, fromOffset = tuple },
+		Enum = setmetatable({}, { __index = function() return names end }),
+		Instance = { new = function(class)
+			local item = { ClassName = class }; table.insert(instances, item); return item
+		end },
+	}
+	cache.Net = { ServerToClient = names, OnClientEvent = function(event, callback) handlers[event] = callback end }
+	local function dependency(module)
+		local name = module.Name
+		if cache[name] then return cache[name] end
+		local path = "shared/Config/" .. name .. ".luau"
+		if name == "Types" or name == "Util" then path = "shared/" .. name .. ".luau" end
+		if name == "Islands" then path = "shared/Config/Islands/init.luau"
+		elseif name:match("^Island%d_") then path = "shared/Config/Islands/" .. name .. ".luau" end
+		local childEnv = table.clone(env)
+		childEnv.script = node(name)
+		childEnv.require = dependency
+		cache[name] = load(path, childEnv)
+		return cache[name]
+	end
+	env.require = dependency
+	local Badge = load("UI/Components/NotificationBadge.luau", env)
+	local gifts, quests = cache.GameConfig.PlaytimeGifts, cache.AchievementsConfig.DailyQuests
+	local rods, islands = cache.RodsConfig.NormalList, cache.Islands.List
+	test("badge_empty_and_malformed_event_boundaries", function()
+		assert(not Badge.Playtime(nil) and not Badge.Progress(nil, 10) and not Badge.Shop(nil) and not Badge.Islands(nil))
+		assert(not Badge.Playtime({}) and not Badge.Progress({}, 10) and not Badge.Shop({}) and not Badge.Islands({}))
+		Badge.Init(); Badge.Init()
+		handlers.StateSnapshot(false); handlers.CurrencyUpdated(false)
+	end)
+	test("playtime_exact_boundary_and_claimed", function()
+		for _, gift in ipairs(gifts) do
+			local claimed = {}
+			for _, other in ipairs(gifts) do claimed[tostring(other.slot)] = true end
+			claimed[tostring(gift.slot)] = nil
+			local state = { playtimeTodaySec = gift.reqSec - 1, playtimeClaimedToday = claimed }
+			assert(not Badge.Playtime(state))
+			state.playtimeTodaySec = gift.reqSec; assert(Badge.Playtime(state))
+			claimed[tostring(gift.slot)] = true; assert(not Badge.Playtime(state))
+		end
+	end)
+	test("progress_daily_quest_and_rebirth_boundaries", function()
+		assert(Badge.Progress({ canClaimDaily = true }, 10))
+		assert(not Badge.Progress({ canClaimDaily = false, lastDailyClaimDay = 9 }, 10))
+		assert(Badge.Progress({ lastDailyClaimDay = 9 }, 10))
+		assert(not Badge.Progress({ lastDailyClaimDay = 10 }, 10))
+		for _, q in ipairs(quests) do
+			local entry = { progress = q.target - 1, claimed = false }
+			local state = { dailyQuests = { [q.id] = entry }, questDay = 10 }
+			assert(not Badge.Progress(state, 10))
+			entry.progress = q.target; assert(Badge.Progress(state, 10))
+			state.questDay = 9; assert(not Badge.Progress(state, 10)); state.questDay = 10
+			entry.claimed = true; assert(not Badge.Progress(state, 10))
+		end
+		for rebirths = 0, 3 do
+			local req = cache.RebirthConfig.GetStrengthRequirement(rebirths)
+			assert(not Badge.Progress({ rebirths = rebirths, strength = req - 1 }, 10))
+			assert(Badge.Progress({ rebirths = rebirths, strength = req }, 10))
+		end
+	end)
+	test("next_island_affordability_and_all_unlocked", function()
+		local owned = { ["1"] = true }
+		for n = 2, #islands do
+			local state = { unlockedIslands = owned, gold = islands[n].unlockCostGold - 1 }
+			assert(not Badge.Islands(state)); state.gold += 1; assert(Badge.Islands(state))
+			owned[tostring(islands[n].id)] = true
+		end
+		assert(not Badge.Islands({ unlockedIslands = owned, gold = math.huge }))
+	end)
+	test("next_regular_rod_requires_both_gold_and_strength", function()
+		local owned = { [rods[1].id] = true }
+		for n = 2, #rods do
+			local rod = rods[n]
+			local state = { ownedRods = owned, gold = rod.priceGold, strength = rod.strengthReq - 1 }
+			assert(not Badge.Shop(state)); state.strength += 1; assert(Badge.Shop(state))
+			state.gold -= 1; assert(not Badge.Shop(state)); owned[rod.id] = true
+		end
+		assert(not Badge.Shop({ ownedRods = owned, gold = math.huge, strength = math.huge }))
+	end)
+	test("badge_attachment_and_visible_toggle_on_live_events", function()
+		local dot = Badge.Attach({ ZIndex = 5 })
+		assert(dot.ZIndex == 7 and not dot.Visible and dot.Size[1] == 10 and dot.Position[1] == 1)
+		Badge.Update(dot, "Gifts", { playtimeTodaySec = gifts[1].reqSec }, 10); assert(dot.Visible)
+		Badge.Update(dot, "Gifts", { playtimeTodaySec = gifts[1].reqSec, playtimeClaimedToday = { [tostring(gifts[1].slot)] = true } }, 10)
+		assert(not dot.Visible)
+		local buttons = { Gifts = {}, Progress = {}, Islands = {}, Shop = {} }
+		for key in pairs(buttons) do
+			local button = { ZIndex = 2 }; Badge.AttachToHud(button, key)
+			for _, item in ipairs(instances) do if item.Parent == button then buttons[key] = item end end
+		end
+		handlers.StateSnapshot({ profile = { gold = rods[2].priceGold, strength = rods[2].strengthReq, ownedRods = { [rods[1].id] = true } } })
+		assert(buttons.Shop.Visible)
+		handlers.InventoryUpdated({ ownedRods = { [rods[1].id] = true, [rods[2].id] = true } }); assert(not buttons.Shop.Visible)
+		handlers.PlaytimeUpdated({ playtimeTodaySec = gifts[1].reqSec }); assert(buttons.Gifts.Visible)
+		handlers.PlaytimeUpdated({ playtimeClaimedToday = { [tostring(gifts[1].slot)] = true } }); assert(not buttons.Gifts.Visible)
+		handlers.ProgressionUpdated({ canClaimDaily = true }); assert(buttons.Progress.Visible)
+		handlers.ProgressionUpdated({ canClaimDaily = false }); assert(not buttons.Progress.Visible)
+		handlers.IslandChanged({ unlockedIslands = { ["1"] = true } })
+		handlers.CurrencyUpdated({ gold = islands[2].unlockCostGold }); assert(buttons.Islands.Visible)
+		handlers.CurrencyUpdated({ gold = 0 }); assert(not buttons.Islands.Visible)
+		handlers.StateSnapshot({ profile = {} }); assert(not buttons.Shop.Visible and not buttons.Gifts.Visible)
+	end)
 	print(string.format("MOBILE_LAYOUT_BADGES_SUITE passed=%d failed=0", passed))
 end

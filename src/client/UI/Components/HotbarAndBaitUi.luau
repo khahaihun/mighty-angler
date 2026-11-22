@@ -21,9 +21,12 @@ export type HotbarCallbacks = {
 }
 
 local WindowFrame = require(script.Parent.WindowFrame)
+local NotificationBadge = require(script.Parent.NotificationBadge)
 
 local HotbarAndBaitUi = {}
 HotbarAndBaitUi.BindLayout = WindowFrame.BindLayout
+HotbarAndBaitUi.AttachBadge = NotificationBadge.AttachToHud
+HotbarAndBaitUi.InitBadges = NotificationBadge.Init
 
 local slotBtns: { [number]: TextButton } = {}
 local autoFishBtn: TextButton? = nil

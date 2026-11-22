@@ -97,6 +97,7 @@ local function syncHotbarStateFlags()
 end
 
 function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
+	HotbarAndBaitUi.InitBadges()
 	ProfileAccessBanner.Mount(rootGui, Theme)
 	local topBar = Instance.new("Frame")
 	topBar.Name = "TopCurrencyBar"
@@ -208,6 +209,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	for _, nb in ipairs(navButtons) do
 		local b = Theme.CreateButton(leftDock, nb.id, nb.label, UDim2.new(1, 0, 0, 42), UDim2.new(), nb.col, function() actions.OnTogglePanel(nb.key) end)
 		b.TextSize = nb.sz
+		HotbarAndBaitUi.AttachBadge(b, nb.key)
 	end
 
 	local gymBanner = Theme.CreateButton(rootGui, "GymActiveBanner", "🏋️ GYM — CLICK TO LIFT!", UDim2.fromOffset(380, 40), UDim2.new(0.5, -190, 1, -168), Theme.Colors.Strength, actions.OnManualGymTap)
