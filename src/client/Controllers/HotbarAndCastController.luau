@@ -25,6 +25,7 @@ local localPlayer = Players.LocalPlayer
 local isUiModalBlocking: (() -> boolean)? = nil
 
 local holdingCast = false
+local waitingForCooldown = false -- Dang giu chuot/ngon tay trong thoi gian cho quang tay; chua nap luc, chua gui gi len server.
 local activeCastInput: InputObject? = nil
 local holdStartClock = 0.0
 local holdPointerPos = Vector2.new()
@@ -95,14 +96,38 @@ local function spawnExclamationPopup(player: Player)
 	Debris:AddItem(bb, 0.95)
 end
 
+local function castBlocked(): boolean
+	return HotbarAndBaitUi.GetEquippedSlot() ~= 1
+		or FishingController.IsBusy()
+		or (isUiModalBlocking ~= nil and isUiModalBlocking())
+end
+
+-- Thoi gian giu do server do tu luc nhan FishingChargeStart, nen chi gui khi thanh luc tren client bat dau chay.
+local function beginCharge()
+	waitingForCooldown = false
+	holdingCast = true
+	holdStartClock = os.clock()
+	HotbarAndBaitUi.SetCastCharge(true, 0.05)
+	Net.FireServer(Net.ClientToServer.FishingChargeStart)
+end
+
 function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 	isUiModalBlocking = checkUiBlocked
 
 	RunService.RenderStepped:Connect(function()
+		if waitingForCooldown then
+			if castBlocked() or GymController.IsOnStation() then
+				waitingForCooldown = false
+				activeCastInput = nil
+			elseif FishingController.CanManualCast() then
+				beginCharge()
+			end
+			return
+		end
 		if not holdingCast then
 			return
 		end
-		if HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() or (isUiModalBlocking and isUiModalBlocking()) then
+		if castBlocked() then
 			holdingCast = false
 			activeCastInput = nil
 			HotbarAndBaitUi.SetCastCharge(false, 0)
@@ -125,38 +150,43 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 
 		local isTouch = (input.UserInputType == Enum.UserInputType.Touch)
 		local isMouse = (input.UserInputType == Enum.UserInputType.MouseButton1)
-		if (not isTouch and not isMouse) or holdingCast then
+		if (not isTouch and not isMouse) or holdingCast or waitingForCooldown then
 			return
 		end
-		if isUiModalBlocking and isUiModalBlocking() then
+		if GymController.IsOnStation() or castBlocked() then
 			return
-		end
-		if GymController.IsOnStation() or HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() then
-			return
-		end
-		if not FishingController.CanManualCast() then
-			return -- Server tu choi quang tay trong thoi gian cho; khong bat dau giu luc.
 		end
 
-		holdingCast = true
 		activeCastInput = input
 		holdIsTouch = isTouch
-		holdStartClock = os.clock()
 		holdPointerPos = if isTouch
 			then Vector2.new(input.Position.X, input.Position.Y)
 			else UserInputService:GetMouseLocation()
-		HotbarAndBaitUi.SetCastCharge(true, 0.05)
-		Net.FireServer(Net.ClientToServer.FishingChargeStart)
+		if FishingController.CanManualCast() then
+			beginCharge()
+		else
+			-- Bam trong thoi gian cho: nho cu bam, RenderStepped se bat dau nap luc khi het cho neu van con giu.
+			waitingForCooldown = true
+		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input: InputObject)
-		if holdingCast and holdIsTouch and input == activeCastInput then
+		if (holdingCast or waitingForCooldown) and holdIsTouch and input == activeCastInput then
 			holdPointerPos = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end)
 
 	UserInputService.InputEnded:Connect(function(input: InputObject, _gameProcessed: boolean)
-		if not holdingCast or input ~= activeCastInput then
+		if input ~= activeCastInput then
+			return
+		end
+		if waitingForCooldown then
+			-- Nha truoc khi het cho: bo cu bam, khong gui gi len server.
+			waitingForCooldown = false
+			activeCastInput = nil
+			return
+		end
+		if not holdingCast then
 			return
 		end
 

@@ -1,7 +1,34 @@
 # PROGRESS.md — Tiến độ & Bàn giao ca (Mighty Angler v2)
 
-- **Cập nhật lần cuối:** 2026-11-22 bởi Devin (Bước 6 của kế hoạch sửa sau review toàn dự án)
-- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** , **Bước 3: bảng xếp hạng top toàn cầu** , **Bước 4: một số phiên bản dữ liệu + CI chạy đủ runner** , **Bước 5: tối ưu mạng/CPU** và **Bước 6: biển bao quanh đảo, bầu trời, mây, tia nắng** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`. **104/104** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `ViewportCard.luau` 345; `PerkService` 343). **16/16** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **104/104** (SHA-256 `5A2BE79669710E9D0E368086C3C605F328E3BBC9977F65DDFEB4AEA566334575`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+- **Cập nhật lần cuối:** 2026-11-22 bởi Devin (sửa theo review + kiểm định Windows trên PR #5, sau Bước 6 của kế hoạch sửa sau review toàn dự án)
+- **Trạng thái hiện tại:** Trên nền Chặng 1 + 2A (`975ab86`), đã sửa **Bước 1: an toàn Gamepass và vòng tự lưu** **Bước 2: không còn hồ sơ trắng khi khoá đang bận** , **Bước 3: bảng xếp hạng top toàn cầu** , **Bước 4: một số phiên bản dữ liệu + CI chạy đủ runner** , **Bước 5: tối ưu mạng/CPU** và **Bước 6: biển bao quanh đảo, bầu trời, mây, tia nắng** ở các nhánh riêng nối tiếp nhau, tách từ `codex/studio-data-isolation`, cộng một nhánh **sửa theo review** ở đỉnh chuỗi. **109/109** file `.luau` trong `src/` đều `≤ 350` dòng (dài nhất `CurrencyService.luau` 350; `ViewportCard` 345; `PerkService` 343). **18/18** runner `tools/test_*.ps1` đạt `exit 0`; Luau LSP, Selene, Rojo build đạt; Source XML khớp **109/109** (SHA-256 `A2AACE4ACA168CA47408B6CA4018A0CB46C916079E4BA054BD1930F53C779460`). **Vẫn CHƯA duyệt phát hành; Play Solo (F5), 2 Client ping 200ms, 2 Server Staging, điện thoại thật và ID Gamepass/Group thật đang chờ Chủ dự án.**
+
+## Sửa theo review + kiểm định Windows trên PR #5 (Devin, 22/11/2026)
+
+Nguồn: comment của Chủ dự án trên PR #5 (review do Devin bản local chạy trên máy Chủ dự án). Làm bằng commit mới ở đỉnh chuỗi, không rebase, không đẩy thêm vào nhánh #1–#4.
+
+**Kết quả kiểm định Windows do bản local báo** (PowerShell 5.1, bộ công cụ ghim trong `tools/`, chạy `tools\verify_project.ps1` và mọi `tools\test_*.ps1` trên từng đỉnh PR). Bảng này chép từ comment đó; ca chạy trên VM Linux của Devin cho cùng số runner và cùng SHA-256 ở #5 và #6.
+
+| PR | Commit | verify | runner | Source XML |
+|---|---|---|---|---|
+| #1 | `47b6a5d` | PASS 6/6 | 16/16 exit 0 | 103/103 |
+| #2 | `d196b43` | PASS 6/6 | 16/16 exit 0 | 103/103 |
+| #3 | `9f850a4` | PASS 6/6 | 16/16 exit 0 | 104/104 |
+| #4 | `d52d9fa` | PASS 6/6 | 16/16 exit 0 | 104/104 |
+| #5 | `4d6487a` | PASS 6/6 | 17/17 exit 0 | 106/106, SHA-256 `8F870054…E89766` |
+| #6 | `b1e045b` | PASS 6/6 | 18/18 exit 0 | 109/109, SHA-256 `1419BF0A…74CB61` |
+
+Sau bảng trên, #6 có thêm commit `57c9c07` (sửa theo Devin Review) và nhánh này có các sửa dưới đây; **hai phần đó chưa chạy trên Windows**, mới chạy trên VM Linux.
+
+- [x] **Dòng "Trạng thái hiện tại" ghi sai số** (`104/104`, `16/16`): đã sửa thành `109/109` và `18/18`.
+- [x] **Quăng tay: cú bấm rơi vào 0,45 giây chờ không còn bị nuốt.** Trước đây `HotbarAndCastController` bỏ hẳn cú bấm/chạm đó, người chơi phải nhả ra bấm lại. Nay client nhớ cú bấm đang giữ; hết thời gian chờ mà vẫn còn giữ thì thanh lực tự bắt đầu chạy và lúc đó mới gửi `FishingChargeStart`, nên thời gian giữ do server đo vẫn khớp thanh lực. Nhả trước khi hết chờ thì bỏ, không gửi gì. Cú bấm đang chờ cũng bị bỏ nếu trong lúc đó mở bảng, đổi ô hotbar, lên máy tập hoặc đang có lượt câu. Server giữ nguyên chốt `FishingCastState.CanManualCast`.
+  - Test: `tests/manual_cast_hold.luau` (5 ca, mã thật của `HotbarAndCastController`, chạy trong `tools/test_fishing_wave.ps1`): bấm trong lúc chờ rồi giữ tiếp, bấm trong lúc chờ rồi nhả sớm, bấm sau khi hết chờ, cú bấm chờ bị huỷ khi không còn quăng được, ngón tay thứ hai không phá cú bấm đang chờ.
+  - Giấy tờ: thêm quy tắc `MANUAL_CAST_MIN_INTERVAL_SEC = 0,45` vào `PLAN.md` mục O3 và dòng O3 của `docs/SPEC_CODE_MATRIX.md`, ghi rõ **chờ Chủ dự án duyệt cảm giác trong Studio** (Chủ dự án chưa chốt quy tắc này).
+- [x] **Băng "Retrying" khi kho dữ liệu lỗi kéo dài.** Chờ quá `SESSION_LOCK_OUTAGE_NOTICE_SEC` (= `SESSION_LOCK_EXPIRE_SEC` 120 giây + 30 giây đệm = 150 giây) mà vẫn chưa nạp được hồ sơ thì khoá cũ chắc chắn đã hết hạn, nên băng đổi sang: "Roblox's data service is having trouble right now. Your saved progress is safe. / We keep retrying automatically — you can wait here or come back later." Server gửi `ProfileAccessChanged` **đúng một lần** khi chuyển giai đoạn (thêm cờ `outage`), không gửi lặp mỗi vòng thử. Nạp được hồ sơ thì cờ tự xoá.
+  - Test: thêm 1 ca vào `tests/session_lock_retry.luau` (7 ca) và mở rộng ca băng thử lại trong `tests/initial_state.luau`. Đã thử tắt cờ trên server: cả hai ca đều đỏ.
+- [x] **Chia làn với ca mỹ thuật:** đã trả lời trên PR #5. Chuỗi này không sửa các file thuộc làn mỹ thuật từ đây trở đi. **Bước 8** (pet hiếm bỏ Neon toàn thân, cảnh trí Đảo 1–2) nằm trọn trong làn mỹ thuật (`ModelBuilders/PetModelBuilder`, `IslandScenery1_2`) nên **tạm dừng**, đề nghị giao cho ca mỹ thuật. Còn lại: Bước 7 (giao diện điện thoại, chỉ đụng `src/client/**`), StyLua sau cùng.
+- [x] **Kiểm định (Linux, lệnh tương đương `verify_project.ps1`):** Luau LSP `exit 0`, Selene 0/0, Rojo build, 18/18 runner `exit 0`, 109 file `.luau` đều ≤ 350 dòng; 5 file cam kết đều < 310 (`HudPanel` 275, `ProgressPanel` 268, `PetsService` 285, `FishingService` 293, `BagPanel` 307).
+- [ ] **Chờ nghiệm thu Studio:** (1) cảm giác quăng tay liên tục: bấm giữ ngay sau khi kéo cá xong, thanh lực phải tự chạy sau khoảng nửa giây; trên điện thoại thử bằng chạm; (2) ngắt mạng DataStore trong Studio (hoặc tắt API Services) hơn 150 giây để xem băng đổi câu chữ.
 
 ## Bước 6 sau review — Biển bao quanh đảo, đáy biển, bầu trời, mây, tia nắng (Devin, 22/11/2026)
 

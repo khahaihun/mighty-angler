@@ -33,12 +33,13 @@ local function publishAccess(player: Player): (boolean, boolean, number)
 	local loading = not s or s.loading or s.profile == nil
 	if not s then return locked, loading, 0 end
 	local retrying = loading and s.lockWaiting
-	local state = if retrying then "Waiting" elseif loading then "Loading" elseif locked then "ReadOnly" else "Ready"
+	local outage = retrying and s.lockWaitLong
+	local state = if outage then "Outage" elseif retrying then "Waiting" elseif loading then "Loading" elseif locked then "ReadOnly" else "Ready"
 	if s.accessState ~= state then
 		s.accessVersion += 1
 		if player:IsDescendantOf(Players) then
 			Net.FireClient(player, Net.ServerToClient.ProfileAccessChanged, {
-				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion, retrying = retrying,
+				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion, retrying = retrying, outage = outage,
 			})
 		end
 		s.accessState = state -- Chi cache sau khi gui thanh cong, de scheduler thu lai neu loi.
@@ -82,7 +83,7 @@ local function acquireSessionAndLoad(player: Player)
 	local loadedData: any = nil
 	local confirmedLock, lockFailed, confirmedAt = false, true, 0
 	local profile: Types.PlayerProfile, quarantineReason: string? = nil :: any, nil
-	local round = 0
+	local round, waitingSince = 0, nil :: number?
 	while true do
 		round += 1
 		loadedData, confirmedLock, lockFailed, confirmedAt = nil, false, true, 0
@@ -112,14 +113,17 @@ local function acquireSessionAndLoad(player: Player)
 		if not lockFailed or quarantineReason ~= nil then break end
 		-- Khoa dang ban hoac kho loi: KHONG dua ho so trang cho nguoi choi; cho roi tu thu lai.
 		-- loading=false trong luc cho de nguoi choi roi di duoc dong phien ngay, khong phai doi het vong cho.
+		local firstWait = waitingSince or os.clock()
+		waitingSince = firstWait
 		s.loading, s.lockWaiting = false, true
+		s.lockWaitLong = os.clock() - firstWait >= GameConfig.SESSION_LOCK_OUTAGE_NOTICE_SEC
 		publishAccess(player)
 		task.wait(if round <= GameConfig.SESSION_LOCK_FAST_RETRIES then GameConfig.SESSION_LOCK_RETRY_SEC else GameConfig.SESSION_LOCK_RETRY_SLOW_SEC)
 		if not player:IsDescendantOf(Players) or s.closing or s.closed then return end
 	end
 	profile.activeSessionId = if lockFailed then nil else myToken
 	profile.lockTimestamp = confirmedAt
-	s.profile, s.confirmedAt, s.readOnly, s.loading, s.lockWaiting = profile, confirmedAt, lockFailed, false, false
+	s.profile, s.confirmedAt, s.readOnly, s.loading, s.lockWaiting, s.lockWaitLong = profile, confirmedAt, lockFailed, false, false, false
 	if lockFailed then
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error", text = "Your save could not be read safely. Safe Read-Only Mode is active to protect it.",
