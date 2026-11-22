@@ -26,6 +26,37 @@ local cachedSounds: { [string]: Sound } = {}
 local ambientSound: Sound? = nil
 local mutedFlag = false
 local lowGfxFlag = false
+local rayOriginals: { [SunRaysEffect]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local cloudOriginals: { [Clouds]: { density: number, cover: number, enabled: boolean } } = setmetatable({}, { __mode = "k" }) :: any
+
+local function applyAtmosphereBudget(lowGfx: boolean)
+	for _, effect in ipairs(Lighting:GetDescendants()) do
+		if effect:IsA("SunRaysEffect") then
+			if lowGfx then
+				if rayOriginals[effect] == nil then rayOriginals[effect] = effect.Enabled end
+				effect.Enabled = false
+			elseif rayOriginals[effect] ~= nil then
+				effect.Enabled = rayOriginals[effect]
+				rayOriginals[effect] = nil
+			end
+		end
+	end
+	local clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds")
+	if clouds then
+		local original = cloudOriginals[clouds]
+		if lowGfx then
+			if not original then
+				original = { density = clouds.Density, cover = clouds.Cover, enabled = clouds.Enabled }
+				cloudOriginals[clouds] = original
+			end
+			clouds.Density = original.density * 0.25
+			clouds.Cover = original.cover * 0.5
+		elseif original then
+			clouds.Density, clouds.Cover, clouds.Enabled = original.density, original.cover, original.enabled
+			cloudOriginals[clouds] = nil
+		end
+	end
+end
 
 local function applyClientParticleBudget()
 	ParticleBudgetController.Update(lowGfxFlag)
@@ -42,14 +73,7 @@ function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)
 	if bloom and bloom:IsA("PostEffect") then
 		bloom.Enabled = not lowGfx
 	end
-	local rays = Lighting:FindFirstChildOfClass("SunRaysEffect")
-	if rays then
-		rays.Enabled = not lowGfx
-	end
-	local clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds")
-	if clouds then
-		clouds.Enabled = not lowGfx
-	end
+	applyAtmosphereBudget(lowGfx)
 	applyClientParticleBudget()
 end
 
@@ -221,6 +245,7 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 		while true do
 			task.wait(2.0)
 			applyClientParticleBudget()
+			if lowGfxFlag then applyAtmosphereBudget(true) end
 		end
 	end)
 end

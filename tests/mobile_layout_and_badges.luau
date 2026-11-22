@@ -189,5 +189,75 @@ return function(sources)
 		handlers.CurrencyUpdated({ gold = 0 }); assert(not buttons.Islands.Visible)
 		handlers.StateSnapshot({ profile = {} }); assert(not buttons.Shop.Visible and not buttons.Gifts.Visible)
 	end)
+	local rays = {
+		{ Enabled = true, IsA = function(_, class) return class == "SunRaysEffect" end },
+		{ Enabled = false, IsA = function(_, class) return class == "SunRaysEffect" end },
+		{ Enabled = true, IsA = function() return false end },
+	}
+	local clouds = { Density = 0.8, Cover = 0.6, Enabled = true }
+	local lighting = { GetDescendants = function() return rays end, FindFirstChild = function() return nil end }
+	local terrain = { FindFirstChildOfClass = function() return clouds end }
+	local particleUpdates = 0
+	local fx = load("Controllers/SoundAndFxController.luau", {
+		script = node("SoundAndFxController"),
+		game = { GetService = function(_, name)
+			if name == "Lighting" then return lighting end
+			if name == "Workspace" then return { Terrain = terrain } end
+			return node(name)
+		end },
+		require = function(module)
+			if module.Name == "ParticleBudgetController" then return { Update = function() particleUpdates += 1 end } end
+			return {}
+		end,
+	})
+	test("low_gfx_all_sunrays_and_clouds_restore_originals", function()
+		fx.SetClientPrefs(false, false)
+		assert(rays[1].Enabled and not rays[2].Enabled and clouds.Density == 0.8)
+		fx.SetClientPrefs(false, true)
+		assert(fx.IsLowGfx() and not rays[1].Enabled and not rays[2].Enabled and rays[3].Enabled)
+		assert(clouds.Enabled and clouds.Density == 0.2 and clouds.Cover == 0.3)
+		fx.SetClientPrefs(true, true)
+		assert(clouds.Density == 0.2 and clouds.Cover == 0.3, "repeated ON must not compound reduction")
+		fx.SetClientPrefs(false, false)
+		assert(not fx.IsLowGfx() and lighting.GlobalShadows and rays[1].Enabled and not rays[2].Enabled)
+		assert(clouds.Density == 0.8 and clouds.Cover == 0.6 and clouds.Enabled)
+		clouds.Density, clouds.Cover, clouds.Enabled = 0.4, 0.2, false
+		fx.SetClientPrefs(false, true); fx.SetClientPrefs(false, false)
+		assert(clouds.Density == 0.4 and clouds.Cover == 0.2 and not clouds.Enabled, "next cycle must capture fresh originals")
+		assert(particleUpdates == 6)
+	end)
+	test("low_gfx_empty_lighting_and_missing_clouds", function()
+		table.clear(rays); clouds = nil
+		fx.SetClientPrefs(false, true); fx.SetClientPrefs(false, false)
+		assert(not fx.IsLowGfx())
+	end)
+	local pets = load("Controllers/ClientPetRenderer.luau", {
+		script = node("ClientPetRenderer"),
+		game = { GetService = function() return node("Service") end },
+		require = function() return {} end,
+		Vector3 = { new = tuple },
+	})
+	test("pet_distance_and_time_policy_local_near_far_on_off", function()
+		for _, low in ipairs({ false, true }) do
+			for _, distance in ipairs({ 0, 60, 90, 160, 1000 }) do
+				local visible, interval = pets.RenderPolicy(true, low, distance)
+				assert(visible and interval == 0, "local pets must stay unaffected")
+			end
+		end
+		local visible, interval = pets.RenderPolicy(false, true, 60)
+		assert(visible and interval == 1 / 30)
+		visible, interval = pets.RenderPolicy(false, true, 90)
+		assert(visible and interval == 0.2)
+		assert(not pets.RenderPolicy(false, true, 90.01))
+		visible, interval = pets.RenderPolicy(false, false, 90.01)
+		assert(visible and interval == 1 / 15, "OFF restores normal range and cadence")
+		visible, interval = pets.RenderPolicy(false, false, 85)
+		assert(visible and interval == 0)
+		assert(pets.RenderPolicy(false, false, 160) and not pets.RenderPolicy(false, false, 160.01))
+		assert(pets.ShouldUpdate(1, nil, 0.2))
+		assert(not pets.ShouldUpdate(1.1, 1, 0.2))
+		assert(pets.ShouldUpdate(1.25, 1, 0.2))
+		assert(pets.ShouldUpdate(1, 1, 0))
+	end)
 	print(string.format("MOBILE_LAYOUT_BADGES_SUITE passed=%d failed=0", passed))
 end
