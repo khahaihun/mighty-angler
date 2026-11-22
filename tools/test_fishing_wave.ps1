@@ -6,6 +6,7 @@ $paths = @{
  FishingController='src/client/Controllers/FishingController.luau'
  FishingCastState='src/server/Services/FishingCastState.luau'
  FishingSessionManager='src/server/Services/FishingSessionManager.luau'
+ RemoteRateLimiter='src/server/Services/RemoteRateLimiter.luau'
  FishingRayFilter='src/shared/FishingRayFilter.luau'
  FishingRoller='src/server/Services/FishingRoller.luau'
  GridWindow='src/client/UI/Components/GridWindow.luau'

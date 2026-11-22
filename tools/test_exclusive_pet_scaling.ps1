@@ -24,6 +24,7 @@ $modules = [ordered]@{
 	OddsCalculator = 'src/shared/OddsCalculator.luau'
 	BuffAggregator = 'src/server/Services/BuffAggregator.luau'
 	PetBuffs = 'src/server/Services/PetBuffs.luau'
+	RemoteRateLimiter = 'src/server/Services/RemoteRateLimiter.luau'
 	PetsService = 'src/server/Services/PetsService.luau'
 }
 $suiteSrc = [IO.File]::ReadAllText((Join-Path $root 'tests/exclusive_pet_scaling.luau'))
@@ -46,8 +47,11 @@ local function require(t) return loaded[t._key] end
 local currentProfile = {}
 local handlers = {}
 local playerObj = { DisplayName = "Tester", SetAttribute = function() end }
+local signal = { Connect = function() end }
+local players = { PlayerAdded = signal, PlayerRemoving = signal, GetPlayers = function() return { playerObj } end }
+playerObj.Parent = players
 loaded["Net"] = {
-	ClientToServer = { HatchEgg = "HatchEgg", EquipPet = "EquipPet", UnequipPet = "UnequipPet", EquipBestPets = "EquipBestPets", DeletePet = "DeletePet" },
+	ClientToServer = setmetatable({}, { __index = function(_, key) return key end }),
 	ServerToClient = { PetsUpdated = "PetsUpdated", EggHatched = "EggHatched", Toast = "Toast" },
 	OnServerEvent = function(k, fn) handlers[k] = fn end,
 	FireClient = function() end,
@@ -85,6 +89,7 @@ local SharedNode = {
 local game = {
 	GetService = function(_, s)
 		if s == "ReplicatedStorage" then return { WaitForChild = function() return SharedNode end } end
+		if s == "Players" then return players end
 		return {}
 	end,
 }
@@ -118,6 +123,7 @@ local function makeScriptCtx(key)
 				PerkService = tok("PerkService"),
 				BuffAggregator = tok("BuffAggregator"), PetBuffs = tok("PetBuffs"),
 				CurrencyService = tok("CurrencyService"),
+				RemoteRateLimiter = tok("RemoteRateLimiter"),
 			},
 		}
 	else

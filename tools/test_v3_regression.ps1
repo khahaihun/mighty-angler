@@ -13,6 +13,7 @@ $modulePaths = @{
  EnchantAndBountyService='src/server/Services/EnchantAndBountyService.luau'
  FishingRoller='src/server/Services/FishingRoller.luau'; FishingService='src/server/Services/FishingService.luau'
  ProgressionService='src/server/Services/ProgressionService.luau'
+ RemoteRateLimiter='src/server/Services/RemoteRateLimiter.luau'
 }
 $runner=[Text.StringBuilder]::new()
 [void]$runner.AppendLine('local sources = {}')

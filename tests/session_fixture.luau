@@ -74,9 +74,14 @@ function Fixture.server(sources, backend, job, placeId, options)
 		error("thread did not finish within bounded steps")
 	end
 	local function signal()
-		local callback
-		return { Connect = function(_, fn) callback = fn end,
-			Fire = function(_, ...) assert(callback); return spawn(callback, ...) end }
+		local callbacks = {}
+		return { Connect = function(_, fn) table.insert(callbacks, fn) end,
+			Fire = function(_, ...)
+				local callback = callbacks[1]
+				assert(callback)
+				for index = 2, #callbacks do spawn(callbacks[index], ...) end
+				return spawn(callback, ...)
+			end }
 	end
 	local players = { PlayerAdded = signal(), PlayerRemoving = signal() }
 	function players:GetPlayers()
@@ -208,7 +213,7 @@ function Fixture.server(sources, backend, job, placeId, options)
 	f.data.Init() -- actual signals and load/save paths; periodic thread remains suspended
 	f.periodic = f.lastSpawn
 	function f.add(userId)
-		local player = { UserId = userId, DisplayName = job }
+		local player = { UserId = userId, DisplayName = job, Parent = players }
 		function player:IsDescendantOf(service) return service == players and active[self] == true end
 		function player:FindFirstChild() return nil end
 		active[player] = true
@@ -216,6 +221,7 @@ function Fixture.server(sources, backend, job, placeId, options)
 	end
 	function f.remove(player)
 		active[player] = nil
+		player.Parent = nil
 		return players.PlayerRemoving:Fire(player)
 	end
 	f.spawn = spawn

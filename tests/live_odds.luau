@@ -18,7 +18,11 @@ local function instanceNew(class)
 	local obj = { ClassName = class, Destroy = function(self) self.Parent = nil end }
 	table.insert(created, obj); return obj
 end
-local net = { OnServerEvent = function(key, callback) handlers[key.Name] = callback end, FireClient = function() end, FireServer = function() promptCalls += 1 end, ServerToClient = node("S2C"), ClientToServer = node("C2S") }
+local equipPlayer = { SetAttribute = function() end }
+local players = node("Players")
+function players:GetPlayers() return { equipPlayer } end
+equipPlayer.Parent = players
+local net = { OnServerEvent = function(key, callback) handlers[key] = callback end, FireClient = function() end, FireServer = function() promptCalls += 1 end, ServerToClient = node("S2C"), ClientToServer = setmetatable({}, { __index = function(_, key) return key end }) }
 local extraPets = false
 local cache = {
 	DataService = { Get = function() return profile end, OnProfileLoaded = function() end, MarkDirty = function() end },
@@ -35,10 +39,10 @@ loadModule = function(ref)
 	local environment = setmetatable({
 		script = node(name), require = loadModule, math = testMath,
 		Instance = { new = instanceNew }, UDim2 = { fromScale = function() return {} end, fromOffset = function() return {} end, new = function() return {} end }, Enum = node("Enum"),
-		game = { GetService = function(_, service) return node(service) end },
+		game = { GetService = function(_, service) return if service == "Players" then players else node(service) end },
 		Color3 = { fromRGB = function() return {} end, new = function() return {} end },
 		Vector3 = { new = function() return {} end }, Vector2 = { new = function() return {} end },
-		os = { time = function() return 10000 end },
+		os = { time = function() return 10000 end, clock = function() return 10000 end },
 	}, { __index = getfenv() })
 	setfenv(chunk, environment)
 	local module = chunk(); cache[name] = module; return module
@@ -131,7 +135,6 @@ print("PASS live odds: " .. tests .. " server/provider buckets, excluded species
 
 profile = { pets = {}, equippedPetUids = {} }
 for idx = 1, 5 do table.insert(profile.pets, { uid = tostring(idx), petId = pets.Eggs[1].pets[1].id }) end
-local equipPlayer = { SetAttribute = function() end }
 for idx = 1, 3 do handlers.EquipPet(equipPlayer, tostring(idx)) end
 assert(#profile.equippedPetUids == 2 and profile.equippedPetUids[1] == "1" and profile.equippedPetUids[2] == "2", "third pet must not replace existing two")
 extraPets = true
