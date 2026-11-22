@@ -26,6 +26,7 @@ local cachedSounds: { [string]: Sound } = {}
 local ambientSound: Sound? = nil
 local mutedFlag = false
 local lowGfxFlag = false
+local activeToasts: { Frame } = {}
 local rayOriginals: { [SunRaysEffect]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local cloudOriginals: { [Clouds]: { density: number, cover: number, enabled: boolean } } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -120,10 +121,12 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	local stack = toastStackFrame
 	if not stack then return end
 
-	local items = stack:GetChildren()
-	local count = 0
-	for _, child in ipairs(items) do
-		if child:IsA("Frame") then count += 1; if count >= 3 then child:Destroy() end end
+	for i = #activeToasts, 1, -1 do
+		if not activeToasts[i].Parent then table.remove(activeToasts, i) end
+	end
+	while #activeToasts >= 3 do
+		local oldest = table.remove(activeToasts, 1)
+		if oldest then oldest:Destroy() end
 	end
 
 	local accent = Theme.Colors.Primary
@@ -137,6 +140,7 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	item.BackgroundColor3 = Theme.Colors.PanelBg
 	item.BackgroundTransparency = 0.08
 	item.Parent = stack
+	table.insert(activeToasts, item)
 	Theme.AddCorner(item, 10)
 	Theme.AddStroke(item, accent, 2.2)
 
