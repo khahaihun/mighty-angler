@@ -9,6 +9,8 @@ local function runSuite(mods: {
 	RodAndWeightBuilder: any,
 	ManualIslandAdapter: any,
 	NpcBuilder: any,
+	IslandScenery1_2: any,
+	runTerrainDraft: () -> (),
 }, env: any)
 	local passed = 0
 	local function check(name: string, cond: boolean, detail: string?)
@@ -177,6 +179,122 @@ local function runSuite(mods: {
 	local sArm = spawnedMerchant:FindFirstChild("LeftUpperArm")
 	check("npc_root_only_anchoring", sHrp.Anchored == true and sArm.Anchored == false, "NPC limbs must remain unanchored")
 	check("npc_uses_manual_marker_pos", spawnedMerchant:GetPivot().Position.X == 12 and spawnedMerchant:GetPivot().Position.Z == 34)
+
+	-- 7. PetModelBuilder: Pet hiem / Exclusive KHONG phu Neon toan than, chi gan Neon o chi tiet nho
+	local rarePets = {
+		{ id = "test_leg_dragon", name = "Sun Dragon", rarity = "Legendary", archetype = "Dragon", primaryColor = Color3.fromRGB(255, 180, 60), secondaryColor = Color3.fromRGB(110, 220, 255) },
+		{ id = "test_myth_star", name = "Star Sprite", rarity = "Mythic", archetype = "Star", primaryColor = Color3.fromRGB(180, 90, 255), secondaryColor = Color3.fromRGB(255, 224, 92) },
+		{ id = "test_excl_seraph", name = "Sovereign Seraph", rarity = "Mythic", archetype = "Bird", isExclusive = true, primaryColor = Color3.fromRGB(92, 200, 255), secondaryColor = Color3.fromRGB(255, 214, 72) },
+	}
+	local allowedNeonNames = {
+		EyeSparkle = true, ClawTipGlow = true, CrestGem = true, HornTipGlow = true,
+		WingTipGlow = true, StarHalo = true, FinTipGlow = true, SpiritOrb = true,
+		ExclusiveHalo = true, CrownGem = true,
+	}
+	for _, pDef in ipairs(rarePets) do
+		local petModel = mods.PetModelBuilder.BuildPet(pDef, false, false)
+		check("pet_body_not_neon_" .. pDef.id, petModel.PrimaryPart ~= nil and petModel.PrimaryPart.Material == Enum.Material.SmoothPlastic, "Body must stay SmoothPlastic")
+		local neonCount = 0
+		local badNeon = nil
+		for _, d in ipairs(petModel:GetDescendants()) do
+			if d:IsA("BasePart") and d.Material == Enum.Material.Neon then
+				neonCount += 1
+				if not allowedNeonNames[d.Name] then
+					badNeon = d.Name
+				end
+			end
+		end
+		check("pet_neon_accent_only_" .. pDef.id, neonCount > 0 and badNeon == nil, "unexpected neon part: " .. tostring(badNeon))
+	end
+
+	-- 8. IslandScenery1_2: Canh tri giau suc song & bo doi xung guong o Dao 1 va Dao 2
+	local sunnyFolder = env.makeInstance("Folder", "ScenerySunny")
+	mods.IslandScenery1_2.Populate(sunnyFolder, {
+		id = 1,
+		centerPosition = Vector3.new(0, 10, 0),
+		theme = { sceneryStyle = "Sunny", cliffColor = Color3.fromRGB(148, 122, 98) },
+	})
+	check("scenery_sunny_has_bushes", sunnyFolder:FindFirstChild("TropicalBush") ~= nil)
+	check("scenery_sunny_has_rowboat", sunnyFolder:FindFirstChild("BeachedRowboat") ~= nil)
+	local umbrellaPositions = {}
+	for _, ch in ipairs(sunnyFolder:GetChildren()) do
+		if ch.Name == "BeachUmbrella" then
+			local pole = ch:FindFirstChild("Pole")
+			if pole then table.insert(umbrellaPositions, pole.CFrame.Position) end
+		end
+	end
+	check("scenery_sunny_umbrellas_not_mirror", #umbrellaPositions == 2 and math.abs(umbrellaPositions[1].Z - umbrellaPositions[2].Z) > 1.0)
+
+	local coralFolder = env.makeInstance("Folder", "SceneryCoral")
+	mods.IslandScenery1_2.Populate(coralFolder, {
+		id = 2,
+		centerPosition = Vector3.new(0, 10, 0),
+		theme = { sceneryStyle = "Coral", cliffColor = Color3.fromRGB(100, 110, 130) },
+	})
+	check("scenery_coral_has_anemone", coralFolder:FindFirstChild("SeaAnemone") ~= nil)
+	check("scenery_coral_has_kelp", coralFolder:FindFirstChild("KelpCluster") ~= nil)
+	local coralMirrorFound = false
+	local coralCoords = {}
+	for _, ch in ipairs(coralFolder:GetChildren()) do
+		if ch.Name == "CoralFormation" then
+			local bubble = ch:FindFirstChild("BubbleSource")
+			if bubble then table.insert(coralCoords, bubble.CFrame.Position) end
+		end
+	end
+	for i = 1, #coralCoords do
+		for j = i + 1, #coralCoords do
+			if math.abs(coralCoords[i].X + coralCoords[j].X) < 1 and math.abs(coralCoords[i].Z - coralCoords[j].Z) < 1 then
+				coralMirrorFound = true
+			end
+		end
+	end
+	check("scenery_coral_not_mirror", #coralCoords >= 5 and not coralMirrorFound)
+
+	-- 9. Terrain Draft Dao 1: Khop tuyet doi hop bien [-132..132, -100..196] Y=9.7 (0 ho vanh) + OceanHole + OceanBounds
+	mods.runTerrainDraft()
+	local hasFullWater = false
+	local hasFullSand = false
+	local airCutSafe = true
+	for _, op in ipairs(env.terrainOps) do
+		if op.kind == "Block" then
+			local p, sz = op.cf.Position, op.size
+			local x0, x1 = p.X - sz.X * 0.5, p.X + sz.X * 0.5
+			local y0, y1 = p.Y - sz.Y * 0.5, p.Y + sz.Y * 0.5
+			local z0, z1 = p.Z - sz.Z * 0.5, p.Z + sz.Z * 0.5
+			if op.mat == Enum.Material.Water and x0 <= -132 and x1 >= 132 and z0 <= -100 and z1 >= 196 then
+				if math.abs(y1 - 9.7) < 1e-4 and math.abs(y0 - 0.0) < 1e-4 then
+					hasFullWater = true
+				end
+			elseif op.mat == Enum.Material.Sand and x0 <= -132 and x1 >= 132 and z0 <= -100 and z1 >= 196 and y1 >= 0 then
+				hasFullSand = true
+			elseif op.mat == Enum.Material.Air and sz.X < 200 then
+				if y0 < 9.7 then
+					airCutSafe = false
+				end
+			end
+		end
+	end
+	check("draft_water_fills_full_manual_box_at_9_7", hasFullWater, "Water FillBlock must cover [-132..132, -100..196] up to Y=9.7")
+	check("draft_sand_seabed_fills_full_manual_box", hasFullSand, "Sand seabed must cover [-132..132, -100..196]")
+	check("draft_plaza_air_cut_above_water", airCutSafe, "Plaza Air cut must not carve below Y=9.7")
+
+	local draftIsland = mods.ManualIslandAdapter.FindManualIsland(1)
+	check("draft_creates_manual_island_1", draftIsland ~= nil)
+	local requiredMarkers = {
+		"OceanHole", "Spawn", "Dock", "FishingWater", "SellMarket", "RodShop",
+		"NpcMerchant", "NpcShop", "NpcCollector", "NpcCoach",
+		"Gym_1", "Gym_2", "Gym_3", "EggGold", "EggGem", "EnchantAltar", "PortalNext",
+	}
+	for _, mName in ipairs(requiredMarkers) do
+		local mp = mods.ManualIslandAdapter.GetMarkerPart(draftIsland, mName)
+		check("draft_marker_" .. mName, mp ~= nil, "missing marker " .. mName)
+	end
+	local holePart = mods.ManualIslandAdapter.GetMarkerPart(draftIsland, "OceanHole")
+	check("draft_ocean_hole_matches_box", holePart ~= nil and holePart.Size.X == 264 and holePart.Size.Z == 296 and holePart.CFrame.Position.X == 0 and holePart.CFrame.Position.Z == 48)
+	local fwMarker = mods.ManualIslandAdapter.GetMarkerPart(draftIsland, "FishingWater")
+	local fwTopY = if fwMarker then (fwMarker.CFrame.Position.Y + fwMarker.Size.Y * 0.5) else 0
+	check("draft_fishing_water_top_is_9_7", math.abs(fwTopY - 9.7) < 1e-4, "got " .. tostring(fwTopY))
+	check("draft_has_manual_ocean_bounds", mods.ManualIslandAdapter.HasManualOceanBounds(draftIsland) == true)
 
 	print(string.format("ART_PIPELINE_SUITE passed=%d failed=0", passed))
 end
