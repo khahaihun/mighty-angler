@@ -124,7 +124,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	subHint.Size = UDim2.fromOffset(780, 18)
 	subHint.BackgroundTransparency = 1
 	subHint.Font = Theme.FontBody
-	subHint.TextSize = 12
+	Theme.FitText(subHint, 14, 12)
 	subHint.TextColor3 = Theme.Colors.TextMuted
 	subHint.Text = ""
 	subHint.Parent = rootGui
@@ -138,7 +138,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	oddsHint.Size = UDim2.fromOffset(820, 18)
 	oddsHint.BackgroundTransparency = 1
 	oddsHint.Font = Theme.FontBody
-	oddsHint.TextSize = 11
+	Theme.FitText(oddsHint, 13, 11)
 	oddsHint.TextColor3 = Color3.fromRGB(132, 238, 255)
 	oddsHint.Text = ""
 	oddsHint.Parent = rootGui

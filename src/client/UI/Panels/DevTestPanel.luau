@@ -81,7 +81,7 @@ function DevTestPanel.Mount(rootGui: ScreenGui)
 	status.Size = UDim2.new(1, -16, 0, 54)
 	status.BackgroundTransparency = 1
 	status.Font = Theme.FontBody
-	status.TextSize = 12
+	Theme.FitText(status, 13, 12)
 	status.TextWrapped = true
 	status.TextColor3 = Theme.Colors.Warning
 	status.Text = "Reset RAM: —\nPersistent: —"

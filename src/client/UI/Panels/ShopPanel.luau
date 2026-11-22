@@ -60,7 +60,7 @@ local function setDetailHeader(titleTxt: string, subTxt: string, col: Color3, bt
 	detailSub.Text = subTxt
 	local margin = if btnTxt then -152 else -20
 	detailTitle.Size = UDim2.new(1, margin, 0, 22)
-	detailSub.Size = UDim2.new(1, margin, 0, 38)
+	detailSub.Size = UDim2.new(1, margin, 0, 46)
 	detailBtnHandler = onBtn
 	if btnTxt then
 		detailActionBtn.Visible = true
@@ -196,7 +196,7 @@ function ShopPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	win = built
 
 	local box = Instance.new("Frame")
-	box.Size = UDim2.new(1, 0, 0, 72)
+	box.Size = UDim2.new(1, 0, 0, 80)
 	box.BackgroundColor3 = Theme.Colors.CardOwned
 	box.LayoutOrder = 1
 	box.ZIndex = 22
@@ -219,10 +219,10 @@ function ShopPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 
 	local ds = Instance.new("TextLabel")
 	ds.Position = UDim2.fromOffset(10, 27)
-	ds.Size = UDim2.new(1, -20, 0, 40)
+	ds.Size = UDim2.new(1, -20, 0, 46)
 	ds.BackgroundTransparency = 1
 	ds.Font = Theme.FontBody
-	ds.TextSize = 11
+	Theme.FitText(ds, 13, 11)
 	ds.TextWrapped = true
 	ds.TextXAlignment = Enum.TextXAlignment.Left
 	ds.TextColor3 = Theme.Colors.TextPrimary

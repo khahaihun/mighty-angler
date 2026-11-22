@@ -90,7 +90,7 @@ local function makeSimpleRow(body: ScrollingFrame, order: number, titleText: str
 	s.Position = UDim2.fromOffset(12, 30)
 	s.BackgroundTransparency = 1
 	s.Font = Theme.FontBody
-	s.TextSize = 12
+	if autoHeight then s.TextSize = 13 else Theme.FitText(s, 13, 12) end
 	s.TextWrapped = true
 	s.TextXAlignment = Enum.TextXAlignment.Left
 	s.TextColor3 = Theme.Colors.TextMuted

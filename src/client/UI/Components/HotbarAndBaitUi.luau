@@ -120,7 +120,7 @@ local function rebuildBaitPopup()
 			local btn = Theme.CreateButton(pop, "Bait_" .. bDef.id, string.format("🪱 %s (x%d) +%d%% Luck", bDef.name, cnt, math.floor(bDef.luckBonus * 100)), UDim2.new(1, -12, 0, 32), UDim2.new(), if curActiveBait == bDef.id then Theme.Colors.Success else Theme.Colors.Primary, function()
 				pop.Visible = false; Net.FireServer(Net.ClientToServer.SelectBait, bDef.id)
 			end)
-			btn.TextSize = 12; btn.LayoutOrder = idx
+			Theme.FitText(btn, 13, 12); btn.LayoutOrder = idx
 		end
 	end
 	pop.Size = UDim2.fromOffset(224, rows * 38 + 12)
@@ -223,7 +223,7 @@ function HotbarAndBaitUi.Mount(rootGui: ScreenGui, callbacks: HotbarCallbacks)
 		local sBtn = Theme.CreateButton(hotbar, "Slot_" .. tostring(slot), "[" .. tostring(slot) .. "]", UDim2.fromOffset(90, 62), UDim2.new(), Theme.Colors.PanelBg, function()
 			Net.FireServer(Net.ClientToServer.SelectHotbarSlot, slot)
 		end)
-		sBtn.TextSize = 12
+		Theme.FitText(sBtn, 13, 12)
 		sBtn.TextWrapped = true
 		slotBtns[slot] = sBtn
 	end

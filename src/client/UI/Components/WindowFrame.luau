@@ -33,6 +33,7 @@ function WindowFrame.Create(
 	root.ZIndex = 20
 	root.Parent = parentGui
 	Theme.AddCorner(root, 16)
+	Theme.AddGradient(root)
 	Theme.AddStroke(root, accentColor, 3)
 
 	local header = Instance.new("Frame")
@@ -43,6 +44,7 @@ function WindowFrame.Create(
 	header.ZIndex = 21
 	header.Parent = root
 	Theme.AddCorner(header, 12)
+	Theme.AddGradient(header)
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"

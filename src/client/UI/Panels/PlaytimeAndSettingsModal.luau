@@ -32,7 +32,7 @@ end
 
 local function makeCard(body: ScrollingFrame, order: number, title: string, sub: string, col: Color3, bg: Color3): Frame
 	local card = Instance.new("Frame")
-	card.Size = UDim2.new(1, 0, 0, 58)
+	card.Size = UDim2.new(1, 0, 0, 68)
 	card.BackgroundColor3 = bg
 	card.LayoutOrder = order
 	card.ZIndex = 22
@@ -54,11 +54,12 @@ local function makeCard(body: ScrollingFrame, order: number, title: string, sub:
 	Theme.AddTextStroke(t, 1.4)
 
 	local s = Instance.new("TextLabel")
-	s.Size = UDim2.new(0.68, 0, 0, 20)
-	s.Position = UDim2.fromOffset(12, 31)
+	s.Size = UDim2.new(1, -168, 0, 34) -- Chua cho nut 128 ben phai; du 2 dong co 13.
+	s.Position = UDim2.fromOffset(12, 30)
 	s.BackgroundTransparency = 1
 	s.Font = Theme.FontBody
-	s.TextSize = 12
+	Theme.FitText(s, 13, 12)
+	s.TextWrapped = true
 	s.TextXAlignment = Enum.TextXAlignment.Left
 	s.TextColor3 = Theme.Colors.TextMuted
 	s.Text = sub

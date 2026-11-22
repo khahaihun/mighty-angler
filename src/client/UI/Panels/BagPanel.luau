@@ -114,21 +114,21 @@ local function rebuildFishToolbarAndInspector()
 	local lockBtn = Theme.CreateButton(ins, "LockAct", if focused.locked then "🔓 Unlock" else "🔒 Lock", UDim2.fromOffset(76, 30), UDim2.new(1, -342, 0.5, -15), if focused.locked then Theme.Colors.Warning else Theme.Colors.CardBg, function()
 		Net.FireServer(Net.ClientToServer.ToggleLockFish, focused.uid)
 	end)
-	lockBtn.TextSize = 12; lockBtn.ZIndex = 24
+	lockBtn.TextSize = 13; lockBtn.ZIndex = 24
 
 	for slot = 2, 5 do
 		local xOff = -260 + (slot - 2) * 46
 		local pBtn = Theme.CreateButton(ins, "Pin" .. tostring(slot), "📌" .. tostring(slot), UDim2.fromOffset(42, 30), UDim2.new(1, xOff, 0.5, -15), Theme.Colors.Primary, function()
 			Net.FireServer(Net.ClientToServer.PinFishToSlot, tostring(slot), focused.uid)
 		end)
-		pBtn.TextSize = 12; pBtn.ZIndex = 24
+		pBtn.TextSize = 13; pBtn.ZIndex = 24
 	end
 
 	local canSellOne = (not focused.locked) and (not focused.soulbound)
 	local sOne = Theme.CreateButton(ins, "SellOneAct", if focused.soulbound then "TROPHY" elseif focused.locked then "LOCKED" else "Sell", UDim2.fromOffset(66, 30), UDim2.new(1, -72, 0.5, -15), if canSellOne then Theme.Colors.Gold else Color3.fromRGB(74, 82, 104), function()
 		if canSellOne then Net.FireServer(Net.ClientToServer.SellSingleFish, focused.uid) end
 	end)
-	sOne.TextSize = 12; sOne.ZIndex = 24
+	sOne.TextSize = 13; sOne.ZIndex = 24
 end
 
 function BagPanel.Render()

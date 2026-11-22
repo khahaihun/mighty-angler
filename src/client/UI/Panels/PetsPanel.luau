@@ -82,7 +82,7 @@ local function rebuildTopToolbar()
 		desc.Position = UDim2.fromOffset(10, 28)
 		desc.BackgroundTransparency = 1
 		desc.Font = Theme.FontBody
-		desc.TextSize = 11
+		Theme.FitText(desc, 13, 11)
 		desc.TextWrapped = true
 		desc.TextXAlignment = Enum.TextXAlignment.Left
 		desc.TextColor3 = Theme.Colors.TextPrimary

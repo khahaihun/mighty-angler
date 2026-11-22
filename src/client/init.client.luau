@@ -1,6 +1,7 @@
 --!strict
 -- init.client.luau: Khoi dong Client UI responsive, ket noi Controllers, Hotbar/Raycast Cast & dong bo State tu Server
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -21,6 +22,7 @@ local ClientPetRenderer = require(script.Controllers.ClientPetRenderer)
 local EggHatchCutscene = require(script.Controllers.EggHatchCutscene)
 local TutorialController = require(script.Controllers.TutorialController)
 
+local ResponsiveScale = require(script.UI.ResponsiveScale)
 local WindowFrame = require(script.UI.Components.WindowFrame)
 local NpcDialogueModal = require(script.UI.Components.NpcDialogueModal)
 local HudPanel = require(script.UI.Panels.HudPanel)
@@ -50,8 +52,13 @@ local function updateResponsiveScale()
 	if not cam then
 		return
 	end
+	-- rootGui nam duoi thanh Roblox (IgnoreGuiInset = false) nen phai tru phan do khoi chieu cao dung duoc.
 	local vp = cam.ViewportSize
-	uiScale.Scale = math.clamp(math.min(vp.X / 1180, vp.Y / 680), 0.62, 1.08)
+	local insetTopLeft, insetBottomRight = GuiService:GetGuiInset()
+	uiScale.Scale = ResponsiveScale.Compute(
+		vp.X - insetTopLeft.X - insetBottomRight.X,
+		vp.Y - insetTopLeft.Y - insetBottomRight.Y
+	)
 end
 
 if Workspace.CurrentCamera then
