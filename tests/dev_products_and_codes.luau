@@ -28,7 +28,12 @@ local function world(sources, backend, job, document)
 	if document ~= nil then backend.document = document end
 	local m = { pushes = 0, inventory = 0, policy = "Allowed", failSaves = false, slowSaves = false }
 	local deps = {
-		CurrencyService = { PushCurrencies = function() m.pushes += 1 end },
+		CurrencyService = { PushCurrencies = function() m.pushes += 1 end,
+			AddGold = function(player, amount) -- mirrors CurrencyService.AddGold's profile effects
+				local profile = m.data.Get(player)
+				profile.gold += amount; profile.stats.goldEarned += amount; m.goldHooks = (m.goldHooks or 0) + 1
+				return amount
+			end },
 		ShopAndItemsService = { PushInventory = function() m.inventory += 1 end },
 		PerkService = { GetPolicyState = function() return m.policy end,
 			ArePaidRandomItemsRestricted = function() return m.policy ~= "Allowed" end },
@@ -38,6 +43,7 @@ local function world(sources, backend, job, document)
 		if kind == "save" and m.slowSaves then coroutine.yield(0.5) end
 		if kind == "save" and m.failSaves then error("DataStore 503 (injected)") end
 	end
+	m.data = f.data
 	local p, load = f.add(101)
 	f.finish(load)
 	f.products = f.loadModule("DevProductsConfig")
@@ -213,12 +219,13 @@ return function(sources)
 	test("code redeems once: lowercase and spaces normalised, reward atomic, re-entry refused", function()
 		local b, f, p = world(sources)
 		local profile = f.data.Get(p)
-		local gems, gold = profile.gems, profile.gold
+		local gems, gold, earned = profile.gems, profile.gold, profile.stats.goldEarned
 		equal(redeem(f, p, "  re lease \n"), "Redeemed", "normalised code")
 		equal(profile.gems, gems + 150, "gems"); equal(profile.gold, gold + 2500, "gold"); equal(profile.redeemedCodes.RELEASE, true, "marked")
+		equal(profile.stats.goldEarned, earned + 2500, "gold counted in goldEarned via CurrencyService.AddGold")
 		equal(redeem(f, p, "RELEASE"), "AlreadyRedeemed", "second use")
 		equal(redeem(f, p, "release"), "AlreadyRedeemed", "second use lowercase")
-		equal(profile.gems, gems + 150, "no double gems")
+		equal(profile.gems, gems + 150, "no double gems"); equal(profile.gold, gold + 2500, "no double gold")
 		f.finish(f.remove(p))
 		equal(b.document.redeemedCodes.RELEASE, true, "persisted")
 		local _, g, q = world(sources, b, "B")

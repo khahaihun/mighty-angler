@@ -70,7 +70,10 @@ function CodesService.Redeem(player: Player, rawCode: any): (RedeemStatus, strin
 	local gems = math.max(0, math.floor(reward.gems or 0))
 	local gold = math.max(0, math.floor(reward.gold or 0))
 	profile.gems += gems
-	profile.gold += gold
+	if gold > 0 then
+		-- AddGold khong yield: cong Gold + stats.goldEarned + hook thong ke (quest/achievement/funnel) ngay trong buoc nay.
+		CurrencyService.AddGold(player, gold, true)
+	end
 	local potionsGranted = false
 	for potionId, qty in pairs(reward.potions or {}) do
 		if PotionsConfig.ById[potionId] and qty > 0 then
