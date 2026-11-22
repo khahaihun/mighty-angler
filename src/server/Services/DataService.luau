@@ -33,12 +33,13 @@ local function publishAccess(player: Player): (boolean, boolean, number)
 	local loading = not s or s.loading or s.profile == nil
 	if not s then return locked, loading, 0 end
 	local retrying = loading and s.lockWaiting
-	local state = if retrying then "Waiting" elseif loading then "Loading" elseif locked then "ReadOnly" else "Ready"
+	local outage = retrying and s.lockWaitLong
+	local state = if outage then "Outage" elseif retrying then "Waiting" elseif loading then "Loading" elseif locked then "ReadOnly" else "Ready"
 	if s.accessState ~= state then
 		s.accessVersion += 1
 		if player:IsDescendantOf(Players) then
 			Net.FireClient(player, Net.ServerToClient.ProfileAccessChanged, {
-				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion, retrying = retrying,
+				safeReadOnly = locked, loading = loading, accessVersion = s.accessVersion, retrying = retrying, outage = outage,
 			})
 		end
 		s.accessState = state -- Chi cache sau khi gui thanh cong, de scheduler thu lai neu loi.
@@ -82,17 +83,17 @@ local function acquireSessionAndLoad(player: Player)
 	local loadedData: any = nil
 	local confirmedLock, lockFailed, confirmedAt = false, true, 0
 	local profile: Types.PlayerProfile, quarantineReason: string? = nil :: any, nil
-	local round = 0
+	local round, waitingSince, heldElsewhere = 0, nil :: number?, false
 	while true do
 		round += 1
-		loadedData, confirmedLock, lockFailed, confirmedAt = nil, false, true, 0
+		loadedData, confirmedLock, lockFailed, confirmedAt, heldElsewhere = nil, false, true, 0, false
 		s.loading = true
 		Lock.WithUserLock(s.userId, function()
 			if s.closed or s.closing then return end
 			local store = Lock.TryGetStore()
 			if store then
-				local okLock, data, claimMayBeOwned = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
-				confirmedLock, loadedData, lockFailed = okLock, data, not okLock
+				local okLock, data, claimMayBeOwned, busy = Lock.AcquireLockWithRetries(player, store, key, myToken, if round == 1 then 3 else 1)
+				confirmedLock, loadedData, lockFailed, heldElsewhere = okLock, data, not okLock, busy
 				-- Khoa da xac nhan: ket qua nha khoa loi cua vong truoc het hieu luc, khong duoc chan lan luu cuoi.
 				if okLock then confirmedAt = tonumber(data.lockTimestamp) or 0; s.loadCloseResult = nil end
 				if not okLock and claimMayBeOwned then s.loadCloseResult = Lock.ReleaseToken(store, key, myToken) end
@@ -112,14 +113,18 @@ local function acquireSessionAndLoad(player: Player)
 		if not lockFailed or quarantineReason ~= nil then break end
 		-- Khoa dang ban hoac kho loi: KHONG dua ho so trang cho nguoi choi; cho roi tu thu lai.
 		-- loading=false trong luc cho de nguoi choi roi di duoc dong phien ngay, khong phai doi het vong cho.
+		local firstWait = waitingSince or os.clock()
+		waitingSince = firstWait
 		s.loading, s.lockWaiting = false, true
+		-- Kho tra loi "khoa con han cua phien khac" thi khong phai su co kho: giu thong bao "server cu dang luu".
+		s.lockWaitLong = not heldElsewhere and os.clock() - firstWait >= GameConfig.SESSION_LOCK_OUTAGE_NOTICE_SEC
 		publishAccess(player)
 		task.wait(if round <= GameConfig.SESSION_LOCK_FAST_RETRIES then GameConfig.SESSION_LOCK_RETRY_SEC else GameConfig.SESSION_LOCK_RETRY_SLOW_SEC)
 		if not player:IsDescendantOf(Players) or s.closing or s.closed then return end
 	end
 	profile.activeSessionId = if lockFailed then nil else myToken
 	profile.lockTimestamp = confirmedAt
-	s.profile, s.confirmedAt, s.readOnly, s.loading, s.lockWaiting = profile, confirmedAt, lockFailed, false, false
+	s.profile, s.confirmedAt, s.readOnly, s.loading, s.lockWaiting, s.lockWaitLong = profile, confirmedAt, lockFailed, false, false, false
 	if lockFailed then
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Error", text = "Your save could not be read safely. Safe Read-Only Mode is active to protect it.",

@@ -268,8 +268,8 @@ function HudPanel.UpdateLiveOddsText(text: string)
 	if liveOddsLbl then liveOddsLbl.Text = "[View all odds] " .. text end
 end
 
-function HudPanel.UpdateProfileAccess(readOnly: boolean, loading: boolean, version: number, retrying: boolean?)
-	ProfileAccessBanner.Update(readOnly, loading, version, retrying)
+function HudPanel.UpdateProfileAccess(readOnly: boolean, loading: boolean, version: number, retrying: boolean?, outage: boolean?)
+	ProfileAccessBanner.Update(readOnly, loading, version, retrying, outage)
 end
 
 return HudPanel

@@ -139,6 +139,19 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
 
+## Sửa theo review trên PR #5 — quăng tay trong thời gian chờ, băng lỗi kho kéo dài
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_fishing_wave.ps1
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite session_lock_retry
+powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite initial_state
+```
+
+- `tests/manual_cast_hold.luau` (trong `test_fishing_wave.ps1`) chạy mã thật của `HotbarAndCastController`; `UserInputService`, `RunService`, đồng hồ và `Net` là giả lập. 5 ca: bấm trong 0,45 giây chờ rồi giữ tiếp (thanh lực tự chạy khi hết chờ, `FishingChargeStart` gửi đúng một lần tại lúc đó, tỉ lệ lực tính từ lúc bắt đầu nạp); bấm trong lúc chờ rồi nhả sớm (không gửi gì); bấm sau khi hết chờ (nạp ngay); cú bấm chờ bị bỏ khi mở bảng, đổi ô, lên máy tập hoặc đang câu; ngón tay thứ hai không phá cú bấm đang chờ.
+- `tests/session_lock_retry.luau` có thêm ca kho lỗi kéo dài: sau 150 giây chờ server gửi đúng một thông báo có cờ `outage`, không gửi lặp trong 5 phút tiếp theo, cờ xoá khi nạp được hồ sơ. Thêm ca server cũ còn sống gia hạn khoá suốt 400 giây: kho vẫn trả lời nên không được báo sự cố dịch vụ dữ liệu; chỉ báo khi yêu cầu tới kho thật sự thất bại. `tests/initial_state.luau` kiểm câu chữ của băng ở cả hai giai đoạn.
+
+Các ca này không chứng minh cảm giác bấm trên chuột/điện thoại thật hay thời gian lỗi thực tế của Roblox DataStore.
+
 ## Biển và bầu trời — Bước 6 sau review
 
 ```powershell
@@ -183,7 +196,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -S
 powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite session_lock_retry
 ```
 
-`tests/session_lock_retry.luau` chạy `DataService`, `DataStoreLockHelper` và `ProfilePersistenceService` thật trên kho và đồng hồ giả lập. 6 ca: đổi server (B chờ A lưu lần cuối rồi nạp hồ sơ thật, không cần vào lại), server cũ chết (B chỉ nhận khoá sau khi hết hạn 120 giây), kho lỗi kéo dài rồi hồi phục, client được báo "đang thử lại" đúng một lần, rời game lúc đang chờ, hồ sơ hỏng không thử lại. Trong mọi ca, phiên đang chờ không có hồ sơ nào trong RAM. Bộ này không chứng minh thời gian thực tế của Roblox DataStore; đổi server trên 2 server Staging vẫn chờ nghiệm thu.
+`tests/session_lock_retry.luau` chạy `DataService`, `DataStoreLockHelper` và `ProfilePersistenceService` thật trên kho và đồng hồ giả lập. 8 ca: đổi server (B chờ A lưu lần cuối rồi nạp hồ sơ thật, không cần vào lại), server cũ chết (B chỉ nhận khoá sau khi hết hạn 120 giây), kho lỗi kéo dài rồi hồi phục, client được báo "đang thử lại" đúng một lần, rời game lúc đang chờ, hồ sơ hỏng không thử lại, kho lỗi quá 150 giây thì báo thêm đúng một lần rằng dịch vụ dữ liệu Roblox trục trặc, server cũ còn gia hạn khoá thì không báo nhầm sự cố. Trong mọi ca, phiên đang chờ không có hồ sơ nào trong RAM. Bộ này không chứng minh thời gian thực tế của Roblox DataStore; đổi server trên 2 server Staging vẫn chờ nghiệm thu.
 
 ## Quyền Gamepass và Group — Bước 1 sau review
 

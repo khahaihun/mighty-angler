@@ -2,12 +2,13 @@
 -- Canh bao quyen luu rieng, khong bi dong su kien/buff ghi de.
 local Banner = {}
 local label: TextLabel? = nil
-local readOnly, loading, retrying, version = true, true, false, -1
+local readOnly, loading, retrying, outage, version = true, true, false, false, -1
 
 local function render()
 	if not label then return end
 	label.Visible = readOnly or loading
-	label.Text = if loading and retrying then "Your save is not ready yet (your last server may still be saving it).\nRetrying automatically — please stay, no need to rejoin."
+	label.Text = if loading and retrying and outage then "Roblox's data service is having trouble right now. Your saved progress is safe.\nWe keep retrying automatically — you can wait here or come back later."
+		elseif loading and retrying then "Your save is not ready yet (your last server may still be saving it).\nRetrying automatically — please stay, no need to rejoin."
 		elseif loading then "Loading your save... Actions are locked until loading finishes."
 		else "SAVE PROTECTED — READ-ONLY MODE\nSpending, trading and leaderboard writes are disabled. Rejoin to retry."
 end
@@ -32,9 +33,9 @@ function Banner.Mount(root: ScreenGui, theme: any)
 	render()
 end
 
-function Banner.Update(safeReadOnly: boolean, isLoading: boolean, incomingVersion: number, isRetrying: boolean?)
+function Banner.Update(safeReadOnly: boolean, isLoading: boolean, incomingVersion: number, isRetrying: boolean?, isOutage: boolean?)
 	if incomingVersion < version then return end
-	version, readOnly, loading, retrying = incomingVersion, safeReadOnly, isLoading, isRetrying == true
+	version, readOnly, loading, retrying, outage = incomingVersion, safeReadOnly, isLoading, isRetrying == true, isOutage == true
 	render()
 end
 

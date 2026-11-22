@@ -92,13 +92,14 @@ function DataStoreLockHelper.ReleaseToken(store: DataStore, key: string, token: 
 	return "TransientError"
 end
 
--- Tra ve (confirmedLock, loadedRawData, claimMayBeOwned): loi phan hoi co the da ghi claim.
-function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string, maxAttempts: number?): (boolean, any, boolean)
-	local claimMayBeOwned = false
+-- Tra ve (confirmedLock, loadedRawData, claimMayBeOwned, heldElsewhere): loi phan hoi co the da ghi claim.
+-- heldElsewhere = kho da tra loi va khoa con han thuoc phien khac (khong phai loi kho du lieu).
+function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string, maxAttempts: number?): (boolean, any, boolean, boolean)
+	local claimMayBeOwned, heldElsewhere = false, false
 	local attempts = maxAttempts or 3
 	for attempt = 1, attempts do
 		if not player:IsDescendantOf(Players) then
-			return false, nil, claimMayBeOwned
+			return false, nil, claimMayBeOwned, false
 		end
 		local nonceOk, claimNonce = pcall(Util.NewUid)
 		if not nonceOk then
@@ -134,15 +135,16 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 			end)
 		end)
 		claimMayBeOwned = not ok or (type(updated) == "table" and updated.activeSessionId == myToken)
-		if ok and updated == nil and rejected ~= nil then return false, rejected, false end
+		heldElsewhere = ok and updated == nil and rejected == nil
+		if ok and updated == nil and rejected ~= nil then return false, rejected, false, false end
 		if ok and type(updated) == "table" and updated.activeSessionId == myToken and updated.lastWriteNonce == claimNonce then
-			return true, updated, true
+			return true, updated, true, false
 		end
 		if attempt < attempts then
 			task.wait(1.5)
 		end
 	end
-	return false, nil, claimMayBeOwned
+	return false, nil, claimMayBeOwned, heldElsewhere
 end
 
 return DataStoreLockHelper

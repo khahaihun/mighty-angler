@@ -115,6 +115,67 @@ return function(sources)
 		assert(other.data.Get(pB), "profile present")
 	end)
 
+	test("long store outage: one extra notice after the old lock must have expired, cleared on recovery", function()
+		local b = Fixture.backend()
+		local f = Fixture.server(sources, b, "A")
+		b.document = f.config.CreateDefaultProfile()
+		b.document.gold = 555
+		f.beforeUpdate = function() error("datastore outage") end
+		local p = f.add(101)
+		equal(f.config.SESSION_LOCK_OUTAGE_NOTICE_SEC, f.config.SESSION_LOCK_EXPIRE_SEC + 30, "notice comes after the lock lease plus a buffer")
+		f.advance(FIRST_ROUND + f.config.SESSION_LOCK_OUTAGE_NOTICE_SEC - 12)
+		local events = accessEvents(f)
+		equal(#events, 2, "loading, then one retry notice while the old server could still be saving")
+		equal(events[2].outage, false, "not yet blamed on the data service")
+		f.advance(24)
+		events = accessEvents(f)
+		equal(#events, 3, "exactly one more notice once the wait outlives the lock lease")
+		equal(events[3].outage, true, "client told the data service is in trouble")
+		equal(events[3].retrying, true, "game is still retrying")
+		equal(events[3].loading, true, "actions stay locked")
+		assert(events[3].accessVersion > events[2].accessVersion, "version increases so the HUD accepts the update")
+		f.advance(300)
+		equal(#accessEvents(f), 3, "no repeated notices during a long outage")
+		equal(f.data.Get(p), nil, "still no blank profile")
+		equal(b.document.gold, 555, "stored data untouched")
+		f.beforeUpdate = nil
+		f.advance(f.config.SESSION_LOCK_RETRY_SLOW_SEC + 1.5)
+		events = accessEvents(f)
+		local last = events[#events]
+		equal(last.loading, false, "ready after recovery")
+		equal(last.outage, false, "outage flag cleared")
+		equal(last.retrying, false, "retry flag cleared")
+		equal(f.data.Get(p).gold, 555, "real save loaded")
+	end)
+
+	test("live owner keeps renewing the lock: long wait is never blamed on the data service", function()
+		local b = Fixture.backend()
+		local a, other = Fixture.server(sources, b, "A"), Fixture.server(sources, b, "B")
+		local pA = a.add(101)
+		local pB = other.add(101)
+		for _ = 1, 8 do -- 400 giay: A van song va gia han khoa moi 50 giay, kho tra loi binh thuong
+			other.advance(50)
+			a.data.Get(pA).gold += 1
+			equal(a.data.SaveProfile(pA), "Saved", "owner renews its lease")
+		end
+		equal(other.data.Get(pB), nil, "B still waiting behind a live owner")
+		local events = accessEvents(other)
+		equal(#events, 2, "loading, then the single 'last server may still be saving' notice")
+		equal(events[2].retrying, true, "retry notice flagged")
+		equal(events[2].outage, false, "a healthy store with a busy lock is not reported as a data service outage")
+		-- Kho bat dau loi that sau khi da cho lau: luc nay moi bao su co, dung mot lan.
+		other.beforeUpdate = function() error("datastore outage") end
+		other.advance(25)
+		events = accessEvents(other)
+		equal(#events, 3, "one outage notice once the store itself stops answering")
+		equal(events[3].outage, true, "outage flagged when requests fail")
+		other.beforeUpdate = nil
+		a.finish(a.remove(pA))
+		other.advance(other.config.SESSION_LOCK_RETRY_SLOW_SEC + 1.5)
+		assert(other.data.Get(pB), "B loads after the owner releases")
+		equal(accessEvents(other)[#accessEvents(other)].outage, false, "outage flag cleared")
+	end)
+
 	test("leaving while waiting closes at once, stops retrying and never touches the owner", function()
 		local b = Fixture.backend()
 		local a, other = Fixture.server(sources, b, "A"), Fixture.server(sources, b, "B")

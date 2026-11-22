@@ -22,6 +22,8 @@ GameConfig.SESSION_LOCK_EXPIRE_SEC = 120
 GameConfig.SESSION_LOCK_RETRY_SEC = 5
 GameConfig.SESSION_LOCK_RETRY_SLOW_SEC = 10
 GameConfig.SESSION_LOCK_FAST_RETRIES = 12
+-- Cho qua moc nay thi khoa cu chac chan da het han: nguyen nhan la dich vu du lieu Roblox, khong con la server cu dang luu.
+GameConfig.SESSION_LOCK_OUTAGE_NOTICE_SEC = GameConfig.SESSION_LOCK_EXPIRE_SEC + 30
 GameConfig.BAG_CAPACITY = 60
 GameConfig.MAX_SOULBOUND_TROPHIES = 12
 GameConfig.MAX_PET_INVENTORY = 80
