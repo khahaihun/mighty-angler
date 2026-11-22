@@ -55,8 +55,9 @@ function ProfileValidator.Validate(raw: any): string?
 	if type(raw) ~= "table" then return "CorruptRootType" end
 	local version = raw.dataVersion
 	if version ~= nil and (not integer(version) or version < 1) then return "InvalidVersion" end
-	if version and version > 2 then return "NewerSchemaVersion" end
-	local legacy = version == nil or version == 1
+	if version and version > GameConfig.PROFILE_SCHEMA_VERSION then return "NewerSchemaVersion" end
+	-- Ho so luu boi phien ban cu hon duoc phep thieu truong moi; Migrator se bu gia tri mac dinh.
+	local legacy = version == nil or version < GameConfig.PROFILE_SCHEMA_VERSION
 	if not tree(raw, {}, 0) then return "UnserializableValue" end
 	local defaults = GameConfig.CreateDefaultProfile()
 	local reason = fields(raw, defaults, legacy, "")
