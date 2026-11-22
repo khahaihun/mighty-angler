@@ -20,7 +20,10 @@ export type HotbarCallbacks = {
 	OnCancelCast: () -> (),
 }
 
+local WindowFrame = require(script.Parent.WindowFrame)
+
 local HotbarAndBaitUi = {}
+HotbarAndBaitUi.BindLayout = WindowFrame.BindLayout
 
 local slotBtns: { [number]: TextButton } = {}
 local autoFishBtn: TextButton? = nil
@@ -123,7 +126,7 @@ local function rebuildBaitPopup()
 			Theme.FitText(btn, 13, 12); btn.LayoutOrder = idx
 		end
 	end
-	pop.Size = UDim2.fromOffset(224, rows * 38 + 12)
+	pop.Size = UDim2.fromOffset(192, rows * 38 + 12)
 end
 
 local function refreshBaitButton()
@@ -154,6 +157,7 @@ function HotbarAndBaitUi.Mount(rootGui: ScreenGui, callbacks: HotbarCallbacks)
 		f.Size = sz
 		f.BackgroundTransparency = 1
 		f.Parent = rootGui
+		WindowFrame.BindLayout(rootGui, f, name)
 		local lay = Instance.new("UIListLayout")
 		lay.FillDirection = Enum.FillDirection.Horizontal
 		lay.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -172,6 +176,7 @@ function HotbarAndBaitUi.Mount(rootGui: ScreenGui, callbacks: HotbarCallbacks)
 	cWrap.Visible = false
 	cWrap.ZIndex = 30
 	cWrap.Parent = rootGui
+	WindowFrame.BindLayout(rootGui, cWrap, cWrap.Name)
 	Theme.AddCorner(cWrap, 10)
 	Theme.AddStroke(cWrap, Theme.Colors.Gold, 2.2)
 	chargeWrap = cWrap
@@ -236,6 +241,7 @@ function HotbarAndBaitUi.Mount(rootGui: ScreenGui, callbacks: HotbarCallbacks)
 		end
 	end)
 	bBtn.AnchorPoint = Vector2.new(0, 1)
+	WindowFrame.BindLayout(rootGui, bBtn, bBtn.Name)
 	bBtn.TextSize = 14
 	baitMainBtn = bBtn
 
@@ -248,6 +254,7 @@ function HotbarAndBaitUi.Mount(rootGui: ScreenGui, callbacks: HotbarCallbacks)
 	pop.Visible = false
 	pop.ZIndex = 35
 	pop.Parent = rootGui
+	WindowFrame.BindLayout(rootGui, pop, pop.Name)
 	Theme.AddCorner(pop, 12)
 	Theme.AddStroke(pop, Theme.Colors.Primary, 2)
 	baitPopup = pop

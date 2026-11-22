@@ -16,6 +16,8 @@ local SoundConfig = require(Shared:WaitForChild("Config"):WaitForChild("SoundCon
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ParticleBudgetController = require(script.Parent.ParticleBudgetController)
 
+local WindowFrame = require(script.Parent.Parent.UI.Components.WindowFrame)
+
 local SoundAndFxController = {}
 
 local fxRootGui: ScreenGui? = nil
@@ -94,6 +96,12 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	local stack = toastStackFrame
 	if not stack then return end
 
+	local items = stack:GetChildren()
+	local count = 0
+	for _, child in ipairs(items) do
+		if child:IsA("Frame") then count += 1; if count >= 3 then child:Destroy() end end
+	end
+
 	local accent = Theme.Colors.Primary
 	if kind == "Success" then accent = Theme.Colors.Success; SoundAndFxController.PlaySfx("Coins")
 	elseif kind == "Error" then accent = Theme.Colors.Danger; SoundAndFxController.PlaySfx("Error")
@@ -167,10 +175,19 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 	stack.Name = "ToastStack"
 	stack.AnchorPoint = Vector2.new(0.5, 0)
 	stack.Position = UDim2.new(0.5, 0, 0, 90)
-	stack.Size = UDim2.fromOffset(460, 175)
+	stack.Size = UDim2.new(1, 0, 1, 0)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(460, 126)
+	limit.Parent = stack
 	stack.BackgroundTransparency = 1
 	stack.ZIndex = 55
-	stack.Parent = rootGui
+	local slot = Instance.new("Frame")
+	slot.BackgroundTransparency = 1
+	slot.Parent = rootGui
+	WindowFrame.BindLayout(rootGui, slot, "ToastStack")
+	stack.AnchorPoint = Vector2.zero
+	stack.Position = UDim2.fromScale(0, 0)
+	stack.Parent = slot
 
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
