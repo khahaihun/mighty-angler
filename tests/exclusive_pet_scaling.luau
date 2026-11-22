@@ -137,6 +137,35 @@ local function runSuite(mods: {
 	local expectedTag = string.format("Shiny %.1f%%", expectedShiny)
 	check("odds_calculator_matches_server_scaled_mut", string.find(liveOdds.mutationSummary, expectedTag, 1, true) ~= nil, liveOdds.mutationSummary .. " vs " .. expectedTag)
 
+	-- 7. Buoc 5: buff Pet duoc nho san, tinh lai dung luc Pet thay doi; Equip Best tinh diem moi loai Pet mot lan
+	local scans = 0
+	local realBest = PetsConfig.GetBestOwnedNormalPet
+	PetsConfig.GetBestOwnedNormalPet = function(owned: any)
+		scans += 1
+		return realBest(owned)
+	end
+	env.unequip("e1"); env.equipBest()
+	scans = 0
+	env.equipBest()
+	check("equip_best_scores_each_pet_kind_once", scans == 4, "inventory scans=" .. tostring(scans))
+	mods.BuffAggregator.GetMultipliers(env.player, 0, 0)
+	scans = 0
+	for _ = 1, 10 do
+		near(mods.BuffAggregator.GetMultipliers(env.player, 0, 0).luckMult, 1 + expectedPetLuck, "cached_pet_buff_same_value")
+	end
+	check("pet_buff_not_recomputed_while_pets_unchanged", scans == 0, "inventory scans=" .. tostring(scans))
+
+	env.unequip("e1")
+	near(mods.BuffAggregator.GetMultipliers(env.player, 0, 0).luckMult, 1 + dragonScaled.luckBonus, "unequip_refreshes_pet_buff")
+	env.deletePet("n5")
+	local afterDelete = PetsConfig.GetEffectivePetStats(dragon, env.getProfile().pets)
+	check("deleting_best_normal_pet_changes_scaling", afterDelete.luckBonus < dragonScaled.luckBonus)
+	near(mods.BuffAggregator.GetMultipliers(env.player, 0, 0).luckMult, 1 + afterDelete.luckBonus, "delete_refreshes_pet_buff")
+	-- Phong ve: ma khac sua thang danh sach Pet ma khong goi PetsService thi so luong Pet doi, buff van duoc tinh lai.
+	table.insert(env.getProfile().pets, { uid = "n9", petId = "pet_nova_valkyrie" })
+	near(mods.BuffAggregator.GetMultipliers(env.player, 0, 0).luckMult, 1 + dragonScaled.luckBonus, "direct_pet_list_change_refreshes_buff")
+	PetsConfig.GetBestOwnedNormalPet = realBest
+
 	print(string.format("EXCLUSIVE_PET_SUITE passed=%d failed=0", passed))
 end
 

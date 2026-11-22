@@ -139,6 +139,16 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
 
+## Tối ưu mạng/CPU — Bước 5 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_bag_delta_and_remote_cache.ps1
+```
+
+Chạy mã thật của `Shared/BagDelta` và `Shared/Net` (9 ca): cá mới được nối vào túi, khoá cá thay đúng một con, cá bị xoá, gói nguyên túi vẫn thay toàn bộ, lệch `count` thì báo cần xin lại túi, gói sai định dạng không làm hỏng túi; `Net` không dò lại thư mục remote sau lần gửi đầu, tự tìm lại remote đã bị huỷ, tên remote lạ vẫn báo lỗi.
+
+Các ca cùng bước nằm trong suite sẵn có: `data_persistence` (`bag_updates_send_only_the_change`: handler thật gửi đúng phần thay đổi, `RequestBagSync` trả nguyên túi tối đa 1 lần/giây), `exclusive_pet_scaling` (mục 7: buff Pet được nhớ và tính lại khi tháo/xoá Pet, Equip Best quét kho 1 lần cho mỗi loại Pet), `fishing_cast_lifecycle` (quăng tay trong 0,45 giây sau lượt câu bị từ chối, Auto-Fish giữ nguyên), `art_pipeline_and_terrain` (NPC được gắn tag cho client).
+
 ## Tương thích hồ sơ cũ — Bước 4 sau review
 
 ```powershell

@@ -1,11 +1,13 @@
 --!strict
 -- NpcBuilder.luau: Dung 4 NPC nguoi that R15 Rig chuan (Humanoid + Animator + Motor6D + WeldConstraint, Zero Server Heartbeat)
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("Types"))
 local AssetRegistry = require(Shared:WaitForChild("AssetRegistry"))
+local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local PartFactory = require(script.Parent.PartFactory)
 local ManualIslandAdapter = require(script.Parent.ManualIslandAdapter)
@@ -63,6 +65,7 @@ local function createArticulatedNpc(
 		override.Name = "Npc_" .. role
 		override:PivotTo(rootCf)
 		override:SetAttribute("IsAnimatedNpc", true)
+		CollectionService:AddTag(override, GameConfig.ANIMATED_NPC_TAG)
 		override:SetAttribute("PhaseOffset", math.random() * 6.28)
 		override.Parent = parent
 
@@ -86,6 +89,7 @@ local function createArticulatedNpc(
 	local m = Instance.new("Model")
 	m.Name = "Npc_" .. role
 	m:SetAttribute("IsAnimatedNpc", true)
+	CollectionService:AddTag(m, GameConfig.ANIMATED_NPC_TAG)
 	m:SetAttribute("PhaseOffset", math.random() * 6.28)
 	m.Parent = parent
 

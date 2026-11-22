@@ -1,6 +1,7 @@
 --!strict
 -- ClientPetRenderer.luau: Dien hoat Pet 3D (PivotTo + CharGen Cleanup) & NPC R15 / Whirlpool culled theo khoang cach tren Client
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -32,8 +33,10 @@ local playerSignatures: { [Player]: string } = {}
 local playerConns: { [Player]: { RBXScriptConnection } } = {}
 local charGenByPlayer: { [Player]: number } = {}
 
-local cachedNpcRigs: { ClientNpcRig } = {}
-local nextNpcScanAt = 0.0
+local npcRigs: { [Instance]: ClientNpcRig } = {}
+local pendingNpcs: { [Instance]: boolean } = {}
+local nextNpcResolveAt = 0.0
+local shadowFishByModel: { [Instance]: { BasePart } } = setmetatable({}, { __mode = "k" }) :: any
 
 local SLOT_OFFSETS = {
 	Vector3.new(-3.2, 1.85, 3.3),
@@ -169,44 +172,50 @@ local function watchPlayer(player: Player)
 	end))
 end
 
-local function refreshNpcRigCacheIfNeeded(now: number)
-	if now < nextNpcScanAt then
+local function tryBuildNpcRig(model: Instance): ClientNpcRig?
+	if not model:IsA("Model") then
+		return nil
+	end
+	local root = model.PrimaryPart or model:FindFirstChild("HumanoidRootPart")
+	local uTorso = model:FindFirstChild("UpperTorso")
+	local rArm = model:FindFirstChild("RightUpperArm")
+	local waist = if uTorso then uTorso:FindFirstChild("Waist") else nil
+	local rSh = if rArm then rArm:FindFirstChild("RightShoulder") else nil
+	if not (root and root:IsA("BasePart") and waist and waist:IsA("Motor6D") and rSh and rSh:IsA("Motor6D")) then
+		return nil
+	end
+	local bw = waist:GetAttribute("BaseC0")
+	local bs = rSh:GetAttribute("BaseC0")
+	return {
+		model = model,
+		root = root,
+		waist = waist,
+		rShoulder = rSh,
+		baseWaistC0 = if typeof(bw) == "CFrame" then bw else waist.C0,
+		baseShoulderC0 = if typeof(bs) == "CFrame" then bs else rSh.C0,
+		phase = tonumber(model:GetAttribute("PhaseOffset")) or 0,
+	}
+end
+
+-- NPC duoc Server gan tag; Client chi theo doi dung cac model do thay vi quet ca map moi 5 giay.
+-- Model vua stream toi co the chua du khop xuong, nen giu trong pendingNpcs va thu lai moi giay.
+local function resolvePendingNpcs(now: number)
+	if now < nextNpcResolveAt or next(pendingNpcs) == nil then
 		return
 	end
-	nextNpcScanAt = now + 5.0
-	local world = Workspace:FindFirstChild("MightyWorld")
-	if not world then
-		return
-	end
-	local fresh: { ClientNpcRig } = {}
-	for _, desc in ipairs(world:GetDescendants()) do
-		if desc:IsA("Model") and desc:GetAttribute("IsAnimatedNpc") == true then
-			local root = desc.PrimaryPart or desc:FindFirstChild("HumanoidRootPart")
-			local uTorso = desc:FindFirstChild("UpperTorso")
-			local rArm = desc:FindFirstChild("RightUpperArm")
-			local waist = if uTorso then uTorso:FindFirstChild("Waist") else nil
-			local rSh = if rArm then rArm:FindFirstChild("RightShoulder") else nil
-			if root and root:IsA("BasePart") and waist and waist:IsA("Motor6D") and rSh and rSh:IsA("Motor6D") then
-				local bw = waist:GetAttribute("BaseC0")
-				local bs = rSh:GetAttribute("BaseC0")
-				table.insert(fresh, {
-					model = desc,
-					root = root,
-					waist = waist,
-					rShoulder = rSh,
-					baseWaistC0 = if typeof(bw) == "CFrame" then bw else waist.C0,
-					baseShoulderC0 = if typeof(bs) == "CFrame" then bs else rSh.C0,
-					phase = tonumber(desc:GetAttribute("PhaseOffset")) or 0,
-				})
-			end
+	nextNpcResolveAt = now + 1.0
+	for model in pairs(pendingNpcs) do
+		local rig = tryBuildNpcRig(model)
+		if rig then
+			pendingNpcs[model] = nil
+			npcRigs[model] = rig
 		end
 	end
-	cachedNpcRigs = fresh
 end
 
 local function animateNearbyWorldVisuals(t: number, myPos: Vector3)
-	refreshNpcRigCacheIfNeeded(t)
-	for _, npc in ipairs(cachedNpcRigs) do
+	resolvePendingNpcs(t)
+	for _, npc in pairs(npcRigs) do
 		if npc.model.Parent and (npc.root.Position - myPos).Magnitude <= 135 then
 			local breath = math.sin(t * 2.2 + npc.phase) * 0.07
 			local wave = math.sin(t * 3.2 + npc.phase) * math.rad(14)
@@ -220,9 +229,20 @@ local function animateNearbyWorldVisuals(t: number, myPos: Vector3)
 		for _, wpModel in ipairs(wpFolder:GetChildren()) do
 			local center = wpModel:GetAttribute("WhirlpoolCenter")
 			if wpModel:IsA("Model") and typeof(center) == "Vector3" and (center - myPos).Magnitude <= 185 then
+				-- Nho san 4 ca bong cua tung xoay nuoc; chi tim lai theo ten khi con thieu (dang stream).
+				local fish = shadowFishByModel[wpModel]
+				if not fish then
+					fish = {}
+					shadowFishByModel[wpModel] = fish
+				end
 				for i = 1, 4 do
-					local f = wpModel:FindFirstChild("ShadowFish_" .. tostring(i))
-					if f and f:IsA("BasePart") then
+					local f = fish[i]
+					if not f or f.Parent ~= wpModel then
+						local found = wpModel:FindFirstChild("ShadowFish_" .. tostring(i))
+						f = if found and found:IsA("BasePart") then found else nil
+						fish[i] = f :: any
+					end
+					if f then
 						local ang = t * 1.6 + i * (math.pi * 0.5)
 						local pos = center + Vector3.new(math.cos(ang) * 7.2, -0.7, math.sin(ang) * 7.2)
 						local tangent = Vector3.new(-math.sin(ang), 0, math.cos(ang))
@@ -234,6 +254,23 @@ local function animateNearbyWorldVisuals(t: number, myPos: Vector3)
 	end
 end
 
+local function watchTaggedNpcs()
+	local function onAdded(inst: Instance)
+		if not npcRigs[inst] then
+			pendingNpcs[inst] = true
+		end
+	end
+	local function onRemoved(inst: Instance)
+		pendingNpcs[inst] = nil
+		npcRigs[inst] = nil
+	end
+	CollectionService:GetInstanceAddedSignal(GameConfig.ANIMATED_NPC_TAG):Connect(onAdded)
+	CollectionService:GetInstanceRemovedSignal(GameConfig.ANIMATED_NPC_TAG):Connect(onRemoved)
+	for _, inst in ipairs(CollectionService:GetTagged(GameConfig.ANIMATED_NPC_TAG)) do
+		onAdded(inst)
+	end
+end
+
 function ClientPetRenderer.Init()
 	ensureRootFolder()
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -241,6 +278,7 @@ function ClientPetRenderer.Init()
 	end
 	Players.PlayerAdded:Connect(watchPlayer)
 	Players.PlayerRemoving:Connect(cleanupLeavingPlayer)
+	watchTaggedNpcs()
 
 	local frameStep = 0
 	RunService.RenderStepped:Connect(function(dt: number)

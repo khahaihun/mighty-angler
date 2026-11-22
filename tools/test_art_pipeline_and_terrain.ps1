@@ -223,6 +223,9 @@ local game = {
 		if name == "ReplicatedStorage" then return ReplicatedStorage end
 		if name == "Workspace" then return Workspace end
 		if name == "RunService" then return { IsServer = function() return true end } end
+		if name == "CollectionService" then
+			return { AddTag = function(_, inst, tag) inst:SetAttribute("Tag_" .. tostring(tag), true) end }
+		end
 		return {}
 	end,
 }
@@ -239,6 +242,7 @@ end
 
 loadedModules["Types"] = {}
 loadedModules["GameConfig"] = {
+	ANIMATED_NPC_TAG = "MightyAnimatedNpc",
 	Mutations = {
 		None = { color = Color3.fromRGB(255, 255, 255) },
 		Shiny = { color = Color3.fromRGB(110, 235, 255) },

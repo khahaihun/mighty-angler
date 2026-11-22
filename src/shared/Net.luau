@@ -20,6 +20,7 @@ Net.ClientToServer = {
 	SelectHotbarSlot = "C2S_SelectHotbarSlot",
 	PinFishToSlot = "C2S_PinFishToSlot",
 	ToggleLockFish = "C2S_ToggleLockFish",
+	RequestBagSync = "C2S_RequestBagSync",
 	SellAllFish = "C2S_SellAllFish",
 	SellSingleFish = "C2S_SellSingleFish",
 	SellSelectedFish = "C2S_SellSelectedFish",
@@ -116,19 +117,30 @@ function Net.InitServer(): Folder
 	return folder
 end
 
-function Net.GetEvent(remoteName: string): RemoteEvent
+-- Nho san tham chieu RemoteEvent: moi lan gui tin khong phai quet lai toan bo manifest va thu muc.
+local eventCache: { [string]: RemoteEvent } = {}
+
+local function findEvent(remoteName: string): RemoteEvent
 	if RunService:IsServer() then
-		local folder = Net.InitServer()
-		local ev = folder:FindFirstChild(remoteName)
+		local ev = Net.InitServer():FindFirstChild(remoteName)
 		assert(ev and ev:IsA("RemoteEvent"), "Missing RemoteEvent: " .. remoteName)
 		return ev
-	else
-		local folder = ReplicatedStorage:WaitForChild(FOLDER_NAME, 15)
-		assert(folder and folder:IsA("Folder"), "Remote folder not found: " .. FOLDER_NAME)
-		local ev = folder:WaitForChild(remoteName, 15)
-		assert(ev and ev:IsA("RemoteEvent"), "RemoteEvent not found: " .. remoteName)
-		return ev
 	end
+	local folder = ReplicatedStorage:WaitForChild(FOLDER_NAME, 15)
+	assert(folder and folder:IsA("Folder"), "Remote folder not found: " .. FOLDER_NAME)
+	local ev = folder:WaitForChild(remoteName, 15)
+	assert(ev and ev:IsA("RemoteEvent"), "RemoteEvent not found: " .. remoteName)
+	return ev
+end
+
+function Net.GetEvent(remoteName: string): RemoteEvent
+	local cached = eventCache[remoteName]
+	if cached and cached.Parent ~= nil then
+		return cached
+	end
+	local ev = findEvent(remoteName)
+	eventCache[remoteName] = ev
+	return ev
 end
 
 function Net.FireServer(remoteName: string, ...: any)

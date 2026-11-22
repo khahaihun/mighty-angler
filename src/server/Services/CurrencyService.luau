@@ -19,6 +19,8 @@ function CurrencyService.OnStatIncremented(callback: (Player, string, number) ->
 	table.insert(statChangedHooks, callback)
 end
 
+local lastBagSyncAt: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 function CurrencyService.OnBagMutated(callback: (Player, Types.PlayerProfile) -> ())
 	table.insert(bagMutatedHooks, callback)
 end
@@ -313,7 +315,7 @@ function CurrencyService.ToggleLockFish(player: Player, uid: string)
 			end
 			entry.locked = not entry.locked
 			DataService.MarkDirty(player)
-			Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
+			Net.FireClient(player, Net.ServerToClient.BagUpdated, { updated = { entry }, count = #profile.fishBag })
 			return
 		end
 	end
@@ -331,6 +333,12 @@ function CurrencyService.Init()
 		if type(rawList) == "table" then
 			CurrencyService.SellSelectedFish(player, rawList)
 		end
+	end)
+	Net.OnServerEvent(Net.ClientToServer.RequestBagSync, function(player: Player)
+		local profile = DataService.Get(player)
+		if not profile or os.clock() - (lastBagSyncAt[player] or -1) < 1 then return end
+		lastBagSyncAt[player] = os.clock()
+		Net.FireClient(player, Net.ServerToClient.BagUpdated, { fishBag = profile.fishBag })
 	end)
 	Net.OnServerEvent(Net.ClientToServer.ToggleLockFish, function(player: Player, rawUid: any)
 		if type(rawUid) == "string" then

@@ -134,6 +134,9 @@ function HotbarAndCastController.Init(checkUiBlocked: () -> boolean)
 		if GymController.IsOnStation() or HotbarAndBaitUi.GetEquippedSlot() ~= 1 or FishingController.IsBusy() then
 			return
 		end
+		if not FishingController.CanManualCast() then
+			return -- Server tu choi quang tay trong thoi gian cho; khong bat dau giu luc.
+		end
 
 		holdingCast = true
 		activeCastInput = input

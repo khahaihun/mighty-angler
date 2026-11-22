@@ -18,6 +18,7 @@ local localPlayer = Players.LocalPlayer
 local isCastingOrWaiting = false
 local autoFishEnabled = false
 local nextCastAt = 0
+local manualCastAt = 0
 local activeSessionId: string? = nil
 local lastClosedSessionId: string? = nil
 local autoRequestId = 0
@@ -48,6 +49,10 @@ function FishingController.IsBusy(): boolean
 	return isCastingOrWaiting or MinigameBar.IsOpen()
 end
 
+function FishingController.CanManualCast(): boolean
+	return Workspace:GetServerTimeNow() >= manualCastAt
+end
+
 function FishingController.IsAutoFishEnabled(): boolean
 	return autoFishEnabled
 end
@@ -75,6 +80,7 @@ local function changeIntent(active: boolean)
 end
 local function resumes(reason: string): boolean
  return reason == "Died" or reason == "IslandChange" or reason == "Rebirth" or reason == "Win" or reason == "Miss" or reason == "Timeout"
+  or reason == "CastCooldown"
 end
 
 local function scheduleSingleAutoRecast(extraDelay: number?)
@@ -206,6 +212,7 @@ function FishingController.Init(rootGui: ScreenGui)
   lastClosedSessionId = sid; activeSessionId = nil
   isCastingOrWaiting = false
   nextCastAt = math.max(nextCastAt, tonumber(payload.readyAt) or 0)
+  manualCastAt = math.max(manualCastAt, tonumber(payload.manualReadyAt) or 0)
   local reason = tostring(payload.reason or "")
   if not resumes(reason) and (tonumber(payload.requestId) or 0) >= autoRequestId then changeIntent(false) end
   MinigameBar.ForceClose()

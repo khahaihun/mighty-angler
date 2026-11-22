@@ -24,7 +24,7 @@ return function(sources)
  end
  local services={Players={LocalPlayer=player},ReplicatedStorage=node('ReplicatedStorage'),Workspace=workspace,
   TweenService={Create=function(_,target,_,props) return {Cancel=function() end,Play=function() target.FieldOfView=props.FieldOfView end} end}}
- local modules={Net=net,MinigameBar=mini,AnimationController=setmetatable({},{__index=function() return function() end end}),PerkService={HasGamepass=function() return false end},GameConfig={AUTO_FISH_FREE_RECAST_SEC=1.1,AUTO_FISH_PRO_RECAST_SEC=.45}}
+ local modules={Net=net,MinigameBar=mini,AnimationController=setmetatable({},{__index=function() return function() end end}),PerkService={HasGamepass=function() return false end},GameConfig={AUTO_FISH_FREE_RECAST_SEC=1.1,AUTO_FISH_PRO_RECAST_SEC=.45,MANUAL_CAST_MIN_INTERVAL_SEC=.45}}
  local env=setmetatable({script=node('script'),game={GetService=function(_,k) return services[k] end},
   os={clock=function() return now-999 end},TweenInfo={new=function() end},Enum={EasingStyle={Quad=0},EasingDirection={Out=0}},
   task={spawn=function(cb,...) cb(...) end,delay=function(sec,cb) table.insert(timers,{at=now+sec,cb=cb}) end}}, {__index=getfenv()})

@@ -13,6 +13,7 @@ local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfi
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
+local PetBuffs = require(script.Parent.PetBuffs)
 local CurrencyService = require(script.Parent.CurrencyService)
 
 local PetsService = {}
@@ -24,6 +25,7 @@ function PetsService.OnPetHatched(callback: (Player, Types.PetDef) -> ())
 end
 
 local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile): { [string]: string }
+	PetBuffs.Invalidate(profile) -- moi thay doi Pet/trang bi deu di qua day
 	local ownedByUid: { [string]: string } = {}
 	for _, inst in ipairs(profile.pets) do
 		ownedByUid[inst.uid] = inst.petId
@@ -220,12 +222,17 @@ local function handleEquipBest(player: Player)
 		return
 	end
 
+	-- Tinh diem moi loai Pet dung mot lan roi moi sap xep (truoc day tinh lai trong tung phep so sanh).
+	local scoreByPetId: { [string]: number } = {}
+	for _, inst in ipairs(profile.pets) do
+		if scoreByPetId[inst.petId] == nil then
+			local def = PetsConfig.PetsById[inst.petId]
+			scoreByPetId[inst.petId] = if def then PetsConfig.GetEffectivePowerScore(def, profile.pets) else 0
+		end
+	end
 	local sorted = table.clone(profile.pets)
 	table.sort(sorted, function(a: Types.PetInstance, b: Types.PetInstance): boolean
-		local defA = PetsConfig.PetsById[a.petId]
-		local defB = PetsConfig.PetsById[b.petId]
-		return (if defA then PetsConfig.GetEffectivePowerScore(defA, profile.pets) else 0)
-			> (if defB then PetsConfig.GetEffectivePowerScore(defB, profile.pets) else 0)
+		return scoreByPetId[a.petId] > scoreByPetId[b.petId]
 	end)
 
 	local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
@@ -261,30 +268,7 @@ end
 
 function PetsService.Init()
 	BuffAggregator.RegisterProvider(function(player: Player, profile: Types.PlayerProfile)
-		local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
-		local ownedByUid: { [string]: string } = {}
-		for _, inst in ipairs(profile.pets) do
-			ownedByUid[inst.uid] = inst.petId
-		end
-
-		local sellAdd, strAdd, luckAdd, mutAdd, count = 0, 0, 0, 0, 0
-		for _, uid in ipairs(profile.equippedPetUids) do
-			local petId = ownedByUid[uid]
-			local def = if petId then PetsConfig.PetsById[petId] else nil
-			if def then
-				local eff = PetsConfig.GetEffectivePetStats(def, profile.pets)
-				count += 1
-				sellAdd += eff.sellBonus
-				strAdd += eff.strengthBonus
-				luckAdd += eff.luckBonus
-				mutAdd += eff.mutationBonus
-				if count >= maxSlots then
-					break
-				end
-			end
-		end
-
-		return { sellAdd = sellAdd, strengthAdd = strAdd, luckAdd = luckAdd, mutationAdd = mutAdd }
+		return PetBuffs.Get(profile, BuffAggregator.GetMaxEquippedPets(player))
 	end)
 
 	DataService.OnProfileLoaded(function(player: Player)

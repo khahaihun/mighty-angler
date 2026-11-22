@@ -32,6 +32,7 @@ $modulePaths = @{
     DevTestService = 'src/server/Services/DevTestService.luau'
     DevTestPanel = 'src/client/UI/Panels/DevTestPanel.luau'
     OddsCalculator = 'src/shared/OddsCalculator.luau'
+    BagDelta = 'src/shared/BagDelta.luau'
     CatchControl = 'src/shared/CatchControl.luau'
     PurchaseOddsSummary = 'src/shared/PurchaseOddsSummary.luau'
     PurchaseOddsController = 'src/client/Controllers/PurchaseOddsController.luau'
