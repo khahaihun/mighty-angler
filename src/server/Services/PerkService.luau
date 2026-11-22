@@ -13,14 +13,19 @@ local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfi
 local GamepassesConfig = require(Shared:WaitForChild("Config"):WaitForChild("GamepassesConfig"))
 
 local DataService = require(script.Parent.DataService)
+local GamepassOwnership = require(script.Parent.GamepassOwnership)
 
 local PerkService = {}
 
 local ownedPassesCache: { [Player]: { [string]: boolean } } = {}
 local groupMemberCache: { [Player]: boolean } = {}
+local groupRetryAt: { [Player]: number } = {}
+local groupAnswerOwed: { [Player]: boolean } = {}
+local verifyingPass: { [Player]: { [string]: boolean } } = {}
 local paidRandomPolicyState: { [Player]: string } = {}
 local devSimulatedFreeMode: { [Player]: boolean } = {}
 local devGrantedPasses: { [Player]: { [string]: boolean } } = {}
+local GROUP_RETRY_SEC = 30
 local passUnlockedCallbacks: { (Player, string) -> () } = {}
 
 function PerkService.OnGamepassUnlocked(callback: (Player, string) -> ())
@@ -35,12 +40,30 @@ local function checkIsInGroup(player: Player): boolean
 	if cached ~= nil then
 		return cached
 	end
+	-- Loi API khong duoc nho thanh "khong o trong Group": hoi lai sau GROUP_RETRY_SEC.
+	if os.clock() < (groupRetryAt[player] or 0) then
+		groupAnswerOwed[player] = true
+		return false
+	end
+	groupRetryAt[player] = os.clock() + GROUP_RETRY_SEC
 	local ok, inGroup = pcall(function()
 		return player:IsInGroupAsync(GameConfig.ROBLOX_GROUP_ID)
 	end)
-	local res = ok and inGroup == true
-	groupMemberCache[player] = res
-	return res
+	if not player:IsDescendantOf(Players) then
+		groupRetryAt[player] = nil
+		return false
+	end
+	if not ok then
+		groupAnswerOwed[player] = true
+		return false
+	end
+	groupMemberCache[player] = inGroup == true
+	-- Client da tung nhan "chua co quyen" luc chua hoi duoc Roblox: gui lai quyen moi de nut Auto-Train khop server.
+	if inGroup == true and groupAnswerOwed[player] then
+		task.spawn(PerkService.PushPerks, player)
+	end
+	groupAnswerOwed[player] = nil
+	return inGroup == true
 end
 
 local function loadPolicyForPlayer(player: Player)
@@ -89,20 +112,93 @@ local function syncExclusivePassRodIfNeeded(player: Player)
 	end
 end
 
-local function loadGamepassOwnership(player: Player)
-	local map: { [string]: boolean } = {}
+-- Tra ve true khi moi pass da co cau tra loi chac chan tu Roblox (khong con "Unknown").
+local function loadGamepassOwnership(player: Player): boolean
+	local allKnown = true
 	for _, gp in ipairs(GamepassesConfig.List) do
-		if gp.id > 0 then
-			local ok, owns = pcall(function()
-				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, gp.id)
-			end)
-			if ok and owns then
-				map[gp.key] = true
+		local map = ownedPassesCache[player]
+		if gp.id > 0 and not (map and map[gp.key]) then
+			local result = GamepassOwnership.QueryPass(player, gp.id)
+			if not player:IsDescendantOf(Players) then
+				return true
+			end
+			if result == "Owned" then
+				local owned: { [string]: boolean } = ownedPassesCache[player] or {}
+				ownedPassesCache[player] = owned
+				owned[gp.key] = true
+			elseif result == "Unknown" then
+				allKnown = false
 			end
 		end
 	end
-	ownedPassesCache[player] = map
+	ownedPassesCache[player] = ownedPassesCache[player] or {}
 	syncExclusivePassRodIfNeeded(player)
+	return allKnown
+end
+
+local function loadOwnershipWithRetry(player: Player)
+	if loadGamepassOwnership(player) then
+		return
+	end
+	-- Roblox loi luc vao game: nguoi da mua khong bi mat quyen ca phien, hoi lai o nen.
+	GamepassOwnership.RetryInBackground(player, function(_isLast: boolean): boolean
+		local done = loadGamepassOwnership(player)
+		PerkService.PushPerks(player)
+		return done
+	end)
+end
+
+local function grantPurchasedPass(player: Player, gp: GamepassesConfig.GamepassDef)
+	local map = ownedPassesCache[player] or {}
+	ownedPassesCache[player] = map
+	if map[gp.key] then
+		return
+	end
+	map[gp.key] = true
+	Net.FireClient(player, Net.ServerToClient.Toast, {
+		kind = "Success",
+		text = "Unlocked Gamepass: " .. gp.name .. "!",
+	})
+	for _, cb in ipairs(passUnlockedCallbacks) do
+		task.spawn(cb, player, gp.key)
+	end
+	PerkService.PushPerks(player)
+end
+
+-- Tin hieu "mua xong" chi la goi y: chi cap quyen khi Roblox xac nhan nguoi choi that su so huu pass.
+local function confirmPurchase(player: Player, gp: GamepassesConfig.GamepassDef)
+	local busy = verifyingPass[player] or {}
+	verifyingPass[player] = busy
+	local map = ownedPassesCache[player]
+	if busy[gp.key] or (map and map[gp.key]) then
+		return
+	end
+	busy[gp.key] = true
+	if GamepassOwnership.QueryPass(player, gp.id) == "Owned" then
+		busy[gp.key] = nil
+		if player:IsDescendantOf(Players) then
+			grantPurchasedPass(player, gp)
+		end
+		return
+	end
+	if not player:IsDescendantOf(Players) then
+		return
+	end
+	warn(string.format("[PerkService] Purchase signal not confirmed yet user=%d pass=%d", player.UserId, gp.id))
+	Net.FireClient(player, Net.ServerToClient.Toast, {
+		kind = "Info",
+		text = "Confirming your " .. gp.name .. " purchase with Roblox...",
+	})
+	GamepassOwnership.RetryInBackground(player, function(isLast: boolean): boolean
+		local owned = GamepassOwnership.QueryPass(player, gp.id) == "Owned"
+		if owned or isLast then
+			busy[gp.key] = nil
+		end
+		if owned and player:IsDescendantOf(Players) then
+			grantPurchasedPass(player, gp)
+		end
+		return owned
+	end)
 end
 
 function PerkService.IsStudioPerkUnlocked(player: Player): boolean
@@ -180,13 +276,15 @@ function PerkService.Init()
 
 	Players.PlayerAdded:Connect(function(player: Player)
 		loadPolicyForPlayer(player)
-		loadGamepassOwnership(player)
-		PerkService.PushPerks(player)
+		loadOwnershipWithRetry(player)
+		if player:IsDescendantOf(Players) then
+			PerkService.PushPerks(player)
+		end
 	end)
 	for _, p in ipairs(Players:GetPlayers()) do
 		task.spawn(function()
 			loadPolicyForPlayer(p)
-			loadGamepassOwnership(p)
+			loadOwnershipWithRetry(p)
 			PerkService.PushPerks(p)
 		end)
 	end
@@ -194,6 +292,9 @@ function PerkService.Init()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		ownedPassesCache[player] = nil
 		groupMemberCache[player] = nil
+		groupRetryAt[player] = nil
+		groupAnswerOwed[player] = nil
+		verifyingPass[player] = nil
 		paidRandomPolicyState[player] = nil
 		devSimulatedFreeMode[player] = nil
 		devGrantedPasses[player] = nil
@@ -203,21 +304,12 @@ function PerkService.Init()
 		if not wasPurchased then
 			return
 		end
-		local map = ownedPassesCache[player] or {}
-		ownedPassesCache[player] = map
 		for _, gp in ipairs(GamepassesConfig.List) do
-			if gp.id == gamePassId then
-				map[gp.key] = true
-				Net.FireClient(player, Net.ServerToClient.Toast, {
-					kind = "Success",
-					text = "Unlocked Gamepass: " .. gp.name .. "!",
-				})
-				for _, cb in ipairs(passUnlockedCallbacks) do
-					task.spawn(cb, player, gp.key)
-				end
+			-- ID 0 la pass chua cau hinh: khong bao gio khop, ke ca khi tin hieu mang ID 0.
+			if gp.id > 0 and gp.id == gamePassId then
+				confirmPurchase(player, gp)
 			end
 		end
-		PerkService.PushPerks(player)
 	end)
 
 	Net.OnServerEvent(Net.ClientToServer.RequestInitialState, function(player: Player)

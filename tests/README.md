@@ -138,3 +138,11 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 - `test_art_pipeline_and_terrain.ps1` (**24/24 PASS**): kiểm 9 thư mục `AssetRegistry` (gồm `Eggs/Npcs/Buildings`), tự xóa 100% `LuaSourceContainer` ẩn trong model clone, neo `RootOnly` giữ khớp tay chân NPC R15, giữ `Silhouette` & `Highlight` + `ClientBudgetManaged` emitter cho đột biến trên MeshPart, override preview Trứng/Cần câu và `ManualIslandAdapter` (`MightyWorldManual` + `IslandMarkers` + `FishingWater`).
 - `test_exclusive_pet_scaling.ps1` (**47/47 PASS**): kiểm đúng 6 Trứng / 24 Pet hoạt động (5 Gold × 4 + 1 Exclusive Gem duy nhất ở Đảo 1 × 4), tổng trọng số 100%/trứng, Boss drop đủ 5 đảo, sàn tối thiểu cho người mới, chống scale vòng tròn, scale động `100%/115%/130%/150%` theo Pet thường khỏe nhất, tương thích ngược `petId` cũ và khớp 100% giữa `PetsService` (`BuffAggregator` + `EquipBest`) với `OddsCalculator`.
 - Tất cả là phép thử VM Luau; nghiệm thu Play Solo (F5), 2 client ping 200ms, 2 server Staging và điện thoại thật vẫn **chờ nghiệm thu**.
+
+## Quyền Gamepass và Group — Bước 1 sau review
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\test_gamepass_ownership.ps1
+```
+
+Chạy nguyên văn `PerkService` và `GamepassOwnership` với `MarketplaceService`, `Players`, `Net`, `DataService` và đồng hồ giả lập. 8 ca: tín hiệu mua giả ID 0 khi pass chưa cấu hình, tín hiệu giả cho pass thật (50 lần), huỷ prompt, mua thật chỉ mở một lần, mua khi Roblox lỗi rồi hồi phục, chủ pass vào game khi Roblox lỗi, rời giữa lúc xác nhận, Group lỗi rồi hồi phục. Bộ này không chứng minh hành vi cache của `UserOwnsGamePassAsync` trên Engine thật; mua thử trong Studio/server thật vẫn chờ nghiệm thu.
