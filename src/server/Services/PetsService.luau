@@ -13,6 +13,7 @@ local PetsConfig = require(Shared:WaitForChild("Config"):WaitForChild("PetsConfi
 local DataService = require(script.Parent.DataService)
 local PerkService = require(script.Parent.PerkService)
 local BuffAggregator = require(script.Parent.BuffAggregator)
+local PetBuffs = require(script.Parent.PetBuffs)
 local CurrencyService = require(script.Parent.CurrencyService)
 
 local PetsService = {}
@@ -23,12 +24,8 @@ function PetsService.OnPetHatched(callback: (Player, Types.PetDef) -> ())
 	table.insert(hatchHooks, callback)
 end
 
--- Nho san tong buff Pet theo ho so; moi thay doi Pet deu di qua sanitizeEquippedList nen bi xoa o do.
-type PetBuffCache = { maxSlots: number, petCount: number, equipped: { string }, equippedCount: number, buff: BuffAggregator.BonusContribution }
-local petBuffCache: { [Types.PlayerProfile]: PetBuffCache } = setmetatable({}, { __mode = "k" }) :: any
-
 local function sanitizeEquippedList(player: Player, profile: Types.PlayerProfile): { [string]: string }
-	petBuffCache[profile] = nil
+	PetBuffs.Invalidate(profile) -- moi thay doi Pet/trang bi deu di qua day
 	local ownedByUid: { [string]: string } = {}
 	for _, inst in ipairs(profile.pets) do
 		ownedByUid[inst.uid] = inst.petId
@@ -271,40 +268,7 @@ end
 
 function PetsService.Init()
 	BuffAggregator.RegisterProvider(function(player: Player, profile: Types.PlayerProfile)
-		local maxSlots = BuffAggregator.GetMaxEquippedPets(player)
-		local cached = petBuffCache[profile]
-		if cached and cached.maxSlots == maxSlots and cached.petCount == #profile.pets
-			and cached.equipped == profile.equippedPetUids and cached.equippedCount == #profile.equippedPetUids then
-			return cached.buff
-		end
-		local ownedByUid: { [string]: string } = {}
-		for _, inst in ipairs(profile.pets) do
-			ownedByUid[inst.uid] = inst.petId
-		end
-
-		local sellAdd, strAdd, luckAdd, mutAdd, count = 0, 0, 0, 0, 0
-		for _, uid in ipairs(profile.equippedPetUids) do
-			local petId = ownedByUid[uid]
-			local def = if petId then PetsConfig.PetsById[petId] else nil
-			if def then
-				local eff = PetsConfig.GetEffectivePetStats(def, profile.pets)
-				count += 1
-				sellAdd += eff.sellBonus
-				strAdd += eff.strengthBonus
-				luckAdd += eff.luckBonus
-				mutAdd += eff.mutationBonus
-				if count >= maxSlots then
-					break
-				end
-			end
-		end
-
-		local buff = { sellAdd = sellAdd, strengthAdd = strAdd, luckAdd = luckAdd, mutationAdd = mutAdd }
-		petBuffCache[profile] = {
-			maxSlots = maxSlots, petCount = #profile.pets,
-			equipped = profile.equippedPetUids, equippedCount = #profile.equippedPetUids, buff = buff,
-		}
-		return buff
+		return PetBuffs.Get(profile, BuffAggregator.GetMaxEquippedPets(player))
 	end)
 
 	DataService.OnProfileLoaded(function(player: Player)

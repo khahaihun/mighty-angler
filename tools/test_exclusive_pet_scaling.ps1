@@ -23,6 +23,7 @@ $modules = [ordered]@{
 	Islands = 'src/shared/Config/Islands/init.luau'
 	OddsCalculator = 'src/shared/OddsCalculator.luau'
 	BuffAggregator = 'src/server/Services/BuffAggregator.luau'
+	PetBuffs = 'src/server/Services/PetBuffs.luau'
 	PetsService = 'src/server/Services/PetsService.luau'
 }
 $suiteSrc = [IO.File]::ReadAllText((Join-Path $root 'tests/exclusive_pet_scaling.luau'))
@@ -110,12 +111,12 @@ local function makeScriptCtx(key)
 				},
 			},
 		}
-	elseif key == "BuffAggregator" or key == "PetsService" then
+	elseif key == "BuffAggregator" or key == "PetBuffs" or key == "PetsService" then
 		return {
 			Parent = {
 				DataService = tok("DataService"),
 				PerkService = tok("PerkService"),
-				BuffAggregator = tok("BuffAggregator"),
+				BuffAggregator = tok("BuffAggregator"), PetBuffs = tok("PetBuffs"),
 				CurrencyService = tok("CurrencyService"),
 			},
 		}
