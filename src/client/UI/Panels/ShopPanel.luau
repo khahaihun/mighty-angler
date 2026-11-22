@@ -17,6 +17,7 @@ local PurchaseOddsController = require(script.Parent.Parent.Parent.Controllers.P
 local WindowFrame = require(script.Parent.Parent.Components.WindowFrame)
 local ViewportCard = require(script.Parent.Parent.Components.ViewportCard)
 local ViewportPool = require(script.Parent.Parent.Components.ViewportPool)
+local GemsAndCodesSection = require(script.Parent.Parent.Components.GemsAndCodesSection)
 
 local ShopPanel = {}
 
@@ -148,6 +149,8 @@ function ShopPanel.Render()
 				onActivate = function() focusedKey = "gear_" .. gDef.id; if isNext then Net.FireServer(Net.ClientToServer.BuyGymGear, gDef.level) end end,
 			})
 		end
+	elseif currentTab == "Gems" then
+		GemsAndCodesSection.FillShopSpecs(specs, setDetailHeader, ShopPanel.Render)
 	else
 		local selGp = GamepassesConfig.ByKey[selectedPassKey] or GamepassesConfig.List[1]
 		local selOwned = ownedPasses[selGp.key] == true
@@ -245,6 +248,7 @@ function ShopPanel.Mount(rootGui: ScreenGui): WindowFrame.BuiltWindow
 	built.AddTab("Bait", function() currentTab = "Bait"; ShopPanel.Render() end)
 	built.AddTab("Gear", function() currentTab = "Gear"; ShopPanel.Render() end)
 	built.AddTab("Passes", function() currentTab = "Passes"; ShopPanel.Render() end)
+	built.AddTab("Gems 💎", function() currentTab = "Gems"; ShopPanel.Render() end)
 	built.SetActiveTab(rodTab)
 	return built
 end
