@@ -15,9 +15,9 @@ local TerrainWaterBuilder = {}
 
 function TerrainWaterBuilder.ConfigureTerrainWater()
 	local terrain = Workspace.Terrain
-	terrain.WaterColor = Color3.fromRGB(26, 168, 224)
-	terrain.WaterReflectance = 0.62
-	terrain.WaterTransparency = 0.28
+	terrain.WaterColor = Color3.fromRGB(26, 184, 240)
+	terrain.WaterReflectance = 0.64
+	terrain.WaterTransparency = 0.25
 	terrain.WaterWaveSize = 0.14
 	terrain.WaterWaveSpeed = 13
 end
@@ -61,24 +61,28 @@ local function buildRopeFenceSegment(parent: Instance, p1: Vector3, p2: Vector3)
 	PartFactory.Block(parent, "RopeSpan", Vector3.new(0.22, 0.22, dist), ropeCf, Color3.fromRGB(218, 188, 134), Enum.Material.Fabric, false)
 end
 
-local function buildCrateAndBarrelCluster(parent: Instance, basePos: Vector3, accent: Color3)
-	PartFactory.Block(parent, "WoodCrate", Vector3.new(2.8, 2.8, 2.8), CFrame.new(basePos + Vector3.new(0, 1.4, 0)) * CFrame.Angles(0, math.rad(18), 0), Color3.fromRGB(174, 122, 74), Enum.Material.WoodPlanks)
-	PartFactory.VerticalCylinder(parent, "Barrel", 3.1, 2.2, CFrame.new(basePos + Vector3.new(2.6, 1.55, 0.8)), Color3.fromRGB(138, 88, 52), Enum.Material.Wood)
-	PartFactory.VerticalCylinder(parent, "BarrelBand", 0.3, 2.32, CFrame.new(basePos + Vector3.new(2.6, 2.1, 0.8)), Color3.fromRGB(58, 64, 76), Enum.Material.Metal)
-	PartFactory.VerticalCylinder(parent, "LifeBuoy", 0.45, 2.4, CFrame.new(basePos + Vector3.new(-1.8, 0.3, 1.6)), accent)
+local function buildCrateAndBarrelCluster(parent: Instance, basePos: Vector3, accent: Color3, yawDeg: number)
+	local base = CFrame.new(basePos) * CFrame.Angles(0, math.rad(yawDeg), 0)
+	PartFactory.Block(parent, "WoodCrate", Vector3.new(2.8, 2.8, 2.8), base * CFrame.new(0, 1.4, 0) * CFrame.Angles(0, math.rad(16), 0), Color3.fromRGB(184, 128, 74), Enum.Material.WoodPlanks)
+	PartFactory.Block(parent, "MiniCrate", Vector3.new(1.8, 1.6, 1.8), base * CFrame.new(-0.2, 3.6, -0.1) * CFrame.Angles(0, math.rad(-14), 0), Color3.fromRGB(206, 152, 92), Enum.Material.WoodPlanks)
+	PartFactory.VerticalCylinder(parent, "Barrel", 3.1, 2.2, base * CFrame.new(2.6, 1.55, 0.8), Color3.fromRGB(142, 88, 50), Enum.Material.Wood)
+	PartFactory.VerticalCylinder(parent, "BarrelBand", 0.3, 2.32, base * CFrame.new(2.6, 2.1, 0.8), Color3.fromRGB(58, 64, 76), Enum.Material.Metal)
+	PartFactory.VerticalCylinder(parent, "LifeBuoy", 0.48, 2.5, base * CFrame.new(-1.9, 0.3, 1.6), Color3.fromRGB(252, 84, 72))
+	PartFactory.VerticalCylinder(parent, "LifeBuoyInner", 0.52, 1.3, base * CFrame.new(-1.9, 0.3, 1.6), accent)
 end
 
 local function buildCampfire(parent: Instance, pos: Vector3)
+	for s = 0, 7 do
+		local ang = math.rad(s * 45)
+		local stonePos = pos + Vector3.new(math.cos(ang) * 2.4, 0.38, math.sin(ang) * 2.4)
+		PartFactory.Ball(parent, "FireStone", 1.05, stonePos, Color3.fromRGB(134, 138, 148), Enum.Material.SmoothPlastic, false)
+	end
 	for i = 0, 3 do
 		local ang = math.rad(i * 45)
 		PartFactory.Block(parent, "FireLog", Vector3.new(0.65, 0.65, 3.6), CFrame.new(pos + Vector3.new(0, 0.35, 0)) * CFrame.Angles(0, ang, 0), Color3.fromRGB(108, 68, 38), Enum.Material.Wood)
 	end
 	local flame = PartFactory.Ball(parent, "CampfireFlame", 2.1, pos + Vector3.new(0, 1.3, 0), Color3.fromRGB(255, 148, 42), Enum.Material.Neon, false, 0.15)
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(255, 168, 72)
-	light.Range = 22
-	light.Brightness = 1.4
-	light.Parent = flame
+	PartFactory.AddWarmLight(flame, Color3.fromRGB(255, 168, 72), 22, 1.4)
 
 	local sparks = Instance.new("ParticleEmitter")
 	sparks:SetAttribute("ClientBudgetManaged", true)
@@ -95,28 +99,25 @@ local function buildLighthouse(parent: Instance, basePos: Vector3)
 	m.Name = "SeasideLighthouse"
 	m.Parent = parent
 
+	PartFactory.VerticalCylinder(m, "StonePlinth", 2.0, 12.2, CFrame.new(basePos + Vector3.new(0, 1.0, 0)), Color3.fromRGB(152, 146, 138), Enum.Material.Slate)
 	local colors = {
-		Color3.fromRGB(244, 246, 252),
-		Color3.fromRGB(238, 78, 72),
-		Color3.fromRGB(244, 246, 252),
-		Color3.fromRGB(238, 78, 72),
+		Color3.fromRGB(250, 250, 254),
+		Color3.fromRGB(246, 76, 68),
+		Color3.fromRGB(250, 250, 254),
+		Color3.fromRGB(246, 76, 68),
 	}
-	local curY = 0
+	local curY = 2.0
 	for tier = 1, 4 do
-		local h = 6.2
-		local diam = 10.5 - tier * 1.15
+		local h = 6.0
+		local diam = 10.6 - tier * 1.15
 		PartFactory.VerticalCylinder(m, "Tower_" .. tostring(tier), h, diam, CFrame.new(basePos + Vector3.new(0, curY + h * 0.5, 0)), colors[tier])
 		curY += h
 	end
-	PartFactory.VerticalCylinder(m, "GalleryDeck", 0.8, 8.2, CFrame.new(basePos + Vector3.new(0, curY + 0.4, 0)), Color3.fromRGB(54, 64, 86), Enum.Material.Metal)
+	PartFactory.VerticalCylinder(m, "GalleryDeck", 0.9, 8.6, CFrame.new(basePos + Vector3.new(0, curY + 0.45, 0)), Color3.fromRGB(54, 68, 96), Enum.Material.SmoothPlastic)
 	local beacon = PartFactory.VerticalCylinder(m, "BeaconGlass", 4.2, 5.2, CFrame.new(basePos + Vector3.new(0, curY + 2.8, 0)), Color3.fromRGB(255, 236, 128), Enum.Material.Neon, false, 0.12)
-	PartFactory.VerticalCylinder(m, "RoofDome", 2.4, 6.2, CFrame.new(basePos + Vector3.new(0, curY + 5.8, 0)), Color3.fromRGB(238, 78, 72))
-
-	local pLight = Instance.new("PointLight")
-	pLight.Color = Color3.fromRGB(255, 236, 148)
-	pLight.Range = 46
-	pLight.Brightness = 2.0
-	pLight.Parent = beacon
+	PartFactory.VerticalCylinder(m, "RoofDome", 2.4, 6.4, CFrame.new(basePos + Vector3.new(0, curY + 5.8, 0)), Color3.fromRGB(246, 76, 68))
+	PartFactory.Ball(m, "RoofFinial", 1.5, basePos + Vector3.new(0, curY + 7.4, 0), Color3.fromRGB(255, 214, 64), Enum.Material.SmoothPlastic, false)
+	PartFactory.AddWarmLight(beacon, Color3.fromRGB(255, 236, 148), 48, 2.1)
 end
 
 function TerrainWaterBuilder.BuildEnchantAltar(islandFolder: Folder, islandDef: Types.IslandDef, manualIsland: Instance?)
@@ -143,22 +144,25 @@ function TerrainWaterBuilder.BuildEnchantAltar(islandFolder: Folder, islandDef: 
 	altarModel.Name = "EnchantAltar"
 	altarModel.Parent = islandFolder
 
-	PartFactory.VerticalCylinder(altarModel, "AltarStep1", 0.8, 11.5, CFrame.new(pos + Vector3.new(0, 0.4, 0)), Color3.fromRGB(62, 56, 88), Enum.Material.Slate)
-	local ped = PartFactory.VerticalCylinder(altarModel, "AltarPedestal", 3.2, 5.4, CFrame.new(pos + Vector3.new(0, 2.2, 0)), Color3.fromRGB(84, 72, 122), Enum.Material.Slate)
-	PartFactory.VerticalCylinder(altarModel, "RuneRing", 0.35, 9.6, CFrame.new(pos + Vector3.new(0, 0.85, 0)), Color3.fromRGB(196, 108, 255), Enum.Material.Neon, false, 0.22)
+	PartFactory.VerticalCylinder(altarModel, "AltarStepOuter", 0.65, 13.4, CFrame.new(pos + Vector3.new(0, 0.32, 0)), Color3.fromRGB(48, 42, 74), Enum.Material.Slate)
+	PartFactory.VerticalCylinder(altarModel, "AltarStep1", 0.8, 10.8, CFrame.new(pos + Vector3.new(0, 0.9, 0)), Color3.fromRGB(68, 58, 98), Enum.Material.Slate)
+	local ped = PartFactory.VerticalCylinder(altarModel, "AltarPedestal", 3.2, 5.4, CFrame.new(pos + Vector3.new(0, 2.6, 0)), Color3.fromRGB(92, 76, 136), Enum.Material.SmoothPlastic)
+	PartFactory.VerticalCylinder(altarModel, "RuneRing", 0.32, 9.6, CFrame.new(pos + Vector3.new(0, 1.32, 0)), Color3.fromRGB(196, 108, 255), Enum.Material.Neon, false, 0.2)
 
 	local relic = PartFactory.Block(
 		altarModel,
 		"FloatingRelicCrystal",
-		Vector3.new(2.1, 3.4, 2.1),
-		CFrame.new(pos + Vector3.new(0, 6.2, 0)) * CFrame.Angles(math.rad(18), math.rad(35), math.rad(18)),
+		Vector3.new(2.0, 3.3, 2.0),
+		CFrame.new(pos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(math.rad(18), math.rad(35), math.rad(18)),
 		Color3.fromRGB(118, 242, 255),
 		Enum.Material.Neon,
 		false,
 		0.1
 	)
-	for _, xP in ipairs({ -4.2, 4.2 }) do
+	PartFactory.AddWarmLight(relic, Color3.fromRGB(172, 132, 255), 22, 1.3)
+	for _, xP in ipairs({ -4.4, 4.4 }) do
 		PartFactory.Block(altarModel, "Obelisk", Vector3.new(1.4, 7.6, 1.4), CFrame.new(pos + Vector3.new(xP, 3.8, -2.2)) * CFrame.Angles(0, 0, math.rad(xP > 0 and -8 or 8)), Color3.fromRGB(58, 52, 84), Enum.Material.Slate)
+		PartFactory.Ball(altarModel, "ObeliskGem", 0.95, pos + Vector3.new(xP * 0.92, 8.0, -2.2), Color3.fromRGB(214, 116, 255), Enum.Material.Neon, false)
 	end
 
 	PartFactory.AddBillboard(relic, "🔮 ENCHANT ALTAR", "Roll Exclusive Rod Enchants!", Color3.fromRGB(216, 132, 255), 3.6)
@@ -175,22 +179,22 @@ function TerrainWaterBuilder.BuildMultiTierReliefAndProps(islandFolder: Folder, 
 	local c = islandDef.centerPosition
 	local theme = islandDef.theme
 
-	-- Doi co & vach da da tang phia Dong-Bac va Tay-Bac tao chieu sau tu nhien
-	PartFactory.Block(relief, "HillWestLower", Vector3.new(34, 4.2, 38), CFrame.new(c + Vector3.new(-58, 2.1, -48)) * CFrame.Angles(0, math.rad(12), 0), theme.cliffColor, Enum.Material.Slate)
-	PartFactory.Block(relief, "HillWestTop", Vector3.new(30, 1.2, 34), CFrame.new(c + Vector3.new(-58, 4.6, -48)) * CFrame.Angles(0, math.rad(12), 0), theme.grassColor)
+	-- Doi co & vach da da tang bat doi xung phia Tay-Bac va Dong-Bac tao chieu sau tu nhien
+	PartFactory.Block(relief, "HillWestLower", Vector3.new(36, 4.0, 34), CFrame.new(c + Vector3.new(-60, 2.0, -46)) * CFrame.Angles(0, math.rad(17), 0), theme.cliffColor, Enum.Material.Slate)
+	PartFactory.Block(relief, "HillWestTop", Vector3.new(32, 1.2, 30), CFrame.new(c + Vector3.new(-60, 4.4, -46)) * CFrame.Angles(0, math.rad(17), 0), theme.grassColor)
 
-	PartFactory.Block(relief, "HillEastLower", Vector3.new(32, 5.4, 34), CFrame.new(c + Vector3.new(60, 2.7, -48)) * CFrame.Angles(0, math.rad(-14), 0), theme.cliffColor, Enum.Material.Slate)
-	PartFactory.Block(relief, "HillEastTop", Vector3.new(28, 1.2, 30), CFrame.new(c + Vector3.new(60, 5.8, -48)) * CFrame.Angles(0, math.rad(-14), 0), theme.grassColor)
+	PartFactory.Block(relief, "HillEastLower", Vector3.new(30, 5.8, 36), CFrame.new(c + Vector3.new(61, 2.9, -51)) * CFrame.Angles(0, math.rad(-11), 0), theme.cliffColor, Enum.Material.Slate)
+	PartFactory.Block(relief, "HillEastTop", Vector3.new(26, 1.2, 32), CFrame.new(c + Vector3.new(61, 6.2, -51)) * CFrame.Angles(0, math.rad(-11), 0), theme.grassColor)
 
-	-- Hang rao day thung ven bo bien & thung go doi song
+	-- Hang rao day thung ven bo bien & thung go doi song (dat lech tu nhien, khong doi xung guong)
 	buildRopeFenceSegment(relief, c + Vector3.new(-44, 0, 56), c + Vector3.new(-16, 0, 56))
 	buildRopeFenceSegment(relief, c + Vector3.new(16, 0, 56), c + Vector3.new(44, 0, 56))
-	buildCrateAndBarrelCluster(relief, c + Vector3.new(-16, 0, 48), theme.accentColor)
-	buildCrateAndBarrelCluster(relief, c + Vector3.new(16, 0, 48), theme.accentColor)
-	buildCampfire(relief, c + Vector3.new(20, 0, 14))
+	buildCrateAndBarrelCluster(relief, c + Vector3.new(-17, 0, 49), theme.accentColor, 14)
+	buildCrateAndBarrelCluster(relief, c + Vector3.new(22, 0, 51), theme.accentColor, -28)
+	buildCampfire(relief, c + Vector3.new(21, 0, 14))
 
 	if islandDef.id == 1 then
-		buildLighthouse(relief, c + Vector3.new(62, 6.2, -50))
+		buildLighthouse(relief, c + Vector3.new(62, 6.6, -51))
 	end
 
 	-- Hat dom dom / bui anh sang lo lung khap quang truong dao

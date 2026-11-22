@@ -180,4 +180,14 @@ function PartFactory.AddPrompt(
 	return prompt
 end
 
+function PartFactory.AddWarmLight(parent: Instance, color: Color3, range: number?, brightness: number?): PointLight
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = range or 18
+	light.Brightness = brightness or 1.2
+	light.Shadows = false
+	light.Parent = parent
+	return light
+end
+
 return PartFactory

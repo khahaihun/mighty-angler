@@ -29,94 +29,109 @@ function PropsBuilder.BuildWoodenDock(islandFolder: Folder, center: Vector3, acc
 	dockModel.Name = "FishingDock"
 	dockModel.Parent = islandFolder
 
-	local woodMain = Color3.fromRGB(162, 112, 68)
-	local woodDark = Color3.fromRGB(116, 78, 46)
+	local woodMain = Color3.fromRGB(178, 120, 68)
+	local woodTrim = Color3.fromRGB(218, 164, 102)
+	local woodDark = Color3.fromRGB(118, 76, 44)
 
-	-- San cau go dai ra bien phia Nam (Z duong)
+	-- San cau go dai ra bien phia Nam (Z duong) + nep go 2 ben kieu cang nhiet doi Gu B
 	PartFactory.Block(dockModel, "DockDeck", Vector3.new(18, 0.9, 54), CFrame.new(dockOrigin + Vector3.new(0, 0.35, 84)), woodMain, Enum.Material.WoodPlanks)
 	PartFactory.Block(dockModel, "DockEndPlatform", Vector3.new(28, 0.9, 16), CFrame.new(dockOrigin + Vector3.new(0, 0.35, 115)), woodMain, Enum.Material.WoodPlanks)
+	for _, xSide in ipairs({ -8.6, 8.6 }) do
+		PartFactory.Block(dockModel, "DockCurb", Vector3.new(0.8, 0.45, 50), CFrame.new(dockOrigin + Vector3.new(xSide, 0.95, 83)), woodTrim, Enum.Material.Wood)
+	end
+	PartFactory.Block(dockModel, "EndTrimFront", Vector3.new(28.4, 0.45, 0.8), CFrame.new(dockOrigin + Vector3.new(0, 0.95, 122.7)), woodTrim, Enum.Material.Wood)
 
-	-- Coc go va den long 2 ben cau
+	-- Coc go, nap dong & den long am 2 ben cau
 	for _, zOff in ipairs({ 64, 82, 100, 120 }) do
 		for _, xOff in ipairs({ -8.5, 8.5 }) do
 			local postX = if zOff == 120 then xOff * 1.45 else xOff
-			PartFactory.VerticalCylinder(dockModel, "DockPost", 8.5, 1.3, CFrame.new(dockOrigin + Vector3.new(postX, -2.0, zOff)), woodDark, Enum.Material.Wood)
+			PartFactory.VerticalCylinder(dockModel, "DockPost", 8.8, 1.4, CFrame.new(dockOrigin + Vector3.new(postX, -1.85, zOff)), woodDark, Enum.Material.Wood)
+			PartFactory.VerticalCylinder(dockModel, "PostCap", 0.35, 1.65, CFrame.new(dockOrigin + Vector3.new(postX, 2.55, zOff)), woodTrim, Enum.Material.SmoothPlastic)
 			if zOff == 64 or zOff == 120 then
-				PartFactory.Ball(dockModel, "DockLantern", 1.3, dockOrigin + Vector3.new(postX, 2.8, zOff), accentColor, Enum.Material.Neon, false)
+				local lantern = PartFactory.Ball(dockModel, "DockLantern", 1.35, dockOrigin + Vector3.new(postX, 3.25, zOff), accentColor, Enum.Material.Neon, false)
+				PartFactory.AddWarmLight(lantern, accentColor, 16, 1.1)
 			end
 		end
 	end
 
-	-- Vong sang goi y vi tri cau ca dep nhat tren mui cau
+	-- Vong sang 2 lop goi y vi tri cau ca dep nhat tren mui cau
+	PartFactory.VerticalCylinder(dockModel, "BestFishHalo", 0.16, 9.2, CFrame.new(dockOrigin + Vector3.new(0, 0.82, 117)), Color3.fromRGB(255, 224, 92), Enum.Material.Neon, false, 0.45)
 	local spot = PartFactory.VerticalCylinder(
 		dockModel,
 		"BestFishSpot",
 		0.25,
-		7.5,
-		CFrame.new(dockOrigin + Vector3.new(0, 0.85, 117)),
-		Color3.fromRGB(88, 240, 255),
+		7.4,
+		CFrame.new(dockOrigin + Vector3.new(0, 0.86, 117)),
+		Color3.fromRGB(64, 232, 255),
 		Enum.Material.Neon,
 		false,
-		0.35
+		0.3
 	)
 	PartFactory.AddBillboard(spot, "FISHING PIER", "Equip Rod [1] • Hold & Release on Water!", Color3.fromRGB(110, 245, 255), 3.4)
 end
 
+local function buildCartoonStall(islandFolder: Folder, name: string, pos: Vector3, palette: { Color3 }): Part
+	local stall = Instance.new("Model")
+	stall.Name = name
+	stall.Parent = islandFolder
+	local counter = PartFactory.Block(stall, "StallCounter", Vector3.new(13.2, 3.6, 6), CFrame.new(pos + Vector3.new(0, 1.8, 0)), palette[1], Enum.Material.WoodPlanks)
+	PartFactory.Block(stall, "CounterBaseTrim", Vector3.new(13.8, 0.65, 6.6), CFrame.new(pos + Vector3.new(0, 0.35, 0)), palette[3])
+	PartFactory.Block(stall, "CounterTop", Vector3.new(14.0, 0.55, 6.8), CFrame.new(pos + Vector3.new(0, 3.85, 0)), palette[2])
+	for _, xP in ipairs({ -5.8, 5.8 }) do
+		for _, zP in ipairs({ -2.4, 2.4 }) do
+			PartFactory.VerticalCylinder(stall, "Post", 9.0, 0.72, CFrame.new(pos + Vector3.new(xP, 4.5, zP)), palette[3], Enum.Material.Wood)
+		end
+	end
+	-- Mai bat soc 5 dai tuoi sang theo Gu B
+	for s = -2, 2 do
+		local col = if s % 2 == 0 then palette[4] else palette[5]
+		PartFactory.Block(stall, "AwningStripe", Vector3.new(3.15, 0.95, 8.8), CFrame.new(pos + Vector3.new(s * 3.1, 9.2, 0)) * CFrame.Angles(math.rad(9), 0, 0), col)
+		PartFactory.Ball(stall, "AwningScallop", 1.15, pos + Vector3.new(s * 3.1, 8.35, 4.25), col, Enum.Material.SmoothPlastic, false)
+	end
+	for _, xL in ipairs({ -5.2, 5.2 }) do
+		local globe = PartFactory.Ball(stall, "StallLantern", 0.95, pos + Vector3.new(xL, 7.6, 2.7), palette[6], Enum.Material.Neon, false)
+		PartFactory.AddWarmLight(globe, palette[6], 14, 0.9)
+	end
+	return counter
+end
+
 function PropsBuilder.BuildMarketStalls(islandFolder: Folder, islandDef: Types.IslandDef, manualIsland: Instance?)
 	local center = islandDef.centerPosition
+	local stalls = {
+		{
+			marker = "SellMarket", name = "SellMarket", offset = Vector3.new(-28, 0, 44),
+			title = "FISH MARKET", sub = "Talk to Captain Barnaby!", titleCol = Color3.fromRGB(255, 222, 76),
+			action = "Talk to Merchant", obj = "Fish Market", kind = "NpcMerchant",
+			palette = {
+				Color3.fromRGB(176, 118, 68), Color3.fromRGB(252, 236, 202), Color3.fromRGB(122, 78, 44),
+				Color3.fromRGB(252, 84, 72), Color3.fromRGB(255, 248, 232), Color3.fromRGB(255, 214, 92),
+			},
+		},
+		{
+			marker = "RodShop", name = "RodShopStall", offset = Vector3.new(28, 0, 44),
+			title = "ANGLER SHOP", sub = "Rods, Bait & Exclusive Gear", titleCol = Color3.fromRGB(98, 224, 255),
+			action = "Talk to Crafter", obj = "Angler Shop", kind = "NpcShop",
+			palette = {
+				Color3.fromRGB(68, 122, 188), Color3.fromRGB(236, 248, 255), Color3.fromRGB(52, 78, 122),
+				Color3.fromRGB(44, 174, 255), Color3.fromRGB(246, 252, 255), Color3.fromRGB(118, 236, 255),
+			},
+		},
+	}
 
-	-- 1. Quay Ban Ca (Fish Market - Ben Trai Duong Ra Cau)
-	local sellCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "SellMarket", CFrame.new(center + Vector3.new(-28, 0, 44)))
-	local sellPos = sellCf.Position
-	local sellOverride = AssetRegistry.TryClone("Buildings", "SellMarket", true)
-	if sellOverride and sellOverride.PrimaryPart then
-		sellOverride.Name = "SellMarket"
-		sellOverride:PivotTo(sellCf)
-		sellOverride.Parent = islandFolder
-		PartFactory.AddBillboard(sellOverride.PrimaryPart, "FISH MARKET", "Talk to Captain Barnaby!", Color3.fromRGB(255, 222, 76), 8.8)
-		PartFactory.AddPrompt(sellOverride.PrimaryPart, "Talk to Merchant", "Fish Market", 16, "NpcMerchant", { IslandId = islandDef.id })
-	else
-		local sellFolder = Instance.new("Model")
-		sellFolder.Name = "SellMarket"
-		sellFolder.Parent = islandFolder
-		local counter = PartFactory.Block(sellFolder, "SellCounter", Vector3.new(13, 3.6, 6), CFrame.new(sellPos + Vector3.new(0, 1.8, 0)), Color3.fromRGB(168, 116, 72), Enum.Material.WoodPlanks)
-		PartFactory.Block(sellFolder, "CounterTop", Vector3.new(13.8, 0.5, 6.8), CFrame.new(sellPos + Vector3.new(0, 3.8, 0)), Color3.fromRGB(242, 226, 196))
-		for _, xP in ipairs({ -5.8, 5.8 }) do
-			for _, zP in ipairs({ -2.4, 2.4 }) do
-				PartFactory.VerticalCylinder(sellFolder, "Post", 9.0, 0.7, CFrame.new(sellPos + Vector3.new(xP, 4.5, zP)), Color3.fromRGB(122, 82, 48), Enum.Material.Wood)
-			end
+	for _, st in ipairs(stalls) do
+		local cf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, st.marker, CFrame.new(center + st.offset))
+		local override = AssetRegistry.TryClone("Buildings", st.name, true)
+		local host: BasePart
+		if override and override.PrimaryPart then
+			override.Name = st.name
+			override:PivotTo(cf)
+			override.Parent = islandFolder
+			host = override.PrimaryPart
+		else
+			host = buildCartoonStall(islandFolder, st.name, cf.Position, st.palette)
 		end
-		PartFactory.Block(sellFolder, "Roof", Vector3.new(15.2, 1.1, 8.6), CFrame.new(sellPos + Vector3.new(0, 9.2, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(245, 92, 76))
-		PartFactory.Block(sellFolder, "RoofStripe", Vector3.new(5.2, 1.18, 8.7), CFrame.new(sellPos + Vector3.new(0, 9.22, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(255, 246, 224))
-		PartFactory.AddBillboard(counter, "FISH MARKET", "Talk to Captain Barnaby!", Color3.fromRGB(255, 222, 76), 8.8)
-		PartFactory.AddPrompt(counter, "Talk to Merchant", "Fish Market", 16, "NpcMerchant", { IslandId = islandDef.id })
-	end
-
-	-- 2. Quay Cua Hang Can Cau & Phu Kien (Angler Shop - Ben Phai)
-	local shopCf = ManualIslandAdapter.GetMarkerCFrame(manualIsland, "RodShop", CFrame.new(center + Vector3.new(28, 0, 44)))
-	local shopPos = shopCf.Position
-	local shopOverride = AssetRegistry.TryClone("Buildings", "RodShopStall", true)
-	if shopOverride and shopOverride.PrimaryPart then
-		shopOverride.Name = "RodShopStall"
-		shopOverride:PivotTo(shopCf)
-		shopOverride.Parent = islandFolder
-		PartFactory.AddBillboard(shopOverride.PrimaryPart, "ANGLER SHOP", "Rods, Bait & Exclusive Gear", Color3.fromRGB(98, 224, 255), 8.8)
-		PartFactory.AddPrompt(shopOverride.PrimaryPart, "Talk to Crafter", "Angler Shop", 16, "NpcShop", { IslandId = islandDef.id })
-	else
-		local shopFolder = Instance.new("Model")
-		shopFolder.Name = "RodShopStall"
-		shopFolder.Parent = islandFolder
-		local shopCounter = PartFactory.Block(shopFolder, "ShopCounter", Vector3.new(13, 3.6, 6), CFrame.new(shopPos + Vector3.new(0, 1.8, 0)), Color3.fromRGB(76, 114, 168), Enum.Material.WoodPlanks)
-		PartFactory.Block(shopFolder, "CounterTop", Vector3.new(13.8, 0.5, 6.8), CFrame.new(shopPos + Vector3.new(0, 3.8, 0)), Color3.fromRGB(232, 244, 255))
-		for _, xP in ipairs({ -5.8, 5.8 }) do
-			for _, zP in ipairs({ -2.4, 2.4 }) do
-				PartFactory.VerticalCylinder(shopFolder, "Post", 9.0, 0.7, CFrame.new(shopPos + Vector3.new(xP, 4.5, zP)), Color3.fromRGB(64, 82, 116), Enum.Material.Wood)
-			end
-		end
-		PartFactory.Block(shopFolder, "Roof", Vector3.new(15.2, 1.1, 8.6), CFrame.new(shopPos + Vector3.new(0, 9.2, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(56, 168, 255))
-		PartFactory.Block(shopFolder, "RoofStripe", Vector3.new(5.2, 1.18, 8.7), CFrame.new(shopPos + Vector3.new(0, 9.22, 0)) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(245, 250, 255))
-		PartFactory.AddBillboard(shopCounter, "ANGLER SHOP", "Rods, Bait & Exclusive Gear", Color3.fromRGB(98, 224, 255), 8.8)
-		PartFactory.AddPrompt(shopCounter, "Talk to Crafter", "Angler Shop", 16, "NpcShop", { IslandId = islandDef.id })
+		PartFactory.AddBillboard(host, st.title, st.sub, st.titleCol, 8.8)
+		PartFactory.AddPrompt(host, st.action, st.obj, 16, st.kind, { IslandId = islandDef.id })
 	end
 end
 
@@ -228,10 +243,11 @@ function PropsBuilder.BuildEggPedestals(islandFolder: Folder, islandDef: Types.I
 		local pos = pedCf.Position
 		local baseH = if sp.isExclusive then 3.4 else 2.8
 		local baseDiam = if sp.isExclusive then 8.6 else 7.2
-		local base = PartFactory.VerticalCylinder(eggFolder, "Pedestal_" .. sp.eggId, baseH, baseDiam, CFrame.new(pos + Vector3.new(0, baseH * 0.5, 0)), if sp.isExclusive then Color3.fromRGB(54, 38, 86) else Color3.fromRGB(236, 240, 248))
+		PartFactory.VerticalCylinder(eggFolder, "PedestalStep", 0.7, baseDiam + 1.8, CFrame.new(pos + Vector3.new(0, 0.35, 0)), if sp.isExclusive then Color3.fromRGB(40, 28, 66) else Color3.fromRGB(214, 224, 240))
+		local base = PartFactory.VerticalCylinder(eggFolder, "Pedestal_" .. sp.eggId, baseH, baseDiam, CFrame.new(pos + Vector3.new(0, baseH * 0.5, 0)), if sp.isExclusive then Color3.fromRGB(58, 38, 96) else Color3.fromRGB(244, 248, 255))
 		PartFactory.VerticalCylinder(eggFolder, "PedestalRim", 0.48, baseDiam + 0.7, CFrame.new(pos + Vector3.new(0, baseH + 0.08, 0)), sp.color, Enum.Material.Neon)
 		if sp.isExclusive then
-			PartFactory.VerticalCylinder(eggFolder, "ExclusiveHalo", 0.22, baseDiam + 2.4, CFrame.new(pos + Vector3.new(0, 0.14, 0)), Color3.fromRGB(255, 218, 72), Enum.Material.Neon, false, 0.25)
+			PartFactory.VerticalCylinder(eggFolder, "ExclusiveHalo", 0.22, baseDiam + 2.8, CFrame.new(pos + Vector3.new(0, 0.14, 0)), Color3.fromRGB(255, 218, 72), Enum.Material.Neon, false, 0.22)
 		end
 
 		local eggCenter = pos + Vector3.new(0, baseH + 3.0, 0)
@@ -243,7 +259,12 @@ function PropsBuilder.BuildEggPedestals(islandFolder: Folder, islandDef: Types.I
 		else
 			local egg = PartFactory.Ball(eggFolder, "EggVisual_" .. sp.eggId, if sp.isExclusive then 4.6 else 4.2, eggCenter, sp.color, Enum.Material.SmoothPlastic, false)
 			egg.Size = if sp.isExclusive then Vector3.new(4.2, 5.4, 4.2) else Vector3.new(3.8, 4.9, 3.8)
-			PartFactory.Ball(eggFolder, "EggCoreGlow", if sp.isExclusive then 4.9 else 4.4, eggCenter, if sp.isExclusive then Color3.fromRGB(255, 224, 96) else sp.color, Enum.Material.Neon, false, 0.72)
+			local bandCol = if sp.isExclusive then Color3.fromRGB(255, 224, 88) else Color3.fromRGB(255, 248, 210)
+			PartFactory.VerticalCylinder(eggFolder, "EggBelt", 0.55, if sp.isExclusive then 4.35 else 3.95, CFrame.new(eggCenter + Vector3.new(0, -0.15, 0)), bandCol, Enum.Material.Neon, false, 0.15)
+			if sp.isExclusive then
+				PartFactory.Block(eggFolder, "EggCrown", Vector3.new(1.5, 0.72, 1.5), CFrame.new(eggCenter + Vector3.new(0, 2.85, 0)) * CFrame.Angles(0, math.rad(45), 0), Color3.fromRGB(255, 214, 62), Enum.Material.Neon, false)
+				PartFactory.AddWarmLight(egg, Color3.fromRGB(224, 132, 255), 22, 1.3)
+			end
 		end
 
 		PartFactory.AddBillboard(base, sp.title, sp.sub, sp.color, baseH + 5.8)
