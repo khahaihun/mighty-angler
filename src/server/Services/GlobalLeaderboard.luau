@@ -19,6 +19,7 @@ export type Board = {
 	nextReadCycle: number,
 	top: { TopRow },
 	written: { [Player]: number },
+	peak: { [Player]: number },
 	nextWriteCycle: { [Player]: number },
 }
 
@@ -37,6 +38,7 @@ function GlobalLeaderboard.New(storeName: string): Board
 		nextReadCycle = 1,
 		top = {},
 		written = setmetatable({}, { __mode = "k" }) :: any,
+		peak = setmetatable({}, { __mode = "k" }) :: any,
 		nextWriteCycle = setmetatable({}, { __mode = "k" }) :: any,
 	}
 end
@@ -82,8 +84,13 @@ end
 local function writeScores(board: Board, store: OrderedDataStore, live: { LiveScore })
 	for _, item in ipairs(live) do
 		local player = item.player
-		local value = math.floor(item.score)
-		if item.canWrite and value > 0 and value > (board.written[player] or 0) and board.cycle >= (board.nextWriteCycle[player] or 0) then
+		-- Giu dinh diem da thay trong luc cho nhip ghi: Strength ve 0 khi Rebirth nhung ky luc vua dat van phai duoc ghi.
+		local value = board.peak[player] or 0
+		if item.canWrite then
+			value = math.max(value, math.floor(item.score))
+			board.peak[player] = value
+		end
+		if item.canWrite and value > (board.written[player] or 0) and board.cycle >= (board.nextWriteCycle[player] or 0) then
 			board.nextWriteCycle[player] = board.cycle + GlobalLeaderboard.WRITE_EVERY_CYCLES
 			local ok, err = pcall(function()
 				store:UpdateAsync(tostring(player.UserId), function(oldValue: any)

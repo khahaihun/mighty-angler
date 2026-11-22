@@ -105,13 +105,31 @@ test("writes only when the score rises, at most once per 3 refreshes, and never 
 	equal(#store.writes, 4, "rising score: one write per 3 refreshes")
 	equal(store.data["101"], 107, "latest throttled value stored")
 	for _ = 1, 6 do f.module.Update(board, { live(me, 5) }) end
-	equal(#store.writes, 4, "lower score is not written")
-	equal(store.data["101"], 107, "record never lowered")
+	equal(#store.writes, 5, "only the pending best (109) is flushed; the lower score itself is not written")
+	equal(store.data["101"], 109, "record never lowered")
 	for _ = 1, 6 do f.module.Update(board, { live(me, 0) }) end
-	equal(#store.writes, 4, "zero score is not written")
+	equal(#store.writes, 5, "zero score is not written")
 	local reborn = f.module.New("Top") -- new server: cache empty, stored record is higher
 	f.module.Update(reborn, { live(me, 50) })
-	equal(store.data["101"], 107, "a new server cannot lower the stored record")
+	equal(store.data["101"], 109, "a new server cannot lower the stored record")
+end)
+
+test("a peak reached while the write is throttled is still recorded after the score drops (rebirth)", function()
+	local f = fixture(sources_placeholder)
+	local store = f.store("Top")
+	local me = f.player(101, "Me")
+	local board = f.module.New("Top")
+	f.module.Update(board, { live(me, 100) }) -- written, next write allowed 3 refreshes later
+	f.module.Update(board, { live(me, 5000) }) -- new best while throttled
+	f.module.Update(board, { live(me, 0) }) -- rebirth resets Strength before the next write
+	equal(store.data["101"], 100, "still throttled")
+	f.module.Update(board, { live(me, 0) })
+	equal(store.data["101"], 5000, "best score seen during the throttle window is written late, not lost")
+	equal(#store.writes, 2, "one late write")
+	local locked = f.player(102, "Locked")
+	for _ = 1, 4 do f.module.Update(board, { live(locked, 9999, false) }) end
+	for _ = 1, 4 do f.module.Update(board, { live(locked, 10, true) }) end
+	equal(store.data["102"], 10, "scores seen without a valid lock never become a pending record")
 end)
 
 test("top is read once per 5 refreshes, not on every refresh", function()

@@ -145,7 +145,7 @@ powershell -ExecutionPolicy Bypass -File tools\test_exclusive_pet_scaling.ps1
 powershell -ExecutionPolicy Bypass -File tools\test_studio_data_isolation.ps1 -Suite global_leaderboard
 ```
 
-`tests/global_leaderboard.luau` chạy `GlobalLeaderboard` thật với `OrderedDataStore`, `Players` và `RunService` giả lập. 9 ca: top gồm người ở server khác, xếp giảm dần, tối đa 8 dòng và không trùng dòng của người đang online; chỉ ghi khi điểm tăng, tối đa 1 lần mỗi 3 nhịp, không hạ kỷ lục; đọc 1 lần mỗi 5 nhịp; phiên không giữ khoá không được ghi; một người ghi lỗi không chặn người khác; đọc lỗi giữ danh sách cũ rồi tự hồi phục; tra tên; hai bảng độc lập; place chưa publish không mở kho. `-Suite studio_data_isolation` vẫn kiểm đường đi qua `LiveOpsService` thật (tên kho `_StudioDev`, quyền ghi). Bộ này không chứng minh `GetSortedAsync` hay hạn mức thật của Roblox.
+`tests/global_leaderboard.luau` chạy `GlobalLeaderboard` thật với `OrderedDataStore`, `Players` và `RunService` giả lập. 10 ca: top gồm người ở server khác, xếp giảm dần, tối đa 8 dòng và không trùng dòng của người đang online; chỉ ghi khi điểm tăng, tối đa 1 lần mỗi 3 nhịp, không hạ kỷ lục; đỉnh điểm đạt trong lúc chờ ghi vẫn được ghi sau khi Rebirth; đọc 1 lần mỗi 5 nhịp; phiên không giữ khoá không được ghi; một người ghi lỗi không chặn người khác; đọc lỗi giữ danh sách cũ rồi tự hồi phục; tra tên; hai bảng độc lập; place chưa publish không mở kho. `-Suite studio_data_isolation` vẫn kiểm đường đi qua `LiveOpsService` thật (tên kho `_StudioDev`, quyền ghi). Bộ này không chứng minh `GetSortedAsync` hay hạn mức thật của Roblox.
 
 ## Khoá hồ sơ đang bận — Bước 2 sau review
 
