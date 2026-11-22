@@ -187,7 +187,7 @@ function FishingService.StartCast(player: Player, aimPayload: any?)
 		FishingCastState.TakeCharge(player)
 		Net.FireClient(player, Net.ServerToClient.Toast, {
 			kind = "Info",
-			text = if isAuto then "Walk closer to the pier or beach to use Auto-Fish!" else "Stand near the ocean & aim directly at open water to cast!",
+			text = if isAuto then "Walk closer to the pier or beach to use Auto-Fish!" else "No fish out there! Stand near the pier & aim at the fishing waters!",
 		})
 		FishingCastState.Reset(player, "NoWater")
 		return

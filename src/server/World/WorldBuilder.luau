@@ -17,6 +17,8 @@ local IslandScenery1_2 = require(script.Parent.IslandScenery1_2)
 local TerrainWaterBuilder = require(script.Parent.TerrainWaterBuilder)
 local NpcBuilder = require(script.Parent.NpcBuilder)
 local ManualIslandAdapter = require(script.Parent.ManualIslandAdapter)
+local OceanBuilder = require(script.Parent.OceanBuilder)
+local SkyBuilder = require(script.Parent.SkyBuilder)
 
 local WorldBuilder = {}
 
@@ -58,6 +60,7 @@ function WorldBuilder.SetupLighting()
 		cc.Saturation = 0.16
 		cc.Parent = Lighting
 	end
+	SkyBuilder.Apply()
 end
 
 local function getDefaultEggCosts(islandDef: Types.IslandDef): (number, number)
@@ -148,10 +151,13 @@ function WorldBuilder.BuildIsland(
 	end
 
 	-- Keep player collision; shared fishing filter explicitly excludes these boundaries.
+	-- Tuong cao 40 (y -6..34) cham xuong duoi day bien va kin ca phia Bac: co bien bao quanh thi nguoi choi khong boi sang dao khac duoc.
 	if not (manualIsland and ManualIslandAdapter.HasManualOceanBounds(manualIsland)) then
-		local boundS = PartFactory.Block(islandFolder, "OceanBoundS", Vector3.new(214, 24, 2), CFrame.new(c + Vector3.new(0, 6, 174)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
-		local boundW = PartFactory.Block(islandFolder, "OceanBoundW", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(-106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
-		local boundE = PartFactory.Block(islandFolder, "OceanBoundE", Vector3.new(2, 24, 256), CFrame.new(c + Vector3.new(106, 6, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+		local boundS = PartFactory.Block(islandFolder, "OceanBoundS", Vector3.new(214, 40, 2), CFrame.new(c + Vector3.new(0, 4, 174)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+		local boundW = PartFactory.Block(islandFolder, "OceanBoundW", Vector3.new(2, 40, 256), CFrame.new(c + Vector3.new(-106, 4, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+		local boundE = PartFactory.Block(islandFolder, "OceanBoundE", Vector3.new(2, 40, 256), CFrame.new(c + Vector3.new(106, 4, 48)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+		local boundN = PartFactory.Block(islandFolder, "OceanBoundN", Vector3.new(214, 40, 2), CFrame.new(c + Vector3.new(0, 4, -80)), theme.waterColor, Enum.Material.SmoothPlastic, true, 1)
+		boundN:SetAttribute("FishingRayIgnore", true)
 		boundS:SetAttribute("FishingRayIgnore", true)
 		boundW:SetAttribute("FishingRayIgnore", true)
 		boundE:SetAttribute("FishingRayIgnore", true)
@@ -251,6 +257,8 @@ function WorldBuilder.BuildAll(): Folder
 		local nextIsland = list[idx + 1]
 		WorldBuilder.BuildIsland(worldRoot, islandDef, nextIsland, scenery35Mod)
 	end
+	-- Do bien sau cung de phu len ca ho bien cua tung dao (cung cao do mat nuoc).
+	OceanBuilder.Build(worldRoot)
 
 	return worldRoot
 end
