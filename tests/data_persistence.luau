@@ -47,10 +47,11 @@ return function(sources)
 		local other = Fixture.server(sources, b, "B")
 		local pA = a.add(101)
 		local owner = b.document.activeSessionId
-		local pB, loadB = other.add(101)
-		other.finish(loadB)
+		local pB = other.add(101)
+		other.advance(4.5) -- het vong lay khoa dau tien, B o trang thai cho thu lai
 		equal(a.data.CanWritePersistent(pA), true, "owner A may write")
-		equal(other.data.CanWritePersistent(pB), false, "competing B is read-only")
+		equal(other.data.CanWritePersistent(pB), false, "competing B is locked")
+		equal(other.data.Get(pB), nil, "competing B has no blank profile")
 		equal(other.data.SaveProfile(pB), "Skipped", "competing save")
 		a.data.Get(pA).gold = 937
 		equal(a.data.SaveProfile(pA), "Saved", "owner save")

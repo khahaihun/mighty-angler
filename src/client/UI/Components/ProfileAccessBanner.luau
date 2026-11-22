@@ -2,12 +2,13 @@
 -- Canh bao quyen luu rieng, khong bi dong su kien/buff ghi de.
 local Banner = {}
 local label: TextLabel? = nil
-local readOnly, loading, version = true, true, -1
+local readOnly, loading, retrying, version = true, true, false, -1
 
 local function render()
 	if not label then return end
 	label.Visible = readOnly or loading
-	label.Text = if loading then "Loading your save... Actions are locked until loading finishes."
+	label.Text = if loading and retrying then "Your save is not ready yet (your last server may still be saving it).\nRetrying automatically — please stay, no need to rejoin."
+		elseif loading then "Loading your save... Actions are locked until loading finishes."
 		else "SAVE PROTECTED — READ-ONLY MODE\nSpending, trading and leaderboard writes are disabled. Rejoin to retry."
 end
 
@@ -31,9 +32,9 @@ function Banner.Mount(root: ScreenGui, theme: any)
 	render()
 end
 
-function Banner.Update(safeReadOnly: boolean, isLoading: boolean, incomingVersion: number)
+function Banner.Update(safeReadOnly: boolean, isLoading: boolean, incomingVersion: number, isRetrying: boolean?)
 	if incomingVersion < version then return end
-	version, readOnly, loading = incomingVersion, safeReadOnly, isLoading
+	version, readOnly, loading, retrying = incomingVersion, safeReadOnly, isLoading, isRetrying == true
 	render()
 end
 

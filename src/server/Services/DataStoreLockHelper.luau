@@ -93,9 +93,10 @@ function DataStoreLockHelper.ReleaseToken(store: DataStore, key: string, token: 
 end
 
 -- Tra ve (confirmedLock, loadedRawData, claimMayBeOwned): loi phan hoi co the da ghi claim.
-function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string): (boolean, any, boolean)
+function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataStore, key: string, myToken: string, maxAttempts: number?): (boolean, any, boolean)
 	local claimMayBeOwned = false
-	for attempt = 1, 3 do
+	local attempts = maxAttempts or 3
+	for attempt = 1, attempts do
 		if not player:IsDescendantOf(Players) then
 			return false, nil, claimMayBeOwned
 		end
@@ -137,7 +138,7 @@ function DataStoreLockHelper.AcquireLockWithRetries(player: Player, store: DataS
 		if ok and type(updated) == "table" and updated.activeSessionId == myToken and updated.lastWriteNonce == claimNonce then
 			return true, updated, true
 		end
-		if attempt < 3 then
+		if attempt < attempts then
 			task.wait(1.5)
 		end
 	end

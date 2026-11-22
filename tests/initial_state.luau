@@ -63,18 +63,22 @@ return function(sources)
 		equal(#snapshots(f),2,"two requests exactly two snapshots")
 		f.finish(f.fireRemote("init",p));equal(#snapshots(f),3,"ready request sends once")
 	end)
-	test("late failed load returns one protected snapshot and HUD warning",function()
-		local b=Fixture.backend();local f=Fixture.server(sources,b,"A")
-		local held=false
-		f.beforeUpdate=function(kind)
-			if kind=="claim" then if not held then held=true;coroutine.yield("late API failure") end;error("load unavailable") end
-		end
-		local p,load=f.add(101);local request=f.fireRemote("init",p)
-		b.now+=8.1;f.resume(load);f.finish(load);f.finish(request)
-		local list=snapshots(f);equal(#list,1,"failed load snapshot once");equal(list[1].safeReadOnly,true,"read-only explicit")
-		local ui=client(sources);ui.emit("StateSnapshot",list[1])
-		equal(warning(ui).Visible,true,"late failure warning visible")
-		assert(string.find(warning(ui).Text,"READ-ONLY",1,true),"warning uses English protected mode")
+	test("unavailable save shows retry banner, no blank snapshot, then one real snapshot",function()
+		local b=Fixture.backend();local f=Fixture.server(sources,b,"A");b.document=profile(f)
+		local down=true
+		f.beforeUpdate=function() if down then error("load unavailable") end end
+		local p=f.add(101);f.fireRemote("init",p)
+		f.advance(4.5)
+		equal(#snapshots(f),0,"no blank snapshot while the real save is unavailable")
+		local access;for _,item in ipairs(f.messages) do if item.event=="ProfileAccessChanged" then access=item.payload end end
+		assert(access and access.loading and access.retrying and access.safeReadOnly,"client told the save is being retried")
+		local ui=client(sources);ui.emit("ProfileAccessChanged",access)
+		equal(warning(ui).Visible,true,"retry banner visible")
+		assert(string.find(warning(ui).Text,"Retrying automatically",1,true),"banner tells the player to stay")
+		down=false;f.advance(6)
+		local list=snapshots(f);equal(#list,1,"real snapshot sent once after recovery")
+		equal(list[1].profile.gold,321,"snapshot carries the real save");equal(list[1].safeReadOnly,false,"recovered save is writable")
+		ui.emit("StateSnapshot",list[1]);equal(warning(ui).Visible,false,"banner clears after recovery")
 	end)
 	test("expired session notifies HUD and cannot spend or write leaderboards",function()
 		local b=Fixture.backend();local f=Fixture.server(sources,b,"A",nil,{dependencies={

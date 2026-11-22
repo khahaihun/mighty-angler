@@ -14,7 +14,7 @@ export type Session = {
 	closeDeadline: number, closeResult: string?, loadCloseResult: string?, failure: string?,
 	confirmedAt: number, revision: number, savedRevision: number, nextSaveAt: number,
 	saveQueued: boolean, resetting: boolean, pending: Writer.Operation?,
-	accessVersion: number, accessState: string?,
+	accessVersion: number, accessState: string?, lockWaiting: boolean,
 }
 local ProfilePersistenceService = {}
 local sessions: { [Player]: Session } = {}
@@ -43,7 +43,7 @@ function ProfilePersistenceService.Begin(player: Player, token: string): Session
 	local s: Session = { player = player, userId = player.UserId, token = token,
 		loading = true, readOnly = true, closed = false, closing = shuttingDown, closeStarted = false,
 		closeDeadline = math.huge, confirmedAt = 0, revision = 0, savedRevision = 0,
-		nextSaveAt = nextAt, saveQueued = false, resetting = false, accessVersion = 0 }
+		nextSaveAt = nextAt, saveQueued = false, resetting = false, accessVersion = 0, lockWaiting = false }
 	sessions[player] = s
 	return s
 end
