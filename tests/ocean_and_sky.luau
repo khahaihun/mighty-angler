@@ -184,13 +184,33 @@ return function(sources)
 		local root = w.named("Folder", "MightyWorld", w.workspace)
 		local manual = w.named("Folder", "Island_2", w.named("Folder", "MightyWorldManual", w.workspace))
 		local Layout, Ocean = w.load("OceanLayout"), w.load("OceanBuilder")
-		local box = Layout.IslandBox(450, 0)
+		local box = Layout.ManualBox(450, 0)
 		for _, part in ipairs(Ocean.Build(root):GetChildren()) do
 			check(part.Name ~= "SeaFloor" or not overlaps(partRect(part), box), "sea floor placed inside the hand-built island")
 		end
 		for _, f in ipairs(w.fills) do check(not overlaps(f, box), "terrain written inside the hand-built island") end
 		check(waterAt(w.fills, box.x0 - 2, 0) and waterAt(w.fills, box.x1 + 2, 0), "sea must still reach the hand-built island's edge")
 		check(not waterAt(w.fills, 0, 0) and waterAt(w.fills, 82, 0), "procedural islands unaffected")
+		check(waterAt(w.fills, 225, 0) and waterAt(w.fills, 675, 0), "sea still connects the hand-built island to its neighbours")
+
+		-- Phoi Sunny Shores (tools/generate_sunny_shores_terrain_draft.luau, tam 0,10,0) rong hon hop dao thu tuc:
+		-- da ngam ban kinh 92 quanh Z=-4 (toi Z=-96), day cat ho 220 x 134 quanh Z=114 (toi Z=181, X=+-110),
+		-- va vung phoi don sach 260 x 290 quanh Z=48. Bien khong duoc ghi vao bat ky vung nao trong so do.
+		local draft = newWorld(sources)
+		draft.named("Folder", "Island_1", draft.named("Folder", "MightyWorldManual", draft.workspace))
+		local draftSea = draft.load("OceanBuilder").Build(draft.named("Folder", "MightyWorld", draft.workspace))
+		local footprints = {
+			rock = { x0 = -92, x1 = 92, z0 = -96, z1 = 88 },
+			lagoonSand = { x0 = -110, x1 = 110, z0 = 47, z1 = 181 },
+			cleared = { x0 = -130, x1 = 130, z0 = -97, z1 = 193 },
+		}
+		for name, rect in pairs(footprints) do
+			for _, f in ipairs(draft.fills) do check(not overlaps(f, rect), "ocean overwrites the Sunny Shores draft: " .. name) end
+			for _, part in ipairs(draftSea:GetChildren()) do
+				check(part.Name ~= "SeaFloor" or not overlaps(partRect(part), rect), "sea floor inside the Sunny Shores draft: " .. name)
+			end
+		end
+		check(waterAt(draft.fills, 0, -102) and waterAt(draft.fills, 134, 0) and waterAt(draft.fills, 0, 198), "sea must start right outside the draft's zone")
 
 		-- Chu du an thu hep vung cam bang marker OceanHole: bien tien sat hon nhung van khong vao trong marker.
 		table.clear(w.fills)

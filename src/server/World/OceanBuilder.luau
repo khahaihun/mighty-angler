@@ -24,11 +24,11 @@ OceanBuilder.PART_SPAN = 2048
 local FLOOR_COLOR = Color3.fromRGB(226, 208, 158)
 local HORIZON_COLOR = Color3.fromRGB(24, 150, 210)
 
-local function manualHole(manualIsland: Instance, box: OceanLayout.Rect): OceanLayout.Rect
+local function manualHole(manualIsland: Instance, cx: number, cz: number): OceanLayout.Rect
 	-- Chu du an co the dat Part "OceanHole" (khong xoay) trong IslandMarkers de thu hep/mo rong vung cam do nuoc.
 	local marker = ManualIslandAdapter.GetMarkerPart(manualIsland, "OceanHole")
 	if not marker then
-		return box
+		return OceanLayout.ManualBox(cx, cz)
 	end
 	local p, half = marker.Position, marker.Size * 0.5
 	return OceanLayout.SnapOut({ x0 = p.X - half.X, x1 = p.X + half.X, z0 = p.Z - half.Z, z1 = p.Z + half.Z })
@@ -50,7 +50,7 @@ function OceanBuilder.Build(worldRoot: Folder): Folder
 		local box = OceanLayout.IslandBox(c.X, c.Z)
 		table.insert(boxes, box)
 		local manualIsland = ManualIslandAdapter.FindManualIsland(islandDef.id)
-		table.insert(holes, if manualIsland then manualHole(manualIsland, box) else OceanLayout.LandHole(c.X, c.Z))
+		table.insert(holes, if manualIsland then manualHole(manualIsland, c.X, c.Z) else OceanLayout.LandHole(c.X, c.Z))
 	end
 
 	local surfaceY = list[1].centerPosition.Y + OceanBuilder.SURFACE_OFFSET_Y

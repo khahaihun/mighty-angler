@@ -15,6 +15,12 @@ OceanLayout.LAND_HALF_X = 79
 OceanLayout.LAND_NORTH = -76
 OceanLayout.LAND_SOUTH = 56 -- ho bien phia nam bat dau tu day, bien phai phu len ca ho
 OceanLayout.LAND_INSET = 1
+-- Vung cua mot dao dung tay khi chua co marker OceanHole: bang vung ma phoi Terrain
+-- (tools/generate_sunny_shores_terrain_draft.luau) don sach truoc khi dap dao, tuc X +-130, Z -97..193 quanh tam.
+-- Da ngam cua phoi ra toi Z = -96 va day cat ho ra toi Z = 181, X = +-110: deu rong hon hop dao thu tuc.
+OceanLayout.MANUAL_HALF_X = 130
+OceanLayout.MANUAL_NORTH = -97
+OceanLayout.MANUAL_SOUTH = 193
 
 local function down(v: number): number
 	return math.floor(v / OceanLayout.GRID) * OceanLayout.GRID
@@ -38,6 +44,13 @@ function OceanLayout.IslandBox(cx: number, cz: number): Rect
 	return OceanLayout.SnapOut({
 		x0 = cx - OceanLayout.ISLAND_HALF_X, x1 = cx + OceanLayout.ISLAND_HALF_X,
 		z0 = cz + OceanLayout.ISLAND_NORTH, z1 = cz + OceanLayout.ISLAND_SOUTH,
+	})
+end
+
+function OceanLayout.ManualBox(cx: number, cz: number): Rect
+	return OceanLayout.SnapOut({
+		x0 = cx - OceanLayout.MANUAL_HALF_X, x1 = cx + OceanLayout.MANUAL_HALF_X,
+		z0 = cz + OceanLayout.MANUAL_NORTH, z1 = cz + OceanLayout.MANUAL_SOUTH,
 	})
 end
 
