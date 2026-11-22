@@ -32,7 +32,9 @@ return function(sources)
  f.fishDefs={boss={id='boss',name='Test Boss',rarity='Boss',islandId=3,minWeight=1,maxWeight=20000,baseValue=100,strengthReward=10},lowboss={id='lowboss',name='Early Boss',rarity='Boss',islandId=2,minWeight=1,maxWeight=30,baseValue=100}}
  deps.FishingSessionManager={HandleStrike=function(p,_,_,_,award) award(p,f.session) end,Get=function() return nil end,CloseSessionOnce=noop}
  local shared=node('Shared')
- local services={ReplicatedStorage={WaitForChild=function() return shared end},Players={PlayerRemoving=signal()},Workspace={},HttpService={GenerateGUID=function() return 'caught-uid' end}}
+ local players={PlayerAdded=signal(),PlayerRemoving=signal(),GetPlayers=function() return {f.player} end}
+ f.player.Parent=players
+ local services={ReplicatedStorage={WaitForChild=function() return shared end},Players=players,Workspace={},HttpService={GenerateGUID=function() return 'caught-uid' end}}
  local env=setmetatable({game={GetService=function(_,k) assert(services[k],k); return services[k] end},Color3={fromRGB=function() return {} end},Vector3={new=vec},task={spawn=function(cb,...) cb(...) end}}, {__index=getfenv()})
  function f.load(name)
   if deps[name] then return deps[name] end

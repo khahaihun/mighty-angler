@@ -29,6 +29,7 @@ $modulePaths = @{
     ProfileMigrator = 'src/server/Services/ProfileMigrator.luau'
     EnchantAndBountyService = 'src/server/Services/EnchantAndBountyService.luau'
     CurrencyService = 'src/server/Services/CurrencyService.luau'
+    RemoteRateLimiter = 'src/server/Services/RemoteRateLimiter.luau'
     DevTestService = 'src/server/Services/DevTestService.luau'
     DevTestPanel = 'src/client/UI/Panels/DevTestPanel.luau'
     OddsCalculator = 'src/shared/OddsCalculator.luau'

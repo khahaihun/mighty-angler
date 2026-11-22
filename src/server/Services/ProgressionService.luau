@@ -21,6 +21,7 @@ local FishingService = require(script.Parent.FishingService)
 local GymService = require(script.Parent.GymService)
 local IslandService = require(script.Parent.IslandService)
 local PetsService = require(script.Parent.PetsService)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 local PlayerVisuals = require(script.Parent.Parent.World.PlayerVisuals)
 
 local ProgressionService = {}
@@ -282,7 +283,7 @@ function ProgressionService.Init()
 		ProgressionService.PushProgression(player)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.RequestInitialState, ProgressionService.PushProgression)
+	RemoteRateLimiter.Connect(Net.ClientToServer.RequestInitialState, ProgressionService.PushProgression)
 
 	FishingService.OnFishCaught(function(player: Player, fishDef: Types.FishDef)
 		local profile = DataService.Get(player)
@@ -310,11 +311,11 @@ function ProgressionService.Init()
 		ProgressionService.PushProgression(player)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.DoRebirth, handleDoRebirth)
-	Net.OnServerEvent(Net.ClientToServer.ClaimDailyReward, handleClaimDaily)
-	Net.OnServerEvent(Net.ClientToServer.ClaimQuest, function(p: Player, id: any) if type(id) == "string" then handleClaimQuest(p, id) end end)
-	Net.OnServerEvent(Net.ClientToServer.ClaimPlaytimeGift, function(p: Player, s: any) local n = tonumber(s); if n then handleClaimPlaytimeGift(p, math.floor(n)) end end)
-	Net.OnServerEvent(Net.ClientToServer.UpdateSettings, handleUpdateSettings)
+	RemoteRateLimiter.Connect(Net.ClientToServer.DoRebirth, handleDoRebirth)
+	RemoteRateLimiter.Connect(Net.ClientToServer.ClaimDailyReward, handleClaimDaily)
+	RemoteRateLimiter.Connect(Net.ClientToServer.ClaimQuest, handleClaimQuest)
+	RemoteRateLimiter.Connect(Net.ClientToServer.ClaimPlaytimeGift, handleClaimPlaytimeGift)
+	RemoteRateLimiter.Connect(Net.ClientToServer.UpdateSettings, handleUpdateSettings)
 end
 
 return ProgressionService

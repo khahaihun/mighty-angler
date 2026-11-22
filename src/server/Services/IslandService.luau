@@ -12,6 +12,7 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 local DataService = require(script.Parent.DataService)
 local CurrencyService = require(script.Parent.CurrencyService)
 local FishingService = require(script.Parent.FishingService)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 local WorldBuilder = require(script.Parent.Parent.World.WorldBuilder)
 
 local IslandService = {}
@@ -131,19 +132,8 @@ function IslandService.Init()
 		end)
 	end)
 
-	Net.OnServerEvent(Net.ClientToServer.UnlockIsland, function(player: Player, rawId: any)
-		local targetId = tonumber(rawId)
-		if targetId then
-			IslandService.HandleUnlockOrTravel(player, math.floor(targetId))
-		end
-	end)
-
-	Net.OnServerEvent(Net.ClientToServer.TravelIsland, function(player: Player, rawId: any)
-		local targetId = tonumber(rawId)
-		if targetId then
-			IslandService.HandleTravel(player, math.floor(targetId))
-		end
-	end)
+	RemoteRateLimiter.Connect(Net.ClientToServer.UnlockIsland, IslandService.HandleUnlockOrTravel)
+	RemoteRateLimiter.Connect(Net.ClientToServer.TravelIsland, IslandService.HandleTravel)
 end
 
 return IslandService

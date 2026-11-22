@@ -23,6 +23,7 @@ local ProfileMigrator = require(script.Parent.ProfileMigrator)
 local EnchantAndBountyService = {}
 
 local WorldPromptAccess = require(script.Parent.WorldPromptAccess)
+local RemoteRateLimiter = require(script.Parent.RemoteRateLimiter)
 
 local function checkNearCollector(player: Player, islandId: number): boolean
  if WorldPromptAccess.IsNear(player, islandId, { NpcCollector = true }) then return true end
@@ -277,18 +278,10 @@ local function handleTurnInBounty(player: Player, bountyId: string, fishUid: str
 end
 
 function EnchantAndBountyService.Init()
-	Net.OnServerEvent(Net.ClientToServer.RollEnchant, function(p: Player, rId: any, useGems: any)
-		if type(rId) == "string" then handleRollEnchant(p, rId, useGems == true) end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.UnlockExclusiveRod, function(p: Player, rId: any, fUid: any)
-		if type(rId) == "string" then handleUnlockExclusiveRod(p, rId, if type(fUid) == "string" then fUid else nil) end
-	end)
-	Net.OnServerEvent(Net.ClientToServer.AppraiseFish, function(p: Player, fUid: any)
-		handleAppraiseFish(p, if type(fUid) == "string" then fUid else nil)
-	end)
-	Net.OnServerEvent(Net.ClientToServer.TurnInBounty, function(p: Player, bId: any, fUid: any)
-		if type(bId) == "string" and type(fUid) == "string" then handleTurnInBounty(p, bId, fUid) end
-	end)
+	RemoteRateLimiter.Connect(Net.ClientToServer.RollEnchant, handleRollEnchant)
+	RemoteRateLimiter.Connect(Net.ClientToServer.UnlockExclusiveRod, handleUnlockExclusiveRod)
+	RemoteRateLimiter.Connect(Net.ClientToServer.AppraiseFish, handleAppraiseFish)
+	RemoteRateLimiter.Connect(Net.ClientToServer.TurnInBounty, handleTurnInBounty)
 end
 
 return EnchantAndBountyService

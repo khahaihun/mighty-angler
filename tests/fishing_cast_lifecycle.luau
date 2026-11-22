@@ -27,7 +27,9 @@ return function(sources)
   Raycast=function() rayCount+=1; return rayHit end}
  local root={Position=vec(0,4,0),CFrame={LookVector=vec(0,0,1)},IsA=function(_,c) return c=="BasePart" end}
  local p={Character={FindFirstChild=function() return root end}}
- local services={Workspace=workspace,ReplicatedStorage=node("ReplicatedStorage"),Players={GetPlayers=function() return {p} end,PlayerRemoving={Connect=function() end}}}
+ local signal={Connect=function() end}
+ local services={Workspace=workspace,ReplicatedStorage=node("ReplicatedStorage"),Players={GetPlayers=function() return {p} end,PlayerAdded=signal,PlayerRemoving=signal}}
+ p.Parent=services.Players
  local uid=0
  local cache={Types={},OddsCalculator={},Net=net,GameConfig=config,PerkService={HasGamepass=function() return pro end},
   Util={NewUid=function() uid+=1; return tostring(uid) end,TriangleBounce=function() return .5 end},RodVisuals={ClearBobber=function() end}}
