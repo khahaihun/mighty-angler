@@ -23,6 +23,9 @@ local ProgressionService = require(script.Services.ProgressionService)
 local EnchantAndBountyService = require(script.Services.EnchantAndBountyService)
 local LiveOpsService = require(script.Services.LiveOpsService)
 local DevTestService = require(script.Services.DevTestService)
+local ReceiptService = require(script.Services.ReceiptService)
+local CodesService = require(script.Services.CodesService)
+local AnalyticsHelper = require(script.Services.AnalyticsHelper)
 
 -- 1. Khoi tao mang RemoteEvent va dung canh quan the gioi
 Net.InitServer()
@@ -44,8 +47,20 @@ PlayerVisuals.Init()
 LiveOpsService.Init()
 DevTestService.SetTriggerEventHook(LiveOpsService.TriggerNewServerEvent)
 DevTestService.Init()
+ReceiptService.Init()
+CodesService.Init()
 
--- 3. Noi hook roi thuoc Potion / Pet hiem khi cau dinh Rare / Boss
+-- 3. Funnel tan thu (Analytics): chi nghe hook public san co, moi buoc bao toi da 1 lan/phien
+DataService.OnProfileLoaded(function(player: Player) AnalyticsHelper.LogOnboardingStep(player, "JoinedGame") end)
+FishingService.OnFishCaught(function(player: Player) AnalyticsHelper.LogOnboardingStep(player, "FirstCatch") end)
+CurrencyService.OnStatIncremented(function(player: Player, statName: string)
+	if statName == "goldEarned" then AnalyticsHelper.LogOnboardingStep(player, "FirstGoldEarned") end
+end)
+GymService.OnGymRepCompleted(function(player: Player) AnalyticsHelper.LogOnboardingStep(player, "FirstGymRep") end)
+IslandService.OnIslandUnlocked(function(player: Player) AnalyticsHelper.LogOnboardingStep(player, "FirstIslandUnlock") end)
+PetsService.OnPetHatched(function(player: Player) AnalyticsHelper.LogOnboardingStep(player, "FirstEggHatch") end)
+
+-- 4. Noi hook roi thuoc Potion / Pet hiem khi cau dinh Rare / Boss
 FishingService.OnFishCaught(function(player: Player, fishDef, _mutation)
 	if fishDef.rarity == "Boss" then
 		if math.random() <= 0.35 then

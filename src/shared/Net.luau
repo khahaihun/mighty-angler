@@ -51,6 +51,8 @@ Net.ClientToServer = {
 	ClaimDailyReward = "C2S_ClaimDailyReward",
 	ClaimQuest = "C2S_ClaimQuest",
 	PromptGamepass = "C2S_PromptGamepass",
+	PromptDevProduct = "C2S_PromptDevProduct",
+	RedeemCode = "C2S_RedeemCode",
 	DevAction = "C2S_DevAction",
 }
 
@@ -81,6 +83,7 @@ Net.ServerToClient = {
 	EggHatched = "S2C_EggHatched",
 	ServerEventChanged = "S2C_ServerEventChanged",
 	Toast = "S2C_Toast",
+	CodeRedeemResult = "S2C_CodeRedeemResult",
 	FloatingGain = "S2C_FloatingGain",
 }
 

@@ -80,7 +80,7 @@ function ProfileValidator.Validate(raw: any): string?
 		end
 		return nil
 	end
-	reason = checkMaps({ "ownedRods", "unlockedIslands", "claimedIndexRewards", "claimedAchievements", "playtimeClaimedToday" }, function(v) return type(v) == "boolean" end)
+	reason = checkMaps({ "ownedRods", "unlockedIslands", "claimedIndexRewards", "claimedAchievements", "playtimeClaimedToday", "redeemedCodes" }, function(v) return type(v) == "boolean" end)
 		or checkMaps({ "rodEnchants", "pinnedFishUids" }, text)
 		or checkMaps({ "potions", "bait", "indexFish", "indexPets" }, number)
 	if reason then return reason end
@@ -103,6 +103,7 @@ function ProfileValidator.Validate(raw: any): string?
 		seenPets[p.uid] = true; return true
 	end) then return "pets:EntriesOrSparseArray" end
 	if raw.equippedPetUids and not dense(raw.equippedPetUids, text) then return "equippedPetUids:SparseArray" end
+	if raw.processedPurchaseIds and not dense(raw.processedPurchaseIds, text) then return "processedPurchaseIds:SparseArray" end
 	if raw.activePotions and not dictionary(raw.activePotions, function(p: any): boolean
 		return type(p) == "table" and text(p.potionId) and integer(p.tier) and p.tier >= 1 and number(p.expiresAt)
 	end) then return "activePotions:Entry" end

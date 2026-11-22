@@ -9,6 +9,7 @@ local GameConfig = require(Shared:WaitForChild("Config"):WaitForChild("GameConfi
 
 local Theme = require(script.Parent.Parent.Theme)
 local WindowFrame = require(script.Parent.Parent.Components.WindowFrame)
+local GemsAndCodesSection = require(script.Parent.Parent.Components.GemsAndCodesSection)
 
 local PlaytimeAndSettingsModal = {}
 
@@ -141,6 +142,7 @@ function PlaytimeAndSettingsModal.Render()
 			tBtn.TextSize = 14
 			tBtn.ZIndex = 24
 		end
+		GemsAndCodesSection.MountCodeBox(w.body, #toggles + 1)
 	end
 end
 

@@ -34,6 +34,12 @@ GameConfig.BONUS_PET_EQUIP_SLOTS = 2
 GameConfig.ROBLOX_GROUP_ID = 0
 GameConfig.DEV_UNLOCK_PERKS_IN_STUDIO = true
 
+-- Bien lai Robux & Ma Qua Tang: vong dem PurchaseId gan nhat va gioi han toc do nhap ma
+GameConfig.MAX_PROCESSED_PURCHASE_IDS = 60
+GameConfig.CODE_REDEEM_MIN_GAP_SEC = 1.5
+GameConfig.CODE_REDEEM_WINDOW_SEC = 60
+GameConfig.CODE_REDEEM_MAX_PER_WINDOW = 6
+
 -- Thong so cau ca, Perfect Cast & Minigame
 GameConfig.BASE_BITE_MIN_SEC = 1.8
 GameConfig.BASE_BITE_MAX_SEC = 4.0
@@ -124,7 +130,7 @@ GameConfig.PlaytimeGifts = {
 -- Noi DUY NHAT khai bao so phien ban du lieu ho so (ProfileValidator va ProfileMigrator deu doc tu day).
 -- Moi lan them/bot/doi kieu mot truong trong CreateDefaultProfile PHAI tang so nay len 1 va them danh sach
 -- truong cua phien ban moi vao tests/profile_compatibility.luau; neu khong, ho so cu se bi khoa (quarantine).
-GameConfig.PROFILE_SCHEMA_VERSION = 2
+GameConfig.PROFILE_SCHEMA_VERSION = 3
 
 function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 	return {
@@ -168,6 +174,8 @@ function GameConfig.CreateDefaultProfile(): Types.PlayerProfile
 		autoLockMutated = true,
 		lowGfx = false,
 		muteSfx = false,
+		processedPurchaseIds = {},
+		redeemedCodes = {},
 		stats = {
 			fishCaught = 0,
 			rareCaught = 0,

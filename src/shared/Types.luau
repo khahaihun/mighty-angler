@@ -286,6 +286,8 @@ export type PlayerProfile = {
 	autoLockMutated: boolean,
 	lowGfx: boolean,
 	muteSfx: boolean,
+	processedPurchaseIds: { string },
+	redeemedCodes: { [string]: boolean },
 	stats: PlayerStats,
 }
 

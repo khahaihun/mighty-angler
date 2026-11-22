@@ -20,6 +20,18 @@ local FROZEN = {
 		stats = "bossCaught:number eggsHatched:number eventsJoined:number fishCaught:number goldEarned:number "
 			.. "gymReps:number mutationsCaught:number playTimeSec:number rareCaught:number",
 	},
+	[3] = {
+		top = "activePotions:table autoLockMutated:boolean autoLockRare:boolean bait:table claimedAchievements:table "
+			.. "claimedIndexRewards:table currentIsland:number dailyQuests:table dailyStreak:number dataVersion:number "
+			.. "enchantRelics:number equippedHotbarSlot:number equippedPetUids:table fishBag:table gems:number gold:number "
+			.. "gymGearLevel:number indexFish:table indexPets:table lastDailyClaimDay:number lockTimestamp:number "
+			.. "lowGfx:boolean muteSfx:boolean ownedRods:table pets:table pinnedFishUids:table playtimeClaimedToday:table "
+			.. "playtimeDay:number playtimeTodaySec:number potions:table processedPurchaseIds:table questDay:number "
+			.. "rebirths:number redeemedCodes:table rodEnchants:table "
+			.. "rodId:string saveSeq:number stats:table strength:number totalStrength:number unlockedIslands:table",
+		stats = "bossCaught:number eggsHatched:number eventsJoined:number fishCaught:number goldEarned:number "
+			.. "gymReps:number mutationsCaught:number playTimeSec:number rareCaught:number",
+	},
 }
 
 -- A save exactly as a version-2 server stores it for a player with real progress.
@@ -45,6 +57,15 @@ local function goldenV2()
 		stats = { fishCaught = 300, rareCaught = 12, bossCaught = 1, mutationsCaught = 4, gymReps = 900,
 			goldEarned = 222222, eggsHatched = 8, eventsJoined = 2, playTimeSec = 36000 },
 	}
+end
+
+-- The same player saved by today's server (version 3 adds purchase receipts and redeemed codes).
+local function goldenV3()
+	local doc = goldenV2()
+	doc.dataVersion = 3
+	doc.processedPurchaseIds = { "receipt-1", "receipt-2" }
+	doc.redeemedCodes = { RELEASE = true }
+	return doc
 end
 
 local function signature(tbl)
@@ -84,7 +105,8 @@ local function evolved(sources, raiseVersion)
 	equal(fields, 1, "test patch: field inserted")
 	if raiseVersion then
 		local versions
-		config, versions = string.gsub(config, "GameConfig%.PROFILE_SCHEMA_VERSION = %d+", "GameConfig.PROFILE_SCHEMA_VERSION = 3", 1)
+		local current = tonumber(string.match(config, "GameConfig%.PROFILE_SCHEMA_VERSION = (%d+)"))
+		config, versions = string.gsub(config, "GameConfig%.PROFILE_SCHEMA_VERSION = %d+", "GameConfig.PROFILE_SCHEMA_VERSION = " .. tostring(current + 1), 1)
 		equal(versions, 1, "test patch: version raised")
 	end
 	patched.GameConfig = config
@@ -146,7 +168,7 @@ return function(sources)
 
 	test("new field without a version bump: old saves get quarantined, and the frozen list catches it first", function()
 		local broken = evolved(sources, false)
-		local b, f, p = join(broken, goldenV2())
+		local b, f, p = join(broken, goldenV3())
 		equal(f.data.CanWritePersistent(p), false, "this is the outage: every existing save becomes read-only")
 		equal(b.document.gold, 123456, "quarantined save untouched")
 		local ok, err = pcall(checkFrozen, f.config)
@@ -154,16 +176,26 @@ return function(sources)
 		assert(string.find(tostring(err), "+futureTokens:number", 1, true), "failure names the new field: " .. tostring(err))
 	end)
 
+	test("a real version-3 save keeps its receipts and redeemed codes", function()
+		local b, f, p = join(sources, goldenV3())
+		equal(f.data.CanWritePersistent(p), true, "version-3 save is writable")
+		local profile = f.data.Get(p)
+		equal(profile.processedPurchaseIds[2], "receipt-2", "receipt ids kept"); equal(profile.redeemedCodes.RELEASE, true, "code kept")
+		f.finish(f.remove(p))
+		equal(b.document.processedPurchaseIds[1], "receipt-1", "receipts saved"); equal(b.document.redeemedCodes.RELEASE, true, "codes saved")
+	end)
+
 	test("new field with the version raised: old save loads, gains the default, and is stored as the new version", function()
 		local upgraded = evolved(sources, true)
 		local b, f, p = join(upgraded, goldenV2())
-		equal(f.data.CanWritePersistent(p), true, "version-2 save still writable on version-3 code")
+		local raised = f.config.PROFILE_SCHEMA_VERSION
+		equal(f.data.CanWritePersistent(p), true, "version-2 save still writable on raised-version code")
 		local profile = f.data.Get(p)
 		equal(profile.futureTokens, 7, "missing new field filled from defaults")
 		equal(profile.gold, 123456, "old progress kept"); equal(profile.fishBag[1].uid, "fish-a", "old fish kept")
-		equal(profile.dataVersion, 3, "profile upgraded in memory")
+		equal(profile.dataVersion, raised, "profile upgraded in memory")
 		f.finish(f.remove(p))
-		equal(b.document.dataVersion, 3, "stored as version 3"); equal(b.document.futureTokens, 7, "new field stored")
+		equal(b.document.dataVersion, raised, "stored as the raised version"); equal(b.document.futureTokens, 7, "new field stored")
 		local ok, err = pcall(checkFrozen, f.config)
 		equal(ok, false, "a raised version still needs its own frozen list")
 		assert(string.find(tostring(err), "no frozen field list", 1, true), "failure asks for the new list: " .. tostring(err))
@@ -171,19 +203,22 @@ return function(sources)
 
 	test("rollback safety: today's server never overwrites a save written by a newer version", function()
 		local future = goldenV2()
-		future.dataVersion, future.futureTokens = 3, 99
+		local _, current = join(sources, nil)
+		local newerVersion = current.config.PROFILE_SCHEMA_VERSION + 1
+		future.dataVersion, future.futureTokens = newerVersion, 99
 		local b, f, p = join(sources, future)
 		equal(f.data.CanWritePersistent(p), false, "newer save is read-only on older code")
 		equal(f.data.SaveProfile(p), "Skipped", "no save attempted")
 		f.finish(f.remove(p))
-		equal(b.document.dataVersion, 3, "version untouched"); equal(b.document.futureTokens, 99, "newer field untouched")
+		equal(b.document.dataVersion, newerVersion, "version untouched"); equal(b.document.futureTokens, 99, "newer field untouched")
 		equal(b.document.gold, 123456, "progress untouched")
 	end)
 
-	test("a version-3 save missing its own new field is still rejected (strict check stays on for the current version)", function()
+	test("a raised-version save missing its own new field is still rejected (strict check stays on for the current version)", function()
 		local upgraded = evolved(sources, true)
 		local current = goldenV2()
-		current.dataVersion = 3 -- claims version 3 but lacks futureTokens: truncated or hand-edited
+		local _, probe = join(upgraded, nil)
+		current.dataVersion = probe.config.PROFILE_SCHEMA_VERSION -- claims the raised version but lacks futureTokens: truncated or hand-edited
 		local b, f, p = join(upgraded, current)
 		equal(f.data.CanWritePersistent(p), false, "incomplete current-version save quarantined")
 		equal(b.document.futureTokens, nil, "store untouched")

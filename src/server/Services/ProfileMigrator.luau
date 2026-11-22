@@ -1,5 +1,5 @@
 --!strict
--- ProfileMigrator.luau: Kiem tra Schema/Version an toan, Migration v2 Idempotent & dong bo Leaderstats
+-- ProfileMigrator.luau: Kiem tra Schema/Version an toan, Migration v1/v2 -> hien tai (Idempotent) & dong bo Leaderstats
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -60,6 +60,9 @@ function ProfileMigrator.MigrateProfileToV2(merged: Types.PlayerProfile)
 	ensureTableField(rawTbl, "claimedAchievements", {})
 	ensureTableField(rawTbl, "dailyQuests", {})
 	ensureTableField(rawTbl, "playtimeClaimedToday", {})
+	-- v3: bien lai Robux da cap va Ma Qua Tang da dung; ho so v1/v2 nhan bang rong.
+	ensureTableField(rawTbl, "processedPurchaseIds", {})
+	ensureTableField(rawTbl, "redeemedCodes", {})
 	ensureTableField(rawTbl, "stats", GameConfig.CreateDefaultProfile().stats :: any)
 
 	merged.unlockedIslands["1"] = true
@@ -92,6 +95,12 @@ function ProfileMigrator.MigrateProfileToV2(merged: Types.PlayerProfile)
 		end
 	end
 	merged.fishBag = cleanBag
+
+	local purchaseIds = merged.processedPurchaseIds
+	local overflow = #purchaseIds - GameConfig.MAX_PROCESSED_PURCHASE_IDS
+	if overflow > 0 then
+		merged.processedPurchaseIds = table.move(purchaseIds, overflow + 1, #purchaseIds, 1, {})
+	end
 
 	if (tonumber(merged.dataVersion) or 1) < CURRENT_SCHEMA_VERSION then
 		merged.dataVersion = CURRENT_SCHEMA_VERSION
