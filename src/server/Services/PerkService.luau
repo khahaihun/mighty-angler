@@ -20,6 +20,7 @@ local PerkService = {}
 local ownedPassesCache: { [Player]: { [string]: boolean } } = {}
 local groupMemberCache: { [Player]: boolean } = {}
 local groupRetryAt: { [Player]: number } = {}
+local groupAnswerOwed: { [Player]: boolean } = {}
 local verifyingPass: { [Player]: { [string]: boolean } } = {}
 local paidRandomPolicyState: { [Player]: string } = {}
 local devSimulatedFreeMode: { [Player]: boolean } = {}
@@ -41,6 +42,7 @@ local function checkIsInGroup(player: Player): boolean
 	end
 	-- Loi API khong duoc nho thanh "khong o trong Group": hoi lai sau GROUP_RETRY_SEC.
 	if os.clock() < (groupRetryAt[player] or 0) then
+		groupAnswerOwed[player] = true
 		return false
 	end
 	groupRetryAt[player] = os.clock() + GROUP_RETRY_SEC
@@ -52,9 +54,15 @@ local function checkIsInGroup(player: Player): boolean
 		return false
 	end
 	if not ok then
+		groupAnswerOwed[player] = true
 		return false
 	end
 	groupMemberCache[player] = inGroup == true
+	-- Client da tung nhan "chua co quyen" luc chua hoi duoc Roblox: gui lai quyen moi de nut Auto-Train khop server.
+	if inGroup == true and groupAnswerOwed[player] then
+		task.spawn(PerkService.PushPerks, player)
+	end
+	groupAnswerOwed[player] = nil
 	return inGroup == true
 end
 
@@ -285,6 +293,7 @@ function PerkService.Init()
 		ownedPassesCache[player] = nil
 		groupMemberCache[player] = nil
 		groupRetryAt[player] = nil
+		groupAnswerOwed[player] = nil
 		verifyingPass[player] = nil
 		paidRandomPolicyState[player] = nil
 		devSimulatedFreeMode[player] = nil

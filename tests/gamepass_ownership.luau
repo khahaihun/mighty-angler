@@ -69,7 +69,7 @@ return function(sources)
 				OnServerEvent = function() end,
 				FireClient = function(player, event, payload)
 					assert(active[player], "must not message a player who left")
-					if event == "Toast" then table.insert(f.toasts, payload) else f.pushes += 1 end
+					if event == "Toast" then table.insert(f.toasts, payload) else f.pushes += 1; f.lastPerks = payload end
 				end },
 			DataService = { Get = function() return f.profile end, MarkDirty = function() end, OnProfileLoaded = function() end },
 		}
@@ -214,9 +214,11 @@ return function(sources)
 		f.advance(5)
 		assert(not f.perks.CanAutoTrain(player) and not f.perks.CanAutoTrain(player))
 		assert(f.groupCalls == 1, "failed lookups are throttled, got " .. f.groupCalls)
+		assert(f.lastPerks.canAutoTrain == false, "client was told Auto-Train is locked during outage")
 		f.groupError = false
 		f.advance(31)
 		assert(f.perks.CanAutoTrain(player), "member regains Auto-Train after API recovers")
+		assert(f.lastPerks.canAutoTrain == true, "client is told as soon as the server grants Auto-Train")
 		local settled = f.groupCalls
 		assert(f.perks.CanAutoTrain(player) and f.groupCalls == settled, "confirmed answer is cached")
 	end)
