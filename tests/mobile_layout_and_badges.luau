@@ -36,8 +36,8 @@ return function(sources)
 				assert(math.abs(physical[name].x * s - r.x * s - i[1]) < 1e-6, name .. " left inset counted twice")
 				assert(math.abs(physical[name].y * s - r.y * s - i[2]) < 1e-6, name .. " top inset counted twice")
 				for other, b in pairs(rects) do
-					-- The open bait dropdown is a transient overlay, not a persistent HUD control.
-					if name ~= other and name ~= "QuickBaitPopup" and other ~= "QuickBaitPopup" then
+					-- Modals and the bait dropdown may cover the HUD underneath.
+					if name ~= other and name ~= "Window" and other ~= "Window" and name ~= "QuickBaitPopup" and other ~= "QuickBaitPopup" then
 						assert(not overlaps(r, b), name .. " overlaps " .. other)
 					end
 				end
@@ -48,7 +48,11 @@ return function(sources)
 			local hotbar = rects.CustomHotbar
 			assert(5 * 90 + 4 * 8 <= hotbar.w and 62 <= hotbar.h, "slots escape hotbar")
 			assert(172 + 196 + 108 + 16 <= rects.AboveHotbarAutoRow.w, "auto buttons escape row")
-			assert(3 * 38 + 2 * 6 <= rects.ToastStack.h, "toast budget escapes stack")
+			assert(rects.Window.h - 112 >= 240, "modal body cannot show cards")
+			assert(3 * 48 + 2 * 6 <= rects.ToastStack.h, "toast budget escapes stack")
+			assert(rects.ToastStack.w == math.min(440, uw / s - 384), "toast width is not flexible")
+			print(string.format("LAYOUT %dx%d scale=%.4f Window.h=%.1f body=%.1f ToastStack=(%.1f,%.1f,%.1f,%.1f)", screen[1], screen[2], s,
+				rects.Window.h, rects.Window.h - 112, rects.ToastStack.x, rects.ToastStack.y, rects.ToastStack.w, rects.ToastStack.h))
 		end)
 	end
 	test("old_tutorial_would_cover_auto_buttons", function()
@@ -64,6 +68,11 @@ return function(sources)
 		assert(next(Window.ComputeLayout(-1, 375)) == nil)
 	end)
 	test("modules_use_live_safe_area_bindings_and_width_constraints", function()
+		local hud, fxSource = sources["UI/Panels/HudPanel.luau"], sources["Controllers/SoundAndFxController.luau"]
+		assert(hud:find("evLbl.TextWrapped = true", 1, true))
+		assert(hud:find("islTag.TextTruncate = Enum.TextTruncate.AtEnd", 1, true))
+		assert(fxSource:find("lbl.TextWrapped = true", 1, true))
+		assert(fxSource:find("Theme.FitText(lbl, 15, 13)", 1, true))
 		for _, path in ipairs({ "Controllers/TutorialController.luau", "Controllers/SoundAndFxController.luau" }) do
 			assert(sources[path]:find('Instance.new("UISizeConstraint")', 1, true))
 			assert(sources[path]:find("UDim2.new(1, 0, 1, 0)", 1, true))

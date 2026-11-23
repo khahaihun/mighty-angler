@@ -157,6 +157,8 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	islTag.BackgroundTransparency = 1
 	islTag.Font = Theme.FontTitle
 	islTag.TextSize = 18
+	Theme.FitText(islTag, 18, 13)
+	islTag.TextTruncate = Enum.TextTruncate.AtEnd
 	islTag.TextXAlignment = Enum.TextXAlignment.Left
 	islTag.TextColor3 = Color3.fromRGB(116, 238, 255)
 	islTag.Text = "🏝️ Sunny Shores"
@@ -172,6 +174,8 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	evLbl.BackgroundTransparency = 1
 	evLbl.Font = Theme.FontBody
 	evLbl.TextSize = 13
+	evLbl.TextWrapped = true
+	evLbl.TextTruncate = Enum.TextTruncate.AtEnd
 	evLbl.TextXAlignment = Enum.TextXAlignment.Left
 	evLbl.TextColor3 = Theme.Colors.Gold
 	evLbl.Text = ""

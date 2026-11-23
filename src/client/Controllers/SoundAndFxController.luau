@@ -136,7 +136,7 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 
 	local item = Instance.new("Frame")
 	item.Name = "ToastItem"
-	item.Size = UDim2.new(1, 0, 0, 38)
+	item.Size = UDim2.new(1, 0, 0, 48)
 	item.BackgroundColor3 = Theme.Colors.PanelBg
 	item.BackgroundTransparency = 0.08
 	item.Parent = stack
@@ -152,7 +152,8 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	lbl.TextSize = 15
 	lbl.TextColor3 = Theme.Colors.TextPrimary
 	lbl.Text = message
-	lbl.TextTruncate = Enum.TextTruncate.AtEnd
+	lbl.TextWrapped = true
+	Theme.FitText(lbl, 15, 13)
 	lbl.Parent = item
 	Theme.AddTextStroke(lbl, 1.6)
 
@@ -205,7 +206,7 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 	stack.Position = UDim2.new(0.5, 0, 0, 90)
 	stack.Size = UDim2.new(1, 0, 1, 0)
 	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(460, 126)
+	limit.MaxSize = Vector2.new(460, 156)
 	limit.Parent = stack
 	stack.BackgroundTransparency = 1
 	stack.ZIndex = 55

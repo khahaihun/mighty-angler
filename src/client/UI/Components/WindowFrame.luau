@@ -26,20 +26,22 @@ function WindowFrame.ComputeLayout(width: number, height: number, insets: { numb
 		return { x = x + rx, y = y + ry, w = rw, h = rh }
 	end
 	local center, cw = 164, math.max(1, w - 384)
+	local windowW, windowH = math.min(w - 28, 650), math.min(h - 24, 465)
+	local toastW = math.min(440, cw)
 	return {
 		TopCurrencyBar = rect((w - 536) / 2, 8, 536, 44),
 		RodStrengthHint = rect(center, 54, cw, 18), LiveOddsBanner = rect(center, 74, cw, 18),
 		IslandTag = rect(14, 8, 140, 28), EventBanner = rect(14, 40, 140, 40),
 		LeftMenuDock = rect(14, 96, 136, 336),
 		OnboardingHint = rect(center + (cw - math.min(600, cw)) / 2, h - 216, math.min(600, cw), 36),
-		ToastStack = rect(w - 208, 96, 192, 126),
+		ToastStack = rect(center + (cw - toastW) / 2, 96, toastW, 156),
 		GymActiveBanner = rect(center + (cw - 380) / 2, h - 176, 380, 32),
 		CastPowerBar = rect((w - 310) / 2, h - 140, 310, 26),
 		AboveHotbarAutoRow = rect((w - 520) / 2, h - 108, 520, 34),
 		CustomHotbar = rect((w - 490) / 2, h - 68, 490, 62),
 		QuickBaitBtn = rect(w - 208, h - 64, 192, 46),
 		QuickBaitPopup = rect(w - 208, h - 298, 192, 228),
-		Window = rect(center, 96, cw, math.max(114, h - 320)),
+		Window = rect((w - windowW) / 2, (h - windowH) / 2, windowW, windowH),
 	}
 end
 
