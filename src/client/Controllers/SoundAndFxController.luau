@@ -212,6 +212,7 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 	stack.ZIndex = 55
 	local slot = Instance.new("Frame")
 	slot.BackgroundTransparency = 1
+	slot.ZIndex = stack.ZIndex
 	slot.Parent = rootGui
 	WindowFrame.BindLayout(rootGui, slot, "ToastStack")
 	stack.AnchorPoint = Vector2.zero
