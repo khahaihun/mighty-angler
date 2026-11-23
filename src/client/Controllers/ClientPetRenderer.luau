@@ -26,6 +26,17 @@ type ClientNpcRig = {
 
 local ClientPetRenderer = {}
 
+function ClientPetRenderer.RenderPolicy(isLocal: boolean, lowGfx: boolean, distance: number): (boolean, number)
+	if isLocal then return true, 0 end
+	if lowGfx then return distance <= 90, if distance > 60 then 0.2 else 1 / 30 end
+	return distance <= 160, if distance > 85 then 1 / 15 else 0
+end
+
+function ClientPetRenderer.ShouldUpdate(now: number, previous: number?, interval: number): boolean
+	return previous == nil or now - previous >= interval
+end
+local lastPetUpdate: { [Model]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 local localPlayer = Players.LocalPlayer
 local rootFolder: Folder? = nil
 local playerPetModels: { [Player]: { Model } } = {}
@@ -280,9 +291,7 @@ function ClientPetRenderer.Init()
 	Players.PlayerRemoving:Connect(cleanupLeavingPlayer)
 	watchTaggedNpcs()
 
-	local frameStep = 0
 	RunService.RenderStepped:Connect(function(dt: number)
-		frameStep = (frameStep + 1) % 4
 		local t = os.clock()
 		local lowGfx = SoundAndFxController.IsLowGfx()
 		local localChar = localPlayer.Character
@@ -298,19 +307,21 @@ function ClientPetRenderer.Init()
 			local hrp = if char then char:FindFirstChild("HumanoidRootPart") else nil
 			if hrp and hrp:IsA("BasePart") then
 				local dist = if myPos and player ~= localPlayer then (hrp.Position - myPos).Magnitude else 0
-				local visible = dist <= 160
+				local visible, interval = ClientPetRenderer.RenderPolicy(player == localPlayer, lowGfx, dist)
 				for _, model in ipairs(models) do
 					if not visible then
 						model.Parent = nil
+						lastPetUpdate[model] = nil
 					elseif not model.Parent then
 						model:PivotTo(hrp.CFrame)
 						model.Parent = ensureRootFolder()
 					end
 				end
-				if visible and not (player ~= localPlayer and (lowGfx or dist > 85) and frameStep ~= 0) then
+				if visible then
 					local lerpAlpha = math.clamp(dt * 10.5, 0.08, 0.45)
 					for idx, m in ipairs(models) do
-						if m.Parent then
+						if m.Parent and ClientPetRenderer.ShouldUpdate(t, lastPetUpdate[m], interval) then
+							lastPetUpdate[m] = t
 							local off = SLOT_OFFSETS[idx] or Vector3.new(0, 2.5, 4.5)
 							local bobY = if lowGfx and player ~= localPlayer then 0 else (math.sin(t * 3.5 + idx * 1.4) * 0.44)
 							local tiltZ = math.cos(t * 2.8 + idx) * math.rad(6)

@@ -16,6 +16,8 @@ local SoundConfig = require(Shared:WaitForChild("Config"):WaitForChild("SoundCon
 local Theme = require(script.Parent.Parent.UI.Theme)
 local ParticleBudgetController = require(script.Parent.ParticleBudgetController)
 
+local WindowFrame = require(script.Parent.Parent.UI.Components.WindowFrame)
+
 local SoundAndFxController = {}
 
 local fxRootGui: ScreenGui? = nil
@@ -24,6 +26,38 @@ local cachedSounds: { [string]: Sound } = {}
 local ambientSound: Sound? = nil
 local mutedFlag = false
 local lowGfxFlag = false
+local activeToasts: { Frame } = {}
+local rayOriginals: { [SunRaysEffect]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local cloudOriginals: { [Clouds]: { density: number, cover: number, enabled: boolean } } = setmetatable({}, { __mode = "k" }) :: any
+
+local function applyAtmosphereBudget(lowGfx: boolean)
+	for _, effect in ipairs(Lighting:GetDescendants()) do
+		if effect:IsA("SunRaysEffect") then
+			if lowGfx then
+				if rayOriginals[effect] == nil then rayOriginals[effect] = effect.Enabled end
+				effect.Enabled = false
+			elseif rayOriginals[effect] ~= nil then
+				effect.Enabled = rayOriginals[effect]
+				rayOriginals[effect] = nil
+			end
+		end
+	end
+	local clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds")
+	if clouds then
+		local original = cloudOriginals[clouds]
+		if lowGfx then
+			if not original then
+				original = { density = clouds.Density, cover = clouds.Cover, enabled = clouds.Enabled }
+				cloudOriginals[clouds] = original
+			end
+			clouds.Density = original.density * 0.25
+			clouds.Cover = original.cover * 0.5
+		elseif original then
+			clouds.Density, clouds.Cover, clouds.Enabled = original.density, original.cover, original.enabled
+			cloudOriginals[clouds] = nil
+		end
+	end
+end
 
 local function applyClientParticleBudget()
 	ParticleBudgetController.Update(lowGfxFlag)
@@ -40,14 +74,7 @@ function SoundAndFxController.SetClientPrefs(muteSfx: boolean, lowGfx: boolean)
 	if bloom and bloom:IsA("PostEffect") then
 		bloom.Enabled = not lowGfx
 	end
-	local rays = Lighting:FindFirstChildOfClass("SunRaysEffect")
-	if rays then
-		rays.Enabled = not lowGfx
-	end
-	local clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds")
-	if clouds then
-		clouds.Enabled = not lowGfx
-	end
+	applyAtmosphereBudget(lowGfx)
 	applyClientParticleBudget()
 end
 
@@ -94,6 +121,14 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	local stack = toastStackFrame
 	if not stack then return end
 
+	for i = #activeToasts, 1, -1 do
+		if not activeToasts[i].Parent then table.remove(activeToasts, i) end
+	end
+	while #activeToasts >= 3 do
+		local oldest = table.remove(activeToasts, 1)
+		if oldest then oldest:Destroy() end
+	end
+
 	local accent = Theme.Colors.Primary
 	if kind == "Success" then accent = Theme.Colors.Success; SoundAndFxController.PlaySfx("Coins")
 	elseif kind == "Error" then accent = Theme.Colors.Danger; SoundAndFxController.PlaySfx("Error")
@@ -101,10 +136,11 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 
 	local item = Instance.new("Frame")
 	item.Name = "ToastItem"
-	item.Size = UDim2.new(1, 0, 0, 38)
+	item.Size = UDim2.new(1, 0, 0, 48)
 	item.BackgroundColor3 = Theme.Colors.PanelBg
 	item.BackgroundTransparency = 0.08
 	item.Parent = stack
+	table.insert(activeToasts, item)
 	Theme.AddCorner(item, 10)
 	Theme.AddStroke(item, accent, 2.2)
 
@@ -116,7 +152,8 @@ function SoundAndFxController.ShowToast(kind: string, message: string)
 	lbl.TextSize = 15
 	lbl.TextColor3 = Theme.Colors.TextPrimary
 	lbl.Text = message
-	lbl.TextTruncate = Enum.TextTruncate.AtEnd
+	lbl.TextWrapped = true
+	Theme.FitText(lbl, 15, 13)
 	lbl.Parent = item
 	Theme.AddTextStroke(lbl, 1.6)
 
@@ -167,10 +204,20 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 	stack.Name = "ToastStack"
 	stack.AnchorPoint = Vector2.new(0.5, 0)
 	stack.Position = UDim2.new(0.5, 0, 0, 90)
-	stack.Size = UDim2.fromOffset(460, 175)
+	stack.Size = UDim2.new(1, 0, 1, 0)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(460, 156)
+	limit.Parent = stack
 	stack.BackgroundTransparency = 1
 	stack.ZIndex = 55
-	stack.Parent = rootGui
+	local slot = Instance.new("Frame")
+	slot.BackgroundTransparency = 1
+	slot.ZIndex = stack.ZIndex
+	slot.Parent = rootGui
+	WindowFrame.BindLayout(rootGui, slot, "ToastStack")
+	stack.AnchorPoint = Vector2.zero
+	stack.Position = UDim2.fromScale(0, 0)
+	stack.Parent = slot
 
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
@@ -204,6 +251,7 @@ function SoundAndFxController.Init(rootGui: ScreenGui)
 		while true do
 			task.wait(2.0)
 			applyClientParticleBudget()
+			if lowGfxFlag then applyAtmosphereBudget(true) end
 		end
 	end)
 end

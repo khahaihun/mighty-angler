@@ -97,6 +97,7 @@ local function syncHotbarStateFlags()
 end
 
 function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
+	HotbarAndBaitUi.InitBadges()
 	ProfileAccessBanner.Mount(rootGui, Theme)
 	local topBar = Instance.new("Frame")
 	topBar.Name = "TopCurrencyBar"
@@ -105,6 +106,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	topBar.Size = UDim2.fromOffset(560, 44)
 	topBar.BackgroundTransparency = 1
 	topBar.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, topBar, topBar.Name)
 
 	local topLayout = Instance.new("UIListLayout")
 	topLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -128,6 +130,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	subHint.TextColor3 = Theme.Colors.TextMuted
 	subHint.Text = ""
 	subHint.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, subHint, subHint.Name)
 	Theme.AddTextStroke(subHint, 1.5)
 	rodHintLbl = subHint
 
@@ -142,6 +145,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	oddsHint.TextColor3 = Color3.fromRGB(132, 238, 255)
 	oddsHint.Text = ""
 	oddsHint.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, oddsHint, oddsHint.Name)
 	oddsHint.Activated:Connect(PurchaseOddsController.ShowLive)
 	Theme.AddTextStroke(oddsHint, 1.4)
 	liveOddsLbl = oddsHint
@@ -153,10 +157,13 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	islTag.BackgroundTransparency = 1
 	islTag.Font = Theme.FontTitle
 	islTag.TextSize = 18
+	Theme.FitText(islTag, 18, 13)
+	islTag.TextTruncate = Enum.TextTruncate.AtEnd
 	islTag.TextXAlignment = Enum.TextXAlignment.Left
 	islTag.TextColor3 = Color3.fromRGB(116, 238, 255)
 	islTag.Text = "🏝️ Sunny Shores"
 	islTag.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, islTag, islTag.Name)
 	Theme.AddTextStroke(islTag, 1.8)
 	islandBannerLbl = islTag
 
@@ -167,10 +174,13 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	evLbl.BackgroundTransparency = 1
 	evLbl.Font = Theme.FontBody
 	evLbl.TextSize = 13
+	evLbl.TextWrapped = true
+	evLbl.TextTruncate = Enum.TextTruncate.AtEnd
 	evLbl.TextXAlignment = Enum.TextXAlignment.Left
 	evLbl.TextColor3 = Theme.Colors.Gold
 	evLbl.Text = ""
 	evLbl.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, evLbl, evLbl.Name)
 	Theme.AddTextStroke(evLbl, 1.5)
 	eventBannerLbl = evLbl
 
@@ -181,6 +191,7 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	leftDock.Size = UDim2.fromOffset(136, 368)
 	leftDock.BackgroundTransparency = 1
 	leftDock.Parent = rootGui
+	HotbarAndBaitUi.BindLayout(rootGui, leftDock, leftDock.Name)
 
 	local leftLayout = Instance.new("UIListLayout")
 	leftLayout.Padding = UDim.new(0, 7)
@@ -202,9 +213,11 @@ function HudPanel.Mount(rootGui: ScreenGui, actions: HudActions)
 	for _, nb in ipairs(navButtons) do
 		local b = Theme.CreateButton(leftDock, nb.id, nb.label, UDim2.new(1, 0, 0, 42), UDim2.new(), nb.col, function() actions.OnTogglePanel(nb.key) end)
 		b.TextSize = nb.sz
+		HotbarAndBaitUi.AttachBadge(b, nb.key)
 	end
 
 	local gymBanner = Theme.CreateButton(rootGui, "GymActiveBanner", "🏋️ GYM — CLICK TO LIFT!", UDim2.fromOffset(380, 40), UDim2.new(0.5, -190, 1, -168), Theme.Colors.Strength, actions.OnManualGymTap)
+	HotbarAndBaitUi.BindLayout(rootGui, gymBanner, "GymActiveBanner")
 	gymBanner.Visible = false
 	gymWorkoutBanner = gymBanner
 

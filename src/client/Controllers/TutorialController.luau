@@ -9,6 +9,8 @@ local IslandsRegistry = require(Shared:WaitForChild("Config"):WaitForChild("Isla
 
 local Theme = require(script.Parent.Parent.UI.Theme)
 
+local WindowFrame = require(script.Parent.Parent.UI.Components.WindowFrame)
+
 local TutorialController = {}
 
 local guideLabel: TextLabel? = nil
@@ -59,7 +61,11 @@ function TutorialController.Init(rootGui: ScreenGui)
 	banner.Name = "OnboardingHint"
 	banner.AnchorPoint = Vector2.new(0.5, 1)
 	banner.Position = UDim2.new(0.5, 0, 1, -122)
-	banner.Size = UDim2.fromOffset(600, 28)
+	banner.Size = UDim2.new(1, 0, 1, 0)
+	banner.TextWrapped = true
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(600, 36)
+	limit.Parent = banner
 	banner.BackgroundColor3 = Color3.fromRGB(26, 44, 68)
 	banner.BackgroundTransparency = 0.12
 	banner.Font = Theme.FontBody
@@ -67,7 +73,13 @@ function TutorialController.Init(rootGui: ScreenGui)
 	banner.TextColor3 = Color3.fromRGB(132, 244, 255)
 	banner.Text = ""
 	banner.Visible = false
-	banner.Parent = rootGui
+	local slot = Instance.new("Frame")
+	slot.BackgroundTransparency = 1
+	slot.Parent = rootGui
+	WindowFrame.BindLayout(rootGui, slot, "OnboardingHint")
+	banner.AnchorPoint = Vector2.zero
+	banner.Position = UDim2.fromScale(0, 0)
+	banner.Parent = slot
 	Theme.AddCorner(banner, 8)
 	Theme.AddStroke(banner, Color3.fromRGB(82, 212, 255), 1.8)
 	Theme.AddTextStroke(banner, 1.4)
